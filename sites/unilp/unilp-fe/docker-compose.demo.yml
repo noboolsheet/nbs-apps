@@ -1,0 +1,25 @@
+name: stack-site-unilp-fe-${DOCKER_PROFILE}
+
+services:
+  frontend:
+    container_name: ${DOCKER_UNILP_APP_DDNS}.${DOCKER_PROFILE}
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        # Demo estatica: chatbot desactivado (el widget no se renderiza).
+        NEXT_PUBLIC_CHAT_ENABLED: "false"
+    restart: unless-stopped
+    ports:
+      - "${UNILP_APP_IFACE}:${UNILP_APP_EPORT}:${UNILP_APP_IPORT}"
+    volumes:
+      - ./nginx.conf:/etc/nginx/templates/default.conf.template
+    environment:
+      - DOCKER_PROFILE=${DOCKER_PROFILE}
+    networks:
+      - custom_net_ref
+
+networks:
+  custom_net_ref:
+    name: ${DOCKER_NETWORK}
+    external: true

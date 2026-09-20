@@ -1,0 +1,30 @@
+{
+  "avvisi": [
+    {
+      "tag": "Bando",
+      "date": "16/06/2026",
+      "title": "Agorà Calabria",
+      "text": "Rivolto ad enti pubblici e soggetti privati della Regione Calabria per il sostegno a Progetti di Valorizzazione Turistica.",
+      "link": "https://calabriaeuropa.regione.calabria.it/bando/agora-calabria/"
+    },
+    {
+      "tag": "Bando",
+      "date": "16/06/2026",
+      "title": "FEERI",
+      "text": "Fondo Efficienza Energetica e Rinnovabili per le Imprese.",
+      "link": "https://calabriaeuropa.regione.calabria.it/bando/feeri-fondo-efficienza-energetica-e-rinnovabili-per-le-imprese/"
+    },
+    {
+      "tag": "Bando",
+      "date": "16/06/2026",
+      "title": "FUSESE",
+      "text": "Fund for Self Employment and Self Entrepreneurship.",
+      "link": "https://calabriaeuropa.regione.calabria.it/bando/fusese-fund-for-self-employment-and-self-entrepreneurship/"
+    }
+  ],
+  "offerte": [
+    { "role": "Assistente sociale", "city": "Montalto Uffugo (CS)", "type": "Tempo indeterminato, part time" },
+    { "role": "Aiutante cuoco", "city": "Amantea (CS)", "type": "Tempo determinato, part time" },
+    { "role": "2 operai manovali", "city": "Montalto Uffugo (CS)", "type": "Tempo indeterminato, full time" }
+  ]
+}

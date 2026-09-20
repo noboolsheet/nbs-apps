@@ -1,0 +1,13 @@
+node_modules
+dist
+dist-ssr
+data
+.git
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+assets/.aistudio
+.agents
+.impeccable

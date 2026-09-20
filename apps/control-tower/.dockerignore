@@ -1,0 +1,22 @@
+# Contexto de build limpio: NO copiar node_modules (las deps se instalan en el stage `deps`;
+# copiar los locales enmascara fallos de resolución y, peor, mezcla binarios de otra arquitectura
+# en la imagen ARM del Pi). Tampoco artefactos de build ni secretos.
+node_modules
+**/node_modules
+.next
+**/.next
+dist
+**/dist
+.git
+.turbo
+coverage
+*.log
+
+# Secretos y entornos locales (los secretos llegan en runtime por env_file, nunca horneados).
+.env
+.env.*
+!.env.example
+
+# Tests/artefactos que no hacen falta para construir la imagen
+playwright-report
+test-results

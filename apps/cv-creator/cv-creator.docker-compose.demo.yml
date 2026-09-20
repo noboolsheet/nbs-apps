@@ -1,0 +1,40 @@
+name: stack-site-cv-creator-${DOCKER_PROFILE}
+
+# cv-creator: Creador de CV con IA. Un unico contenedor Express sirve el build
+# (SPA) Y la API /api/parse-cv, que llama a Gemini para importar CVs. El endpoint
+# esta protegido con rate-limit; la GEMINI_API_KEY viene del .env gitignored.
+services:
+  frontend:
+    container_name: ${DOCKER_CV_CREATOR_APP_DDNS}.${DOCKER_PROFILE}
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${CV_CREATOR_APP_IFACE}:${CV_CREATOR_APP_EPORT}:${CV_CREATOR_APP_IPORT}"
+    # Secretos (GEMINI_API_KEY) y opciones (ALLOW_REGISTRATION) desde cv-creator/.env, gitignored.
+    env_file:
+      - ./.env.${DOCKER_PROFILE}
+    environment:
+      - NODE_ENV=production
+      - PORT=${CV_CREATOR_APP_IPORT}
+      - DATA_DIR=/app/data
+    # Persistencia: la BD SQLite (usuarios + CVs) vive en un bind-mount del host, asi
+    # sobrevive a reinicios/recreaciones del contenedor.
+    volumes:
+      - ${CV_CREATOR_DATA_DIR}:/app/data
+    # Healthcheck: pega al server dentro del contenedor. Si el bind quedo mal, el
+    # contenedor aparece 'unhealthy' en docker ps en vez de un 'Up' enganoso.
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:${CV_CREATOR_APP_IPORT}/', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - custom_net_ref
+
+networks:
+  custom_net_ref:
+    name: ${DOCKER_NETWORK}
+    external: true

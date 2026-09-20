@@ -1,0 +1,198 @@
+@import "tailwindcss";
+
+/* Dark mode por CLASE (toggle manual): la variante dark: aplica cuando hay .dark en
+   un ancestro. El tema se decide en main.tsx (elección guardada o preferencia del SO). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Canvas del shell: near-white con un tinte mínimo hacia el índigo de marca
+     (más carácter que el slate por defecto, sin caer en el crema-IA). */
+  --color-canvas: #f5f6fb;
+
+  /* Tokens semánticos de superficie/texto/línea. Los valores en CLARO coinciden con
+     los literales actuales (bg-white, slate-800, slate-600, slate-200), así el modo
+     claro no cambia nada. En .dark se re-mapean estas variables → todo el chrome se
+     invierte de golpe. La vista previa del CV (output) NO usa estos tokens: se queda
+     siempre clara (un currículum es papel blanco). */
+  --color-surface: #ffffff;     /* tarjetas/paneles (= bg-white) */
+  --color-surface-2: #f8fafc;   /* fondos sutiles/hover (= slate-50) */
+  --color-ink: #1e293b;         /* texto principal (= slate-800) */
+  --color-ink-muted: #475569;   /* texto secundario (= slate-600) */
+  --color-line: #e2e8f0;        /* bordes (= slate-200) */
+
+  /* Marca: escala completa (hoy con los valores de índigo, pero centralizada aquí para
+     que cambiar la identidad sea editar SOLO este bloque, no ~180 sitios). El chrome usa
+     utilidades brand-*; las plantillas del CV (el output) conservan su índigo propio. */
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-300: #a5b4fc;
+  --color-brand-400: #818cf8;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+  --color-brand-800: #3730a3;
+  --color-brand-900: #312e81;
+  --color-brand: #4f46e5;       /* alias por defecto (= brand-600), usado en el focus ring */
+  --color-brand-strong: #4338ca;
+  --color-accent: #f59e0b;      /* ámbar-500: acento de apoyo, con moderación */
+
+  /* Escala z-index semántica (fin de los z-[70] arbitrarios). */
+  --z-header: 30;
+  --z-drawer: 40;
+  --z-drawer-panel: 50;
+  --z-toast: 60;
+  --z-modal: 70;
+}
+
+/* Tema oscuro: re-mapea los tokens semánticos. Las utilidades (bg-surface, text-ink,
+   border-line, bg-canvas) los referencian, así que todo el chrome se invierte solo. */
+.dark {
+  --color-canvas: #0b1020;
+  --color-surface: #131a2b;
+  --color-surface-2: #1b2338;
+  --color-ink: #e7ecf5;
+  --color-ink-muted: #9aa7bd;
+  --color-line: #2b3650;
+  color-scheme: dark;
+}
+
+@layer base {
+  /* Foco visible y consistente en TODO lo interactivo a medida (botones, enlaces,
+     tarjetas con role/tabindex). :where() mantiene especificidad 0 para no pisar
+     estilos de componente. Los inputs ya traen su propio anillo de foco. */
+  :where(button, a, [role="button"], [tabindex]):focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+    border-radius: 0.5rem;
+  }
+
+  /* Wordmark de la app: Inter apretado, con el punto/acento en ámbar. */
+  .wordmark {
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .wordmark-accent {
+    color: var(--color-accent);
+  }
+}
+
+/* Editor responsive: en pantallas pequeñas el layout de 3 columnas (opciones |
+   divisor | vista previa) se apila en vertical y el divisor se oculta (solo tiene
+   sentido con ratón/puntero en escritorio). */
+@media (max-width: 767px) {
+  .editor-split {
+    flex-direction: column !important;
+    overflow-y: auto !important;
+  }
+  .editor-options {
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  /* Neutraliza el h-full del card interior del panel de opciones al apilar. */
+  .editor-options > * {
+    height: auto !important;
+  }
+  .editor-preview {
+    height: auto !important;
+    min-height: 80vh;
+  }
+  .editor-divider {
+    display: none !important;
+  }
+}
+
+/* Reduced motion: alternativa obligatoria (AA). Neutraliza animaciones/transiciones. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Custom scrollbar rules to keep scrollbars thin and elegant */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Print styles for high-fidelity vector PDF saving */
+@media print {
+  html, body, #root, main {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Hide UI elements from print */
+  header,
+  .no-print,
+  button,
+  footer {
+    display: none !important;
+  }
+
+  /* Reset layout for full page print */
+  main {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Make the CV preview container absolute and cover standard A4 dimensions */
+  #resume-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 210mm !important;
+    min-height: 297mm !important;
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    transform: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Force background colors and styles to print exactly as designed */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Prevent page-break issues inside blocks */
+  .experience-card, .education-card, .skill-card, .pdf-block {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}
+

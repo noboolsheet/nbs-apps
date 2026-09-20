@@ -1,0 +1,497 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+  U.N.I.L.P. — Patronato Editoriale.
+  Token layer. Committed warm-ink-navy on paper-cream. No dark mode.
+  Canonical values live in DESIGN.md; this file binds them to CSS.
+*/
+
+:root {
+  /* Brand primitives — OKLCH per DESIGN.md */
+  --ink-navy:         oklch(0.245 0.085 273);
+  --ink-navy-deep:    oklch(0.195 0.082 273);
+  --ink-navy-soft:    oklch(0.945 0.020 273);
+  --warm-brick:       oklch(0.535 0.115 38);
+  --warm-brick-deep:  oklch(0.445 0.125 38);
+  /*
+    Brick TEXT roles, split from the accent for WCAG AA legibility.
+    `--warm-brick` above is the DECORATION accent (underlines, focus ring, list
+    markers, glyphs) where the 3:1 UI-component bar applies; it reads ~3.0:1 as
+    text on navy, which fails 1.4.3. A single darkened value can't fix both
+    surfaces: brick is a mid-tone, so darkening clears the light surface but
+    sinks toward navy. The text role therefore splits by surface polarity:
+      --warm-brick-text     readable text on cream/cream-deep/ash (~6.8:1 cream)
+      --warm-brick-on-navy  readable text on the navy plinth       (~5.9:1 navy)
+    Both verified in-gamut against the brand surfaces.
+  */
+  --warm-brick-text:    oklch(0.470 0.130 40);
+  --warm-brick-on-navy: oklch(0.700 0.120 42);
+  --paper-cream:      oklch(0.978 0.012 76);
+  --paper-cream-deep: oklch(0.955 0.015 76);
+  --warm-ash:         oklch(0.910 0.013 76);
+  --ink-line:         oklch(0.860 0.015 76);
+  --ink-black:        oklch(0.215 0.020 273);
+  --ink-quiet:        oklch(0.435 0.025 273);
+
+  /* shadcn / Radix role slots → brand primitives */
+  --background:             var(--paper-cream);
+  --foreground:             var(--ink-black);
+  --card:                   var(--paper-cream-deep);
+  --card-foreground:        var(--ink-black);
+  --popover:                var(--paper-cream);
+  --popover-foreground:     var(--ink-black);
+  --primary:                var(--ink-navy);
+  --primary-foreground:     var(--paper-cream);
+  --secondary:              var(--paper-cream-deep);
+  --secondary-foreground:   var(--ink-black);
+  --muted:                  var(--warm-ash);
+  --muted-foreground:       var(--ink-quiet);
+  --accent:                 var(--warm-brick);
+  --accent-foreground:      var(--paper-cream);
+  --destructive:            var(--warm-brick-deep);
+  --destructive-foreground: var(--paper-cream);
+  --border:                 var(--ink-line);
+  --input:                  var(--ink-line);
+  --ring:                   var(--warm-brick);
+
+  /* Chart roles route to brand tones, not the default rainbow */
+  --chart-1: var(--ink-navy);
+  --chart-2: var(--ink-navy-deep);
+  --chart-3: var(--warm-brick);
+  --chart-4: var(--warm-brick-deep);
+  --chart-5: var(--ink-quiet);
+
+  /* Sidebar roles share the page surface; this site has no app sidebar */
+  --sidebar:                          var(--paper-cream);
+  --sidebar-foreground:               var(--ink-black);
+  --sidebar-primary:                  var(--ink-navy);
+  --sidebar-primary-foreground:       var(--paper-cream);
+  --sidebar-accent:                   var(--warm-brick);
+  --sidebar-accent-foreground:        var(--paper-cream);
+  --sidebar-border:                   var(--ink-line);
+  --sidebar-ring:                     var(--warm-brick);
+
+  /* Editorial radius, per DESIGN.md. Subtle, not friendly-rounded. */
+  --radius: 4px;
+
+  /* Shadows are tinted with the brand navy, never black. Floating chrome only. */
+  --shadow-color:   var(--ink-navy);
+  --shadow-x:       0px;
+  --shadow-y:       2px;
+  --shadow-blur:    6px;
+  --shadow-spread:  0px;
+  --shadow-opacity: 0.10;
+
+  /*
+    Brand focus ring resource.
+    Components opt in via `box-shadow: var(--focus-ring)` on :focus-visible.
+  */
+  --focus-ring: 0 0 0 3px color-mix(in oklch, var(--warm-brick) 35%, transparent);
+
+  /* Motion vocabulary, per DESIGN.md and the .impeccable/design.json sidecar */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-expo:  cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast:  150ms;
+  --duration-base:  250ms;
+  --duration-slow:  450ms;
+}
+
+@theme inline {
+  /*
+    Font stacks reference the next/font CSS variables emitted by `app/layout.tsx`.
+    The next/font className must be applied on <html> (it is) for these to resolve.
+  */
+  --font-sans:  var(--font-sans-inter),  'Inter',          system-ui, sans-serif;
+  --font-serif: var(--font-serif-source), 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --font-mono:  var(--font-mono-geist),  'Geist Mono',     ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* shadcn role bridges (consumed by Radix primitives and `bg-*` utilities) */
+  --color-background:             var(--background);
+  --color-foreground:             var(--foreground);
+  --color-card:                   var(--card);
+  --color-card-foreground:        var(--card-foreground);
+  --color-popover:                var(--popover);
+  --color-popover-foreground:     var(--popover-foreground);
+  --color-primary:                var(--primary);
+  --color-primary-foreground:     var(--primary-foreground);
+  --color-secondary:              var(--secondary);
+  --color-secondary-foreground:   var(--secondary-foreground);
+  --color-muted:                  var(--muted);
+  --color-muted-foreground:       var(--muted-foreground);
+  --color-accent:                 var(--accent);
+  --color-accent-foreground:      var(--accent-foreground);
+  --color-destructive:            var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border:                 var(--border);
+  --color-input:                  var(--input);
+  --color-ring:                   var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /*
+    Brand-direct utilities.
+    Use these in components instead of raw Tailwind palette classes:
+      bg-ink-navy / text-paper-cream / border-ink-line / text-warm-brick / etc.
+  */
+  --color-ink-navy:         var(--ink-navy);
+  --color-ink-navy-deep:    var(--ink-navy-deep);
+  --color-ink-navy-soft:    var(--ink-navy-soft);
+  --color-warm-brick:       var(--warm-brick);
+  --color-warm-brick-deep:  var(--warm-brick-deep);
+  --color-warm-brick-text:    var(--warm-brick-text);
+  --color-warm-brick-on-navy: var(--warm-brick-on-navy);
+  --color-paper-cream:      var(--paper-cream);
+  --color-paper-cream-deep: var(--paper-cream-deep);
+  --color-warm-ash:         var(--warm-ash);
+  --color-ink-line:         var(--ink-line);
+  --color-ink-black:        var(--ink-black);
+  --color-ink-quiet:        var(--ink-quiet);
+
+  --color-sidebar:                    var(--sidebar);
+  --color-sidebar-foreground:         var(--sidebar-foreground);
+  --color-sidebar-primary:            var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent:             var(--sidebar-accent);
+  --color-sidebar-accent-foreground:  var(--sidebar-accent-foreground);
+  --color-sidebar-border:             var(--sidebar-border);
+  --color-sidebar-ring:               var(--sidebar-ring);
+
+  /* Radius scale per DESIGN.md (subtle, editorial) */
+  --radius-none: 0px;
+  --radius-sm:   2px;
+  --radius-md:   4px;
+  --radius-lg:   8px;
+  --radius-xl:   12px;
+
+  /*
+    Shadow scale.
+    `shadow-md` and `shadow-lg` match the `floating-sm` / `floating-md` vocabulary
+    in DESIGN.md; both are tinted with the brand navy at low alpha.
+    Cards and resting surfaces must not opt into these (The Flat-Plinth Rule).
+  */
+  --shadow-2xs: var(--shadow-x) 1px 2px color-mix(in oklch, var(--shadow-color) calc(var(--shadow-opacity) * 50%), transparent);
+  --shadow-xs:  var(--shadow-x) var(--shadow-y) calc(var(--shadow-blur) * 0.7) var(--shadow-spread) color-mix(in oklch, var(--shadow-color) calc(var(--shadow-opacity) * 70%), transparent);
+  --shadow-sm:  var(--shadow-x) var(--shadow-y) var(--shadow-blur) var(--shadow-spread) color-mix(in oklch, var(--shadow-color) calc(var(--shadow-opacity) * 100%), transparent);
+  --shadow-md:  0 2px 6px color-mix(in oklch, var(--ink-navy) 10%, transparent), 0 1px 2px color-mix(in oklch, var(--ink-navy) 6%, transparent);
+  --shadow-lg:  0 8px 24px color-mix(in oklch, var(--ink-navy) 12%, transparent), 0 2px 4px color-mix(in oklch, var(--ink-navy) 6%, transparent);
+  --shadow-xl:  0 12px 36px color-mix(in oklch, var(--ink-navy) 14%, transparent), 0 4px 6px color-mix(in oklch, var(--ink-navy) 8%, transparent);
+  --shadow-2xl: 0 20px 60px color-mix(in oklch, var(--ink-navy) 18%, transparent);
+  --shadow:     var(--shadow-md);
+  --color-shadow-color: var(--shadow-color);
+  --shadow-opacity:     var(--shadow-opacity);
+  --shadow-spread:      var(--shadow-spread);
+  --shadow-blur:        var(--shadow-blur);
+  --shadow-y:           var(--shadow-y);
+  --shadow-x:           var(--shadow-x);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/40;
+  }
+
+  html {
+    /*
+      Editorial reading bar, set as a deliberate ROOT scale-up.
+      The root font-size is 17px, not the browser-default 16px, so 1rem = 17px and
+      the entire rem-based system (Tailwind's text-* and spacing utilities, plus the
+      type roles defined below) inherits the same ~1.0625x bump from this single line.
+      Body therefore reads at 17px, comfortable for older readers, who are first-class
+      here (DESIGN.md, The Body-Is-Read Rule).
+      Do not "reset" this to 16px: it is not a stray value, it silently rescales every
+      rem unit across the whole site. To change the reading bar, change it here only.
+    */
+    font-size: 17px;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.6;
+    font-feature-settings: 'kern', 'liga', 'calt';
+  }
+
+  /*
+    Headings.
+    Source Serif 4 carries Display (h1) and Headline (h2). Inter carries Title and below.
+    DESIGN.md, The Display-Is-Serif Rule: never promote Inter to display sizes.
+    DESIGN.md, The No-Gradient-Type Rule: solid color only; never background-clip: text on a gradient.
+  */
+  h1 {
+    font-family: var(--font-serif);
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    font-weight: 400;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    color: var(--ink-black);
+    text-wrap: balance;
+  }
+
+  h2 {
+    font-family: var(--font-serif);
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 400;
+    line-height: 1.15;
+    letter-spacing: -0.005em;
+    color: var(--ink-black);
+    text-wrap: balance;
+  }
+
+  h3 {
+    font-family: var(--font-sans);
+    font-size: 1.5rem;
+    font-weight: 500;
+    line-height: 1.3;
+    letter-spacing: normal;
+    color: var(--ink-black);
+  }
+
+  h4 {
+    font-family: var(--font-sans);
+    font-size: 1.25rem;
+    font-weight: 500;
+    line-height: 1.35;
+    color: var(--ink-black);
+  }
+
+  h5 {
+    font-family: var(--font-sans);
+    font-size: 1.125rem;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--ink-black);
+  }
+
+  h6 {
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: 0.04em;
+    color: var(--ink-quiet);
+  }
+
+  p {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--ink-black);
+    text-wrap: pretty;
+  }
+
+  small {
+    font-size: 0.875rem;
+    color: var(--ink-quiet);
+  }
+
+  strong, b {
+    font-weight: 700;
+  }
+
+  em, i {
+    font-style: italic;
+  }
+
+  ::selection {
+    background: color-mix(in oklch, var(--ink-navy) 18%, transparent);
+    color: var(--ink-black);
+  }
+
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--paper-cream);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in oklch, var(--ink-quiet) 35%, transparent);
+    border: 3px solid var(--paper-cream);
+    border-radius: 8px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in oklch, var(--ink-quiet) 60%, transparent);
+  }
+}
+
+@layer components {
+  /*
+    Typography role utilities mirroring the DESIGN.md hierarchy.
+    Use these in JSX instead of ad-hoc `text-3xl font-bold` chains:
+
+      <h1 className="display">…</h1>
+      <h2 className="headline">…</h2>
+      <h3 className="title">…</h3>
+      <p  className="lede">…</p>
+      <p  className="body">…</p>
+      <span className="label">…</span>
+
+    They re-apply the base heading rules at any element, useful when semantics
+    and visual role diverge (a section opener inside an <h2> can carry .display).
+  */
+  .display {
+    font-family: var(--font-serif);
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    font-weight: 400;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    color: inherit;
+    text-wrap: balance;
+  }
+
+  .headline {
+    font-family: var(--font-serif);
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 400;
+    line-height: 1.15;
+    letter-spacing: -0.005em;
+    color: inherit;
+    text-wrap: balance;
+  }
+
+  .title {
+    font-family: var(--font-sans);
+    font-size: 1.5rem;
+    font-weight: 500;
+    line-height: 1.3;
+    color: inherit;
+  }
+
+  .lede {
+    font-family: var(--font-sans);
+    font-size: 1.25rem;
+    font-weight: 400;
+    line-height: 1.55;
+    color: inherit;
+    text-wrap: pretty;
+  }
+
+  .body {
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.6;
+    color: inherit;
+    text-wrap: pretty;
+  }
+
+  .label {
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: 0.04em;
+    color: inherit;
+  }
+
+  /*
+    Reading column width helper.
+    Caps any prose-bearing element at 60-72ch, per The Body-Is-Read Rule.
+    Use on the wrapping element that holds the paragraphs, not on each <p>.
+  */
+  .read {
+    max-width: 68ch;
+  }
+
+  /*
+    One-shot entry motion. Drives the Navy Plinth hero's staggered fade-up.
+    Stagger per element via inline `style={{ '--hero-delay': '<n>ms' }}`.
+    Reduced-motion override below collapses to an opacity-only fade.
+  */
+  .hero-rise {
+    /*
+      One-shot entry animation. No `will-change`: the browser already composites
+      an element while its animation runs, and the hint would otherwise pin a
+      compositing layer for the life of the page for a fade that plays once.
+    */
+    animation: hero-rise 450ms cubic-bezier(0.25, 1, 0.5, 1) both;
+    animation-delay: var(--hero-delay, 0ms);
+  }
+
+  /*
+    Lanzador del chat — rebote de atencion.
+    Un salto vertical concentrado al final de un ciclo de 4s; el resto del tiempo
+    esta quieto, asi que llama la atencion cada ~4s sin movimiento constante.
+    Solo transform (translateY), sin tocar layout. Se pausa en hover/focus para
+    no moverse cuando el usuario va a pulsarlo. Reduced-motion la anula abajo.
+  */
+  .chat-bounce {
+    animation: chat-bounce 4s var(--ease-out-quart) infinite;
+    transform-origin: center bottom;
+  }
+  .chat-bounce:hover,
+  .chat-bounce:focus-visible {
+    animation-play-state: paused;
+  }
+
+  /*
+    Entrada del panel del chat (la auto-apertura no debe aparecer de golpe).
+    Una sola entrada bien definida, en linea con el registro brand.
+  */
+  .chat-panel-enter {
+    animation: chat-panel-enter var(--duration-base) var(--ease-out-expo) both;
+    transform-origin: bottom right;
+  }
+}
+
+@keyframes chat-bounce {
+  /*
+    Reposo hasta el 70%, luego un salto y un rebote corto. El timing por tramo
+    da gravedad: sube desacelerando (ease-out) y cae acelerando (ease-in). No se
+    usan curvas con overshoot, asi que el "rebote" lo da el keyframe, no el easing.
+  */
+  0% { transform: translateY(0); }
+  70% { transform: translateY(0); animation-timing-function: cubic-bezier(0.33, 0, 0.2, 1); }
+  80% { transform: translateY(-14px); animation-timing-function: cubic-bezier(0.7, 0, 0.84, 0); }
+  88% { transform: translateY(0); animation-timing-function: cubic-bezier(0.33, 0, 0.2, 1); }
+  93% { transform: translateY(-6px); animation-timing-function: cubic-bezier(0.7, 0, 0.84, 0); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes chat-panel-enter {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes chat-panel-enter-reduced {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes hero-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes hero-rise-reduced {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-rise {
+    animation: hero-rise-reduced 200ms ease-out both;
+    animation-delay: 0ms;
+  }
+
+  /* Sin rebote; el panel solo hace fade (sin desplazamiento ni escala). */
+  .chat-bounce {
+    animation: none;
+  }
+  .chat-panel-enter {
+    animation: chat-panel-enter-reduced 200ms ease-out both;
+  }
+}

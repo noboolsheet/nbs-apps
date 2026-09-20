@@ -1,0 +1,21 @@
+node_modules
+.output
+.nitro
+.vinxi
+.tanstack
+.wrangler
+dist
+dist-ssr
+.git
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+.vscode
+.idea
+
+# Originales pesados: las versiones optimizadas ya van commiteadas en public/images/
+# y se generan con `npm run optimize-images` (no en el build). No hacen falta aqui.
+images-sources
+scripts/optimize-images.mjs

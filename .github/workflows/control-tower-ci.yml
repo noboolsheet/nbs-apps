@@ -1,0 +1,71 @@
+name: control-tower-ci
+
+on:
+  push:
+    branches: [prod, control-tower-mvp]
+    paths:
+      - 'apps/control-tower/**'
+      - '.github/workflows/control-tower-ci.yml'
+  pull_request:
+    paths:
+      - 'apps/control-tower/**'
+      - '.github/workflows/control-tower-ci.yml'
+
+defaults:
+  run:
+    working-directory: apps/control-tower
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      # Postgres para los tests de INTEGRACIÓN (aislamiento multi-org, syncs, gobernanza…). Mismo user/pass/db que
+      # dev (control_tower) y misma major (18) para fidelidad con prod.
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: control_tower
+          POSTGRES_PASSWORD: control_tower
+          POSTGRES_DB: control_tower
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U control_tower"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://control_tower:control_tower@localhost:5432/control_tower
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.3
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: apps/control-tower/pnpm-lock.yaml
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Migrate (integration DB)
+        run: pnpm --filter @ct/db migrate
+
+      - name: Integration tests
+        run: pnpm test:integration
+
+      - name: Build
+        run: pnpm build

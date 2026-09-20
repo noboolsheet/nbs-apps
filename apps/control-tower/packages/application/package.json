@@ -1,0 +1,20 @@
+{
+  "name": "@ct/application",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ct/db": "workspace:*",
+    "@ct/domain": "workspace:*",
+    "@ct/integrations": "workspace:*",
+    "@ct/shared": "workspace:*",
+    "@ct/validation": "workspace:*",
+    "drizzle-orm": "^0.45.2"
+  }
+}

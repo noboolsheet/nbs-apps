@@ -1,0 +1,6 @@
+name: site-unilp-full-stack-${DOCKER_PROFILE}
+
+# Demo de portafolio: solo el frontend estatico (nginx). El backend del
+# formulario (unilp-be) NO se despliega; el sitio es puro showcase visual.
+include:
+  - path: ./unilp-fe/docker-compose.${DOCKER_PROFILE}.yml

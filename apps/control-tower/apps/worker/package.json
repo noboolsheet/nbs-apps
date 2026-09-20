@@ -1,0 +1,19 @@
+{
+  "name": "@ct/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ct/application": "workspace:*",
+    "@ct/db": "workspace:*",
+    "@ct/integrations": "workspace:*",
+    "@ct/shared": "workspace:*",
+    "@ct/validation": "workspace:*",
+    "tsx": "^4.19.2"
+  }
+}

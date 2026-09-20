@@ -1,0 +1,76 @@
+# Control Tower — orquestación de desarrollo local (self-contained).
+# `docker compose up` levanta db + web + worker. Para la Pi (infra compartida del
+# monorepo) usar control-tower.docker-compose.{dev,prod}.yml + deploy-control-tower.sh.
+name: control-tower-dev
+
+services:
+  db:
+    image: postgres:18
+    container_name: control-tower-db-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: control_tower
+      POSTGRES_PASSWORD: control_tower
+      POSTGRES_DB: control_tower
+    ports:
+      - '5432:5432'
+    volumes:
+      - ct_pgdata_dev:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U control_tower -d control_tower']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      target: web
+    container_name: control-tower-web-dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://control_tower:control_tower@db:5432/control_tower
+      APP_URL: http://localhost:4270
+      BETTER_AUTH_URL: http://localhost:4270
+      # Secreto SOLO para desarrollo local. En prod va en apps/control-tower/.env (gitignored).
+      BETTER_AUTH_SECRET: dev-only-secret-change-me-0123456789abcdef
+    ports:
+      - '4270:3000'
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://127.0.0.1:3000/api/health',(r)=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  worker:
+    build:
+      context: .
+      target: worker
+    container_name: control-tower-worker-dev
+    restart: unless-stopped
+    # Los secretos de integración (TWENTY_API_KEY, etc.) viven en apps/control-tower/.env (gitignored).
+    # `required: false` → `docker compose up` funciona aunque no exista .env (dev self-contained).
+    # `environment` gana a `env_file`, así que DATABASE_URL sigue apuntando al servicio `db`.
+    env_file:
+      - path: ./.env.dev
+        required: false
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://control_tower:control_tower@db:5432/control_tower
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  ct_pgdata_dev:

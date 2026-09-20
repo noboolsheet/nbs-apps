@@ -1,0 +1,19 @@
+# Override SÓLO para desarrollo local. `docker compose up` fusiona automáticamente compose.yml + compose.override.yml.
+# La Pi despliega con `control-tower.docker-compose.{dev,prod}.yml` explícitos (deploy-control-tower.sh) → este
+# override NUNCA aplica en producción (allí las imágenes horneadas e inmutables son lo correcto).
+#
+# Objetivo: iterar el código del worker SIN reconstruir la imagen. Monta únicamente el CÓDIGO FUENTE (los `src/`,
+# nunca node_modules — que es arch-específico y vive en la imagen) y corre `tsx watch`, que recarga al guardar.
+# Nota: un cambio de DEPENDENCIAS (package.json) sí requiere rebuild. `web` (Next standalone) sigue horneada; para
+# iterar la UI usa `pnpm dev` en el host (Next dev en :4270) o reconstruye la imagen web.
+services:
+  worker:
+    command: ['pnpm', '--filter', '@ct/worker', 'dev'] # tsx watch src/index.ts
+    volumes:
+      - ./apps/worker/src:/app/apps/worker/src
+      - ./packages/application/src:/app/packages/application/src
+      - ./packages/integrations/src:/app/packages/integrations/src
+      - ./packages/domain/src:/app/packages/domain/src
+      - ./packages/db/src:/app/packages/db/src
+      - ./packages/validation/src:/app/packages/validation/src
+      - ./packages/shared/src:/app/packages/shared/src

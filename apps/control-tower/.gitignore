@@ -1,0 +1,33 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# builds
+dist/
+.next/
+out/
+*.tsbuildinfo
+
+# env / secrets (NEVER commit real secrets — see .env.example)
+.env
+.env.*
+!.env.example
+# claves de cuentas de servicio / credenciales en JSON — el secreto va en .env (base64), nunca en el repo
+ct-drive-integration.json
+*-integration.json
+*service-account*.json
+*.sa.json
+
+# test / coverage
+coverage/
+playwright-report/
+test-results/
+
+# backups (nunca commitear dumps de datos)
+backups/
+
+# drizzle
+packages/db/drizzle/meta/_journal.json.bak
+
+# os
+.DS_Store

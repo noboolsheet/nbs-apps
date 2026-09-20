@@ -1,0 +1,174 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1786457979323,
+      "tag": "0000_m02_mvp_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786458842825,
+      "tag": "0001_m03_auth",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786464880285,
+      "tag": "0002_m10_search",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786545386829,
+      "tag": "0003_m19_org_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786619089810,
+      "tag": "0004_m20_inbox_channels",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786621677620,
+      "tag": "0005_m21_resources",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786632813174,
+      "tag": "0006_m22_learning_sector",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786639492385,
+      "tag": "0007_m23_calendar_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786701261107,
+      "tag": "0008_m24_project_contact",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1786885460139,
+      "tag": "0009_m25_task_personal",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1786914940945,
+      "tag": "0010_m26_opportunity_closed_cancelled",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1786916678686,
+      "tag": "0011_m27_task_opportunity",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1786953091430,
+      "tag": "0012_m28_inbox_type_sector",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1786955013244,
+      "tag": "0013_m29_project_personal",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1788252462595,
+      "tag": "0014_m30_project_type_supersede_assets",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1788253604555,
+      "tag": "0015_m31_sync_runs",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1788267232249,
+      "tag": "0016_m32_job_log_archives",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1788268195525,
+      "tag": "0017_m33_log_archives_jobs_and_outbox",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1788270576946,
+      "tag": "0018_m34_outbox_discarded",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1788271429139,
+      "tag": "0019_m35_payments",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1788272698423,
+      "tag": "0020_m36_review_items",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1788274216572,
+      "tag": "0021_m37_review_items_drop_source",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1788275250485,
+      "tag": "0022_m38_review_item_knowledge_link",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1788347667100,
+      "tag": "0023_m39_opportunity_stages",
+      "breakpoints": true
+    }
+  ]
+}

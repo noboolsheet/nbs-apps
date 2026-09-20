@@ -1,0 +1,25 @@
+{
+  "name": "unilp-be",
+  "version": "1.0.0",
+  "description": "Backend del formulario de contacto de unilp.it: recibe el POST del formulario y reenvia el mensaje por email via SMTP de Gmail.",
+  "type": "module",
+  "private": true,
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "smtp-check": "node src/smtp-check.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "nodemailer": "^8.0.10",
+    "zod": "^3.24.1"
+  }
+}

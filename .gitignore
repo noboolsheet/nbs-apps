@@ -1,0 +1,65 @@
+# Dependencias y builds
+node_modules/
+.pnpm-store/
+dist/
+dist-ssr/
+.next/
+out/
+build/
+coverage/
+*.tsbuildinfo
+.output
+.vinxi
+.nitro
+.tanstack/**
+
+# Secretos: un fichero por perfil (.env.dev / .env.prod / .env.demo), ninguno en git.
+# Los envs NO-secreto del repo (puertos, nombres de contenedor) sí se versionan.
+.env
+.env.*
+!.env.example
+!envs/.env.dev
+!envs/.env.prod
+!envs/.env.demo
+# Claves de cuentas de servicio: el secreto va en el .env en base64, nunca el JSON.
+*-integration.json
+*service-account*.json
+*.sa.json
+
+# Datos y volcados — jamás al repo
+backups/
+data/
+*.sql
+*.sql.gz
+
+# Material fuente interno (originales en ../_assets/)
+imagen-sources/
+images-sources/
+image-sources/
+images-resources/
+docs-sources/
+*.docx
+*.xlsx
+*.pptx
+*.HEIC
+*.heic
+
+# Test / e2e
+playwright-report/
+test-results/
+
+# Herramientas de desarrollo (no van al servidor)
+.impeccable/
+.lovable/
+.agents/
+skills-lock.json
+.claude/settings.local.json
+
+# Sistema operativo / editor
+.DS_Store
+*.log
+logs/
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.local

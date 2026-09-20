@@ -1,0 +1,32 @@
+name: stack-site-unilp-be-${DOCKER_PROFILE}
+
+services:
+  backend:
+    container_name: ${DOCKER_UNILP_BE_DDNS}.${DOCKER_PROFILE}
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    restart: unless-stopped
+    # Sin publicar puerto al host: Caddy lo alcanza por nombre en shared_network.
+    # Secreto (SMTP_PASS) desde unilp-be/.env, que esta gitignored.
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - ALLOWED_ORIGINS=${UNILP_BE_ALLOWED_ORIGINS}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_SECURE=${SMTP_SECURE}
+      - SMTP_USER=${SMTP_USER}
+      - CONTACT_TO=${CONTACT_TO}
+      # Webhook interno de n8n para el chatbot. Solo se define en prod (n8n no
+      # existe en dev/nonprod); si falta, la ruta /chat responde 503.
+      - N8N_CHAT_WEBHOOK_URL=${N8N_CHAT_WEBHOOK_URL}
+    networks:
+      - custom_net_ref
+
+networks:
+  custom_net_ref:
+    name: ${DOCKER_NETWORK}
+    external: true

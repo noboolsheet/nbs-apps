@@ -1,0 +1,6 @@
+{
+  "name": "Creador de Currículum",
+  "description": "Una aplicación full-stack para diseñar currículums profesionales, con plantillas personalizadas, descarga en PDF en tiempo real e importación inteligente de CVs existentes mediante Gemini AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
