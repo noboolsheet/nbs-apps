@@ -23,14 +23,6 @@ else
     exit 1
 fi
 
-# 2b. Guarda de interfaz. En prod los puertos van atados a la IP de Tailscale de vibox,
-#     no a 0.0.0.0: es lo que mantiene privadas las apps con datos reales ahora que la
-#     máquina sí tiene IP pública. Sin esto, un envs/ a medio rellenar publica en abierto.
-if [[ "$DOCKER_IFACE" == *CAMBIAME* ]]; then
-    echo "❌ DOCKER_IFACE sigue sin rellenar en $ENV_DIR/.env.$ENV (valor: '$DOCKER_IFACE')."
-    echo "   Pon la IP de Tailscale de vibox:  tailscale ip -4"
-    exit 1
-fi
 
 # 3. Ensure the Gemini secret file exists (GEMINI_API_KEY lives here, gitignored).
 if [ ! -f "$SCRIPT_DIR/.env.$ENV" ]; then

@@ -6,9 +6,9 @@ ENV_DIR="$SCRIPT_DIR/../../envs"
 
 # 1. Validate Environment
 ENV=${1:-}
-if [[ ! "$ENV" =~ ^(dev|demo)$ ]]; then
+if [[ ! "$ENV" =~ ^(demo)$ ]]; then
     echo "❌ Error: Invalid or missing environment."
-    echo "Usage: $0 {dev|demo}"
+    echo "Usage: $0 {demo}"
     exit 1
 fi
 
@@ -23,14 +23,6 @@ else
     exit 1
 fi
 
-# 2b. Guarda de interfaz. En prod los puertos van atados a la IP de Tailscale de vibox,
-#     no a 0.0.0.0: es lo que mantiene privadas las apps con datos reales ahora que la
-#     máquina sí tiene IP pública. Sin esto, un envs/ a medio rellenar publica en abierto.
-if [[ "$DOCKER_IFACE" == *CAMBIAME* ]]; then
-    echo "❌ DOCKER_IFACE sigue sin rellenar en $ENV_DIR/.env.$ENV (valor: '$DOCKER_IFACE')."
-    echo "   Pon la IP de Tailscale de vibox:  tailscale ip -4"
-    exit 1
-fi
 
 # 3. Create Network if it doesn't exist
 if ! docker network inspect "$DOCKER_NETWORK" >/dev/null 2>&1; then

@@ -23,14 +23,6 @@ else
     exit 1
 fi
 
-# 2b. Guarda de interfaz. En prod los puertos van atados a la IP de Tailscale de vibox,
-#     no a 0.0.0.0: es lo que mantiene privadas las apps con datos reales ahora que la
-#     máquina sí tiene IP pública. Sin esto, un envs/ a medio rellenar publica en abierto.
-if [[ "$DOCKER_IFACE" == *CAMBIAME* ]]; then
-    echo "❌ DOCKER_IFACE sigue sin rellenar en $ENV_DIR/.env.$ENV (valor: '$DOCKER_IFACE')."
-    echo "   Pon la IP de Tailscale de vibox:  tailscale ip -4"
-    exit 1
-fi
 
 # 3. Ensure the secret file exists (BETTER_AUTH_SECRET, POSTGRES_*, *_API_KEY viven aqui, gitignored).
 #    Se cargan al shell para que docker compose los interpole (no viven en envs/ compartido).

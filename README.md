@@ -29,17 +29,22 @@ de despliegue**. El mismo código produce contenedores distintos:
 | Perfil | Datos | Puerto atado a | Lo ve |
 |--------|-------|----------------|-------|
 | `dev` | ficticios | `127.0.0.1` | sólo el Mac |
-| `prod` | **reales** | IP de Tailscale de vibox | yo, por el tailnet |
-| `demo` | ficticios | `127.0.0.1`, y Caddy lo publica por su nombre de contenedor | cualquiera con el enlace |
+| `prod` | **reales** | `0.0.0.0` → LAN de casa y tailnet | yo |
+| `demo` | ficticios | `0.0.0.0`, y Caddy lo publica por su nombre de contenedor | cualquiera con el enlace |
+
+vibox no tiene IP pública ni puertos abiertos, así que `0.0.0.0` significa "la LAN
+de casa y el tailnet", no internet. Lo público sale por el túnel de Cloudflare
+(ver `nbs-infra`), que sólo enruta contenedores del perfil `demo`.
 
 | Proyecto | dev | prod | demo |
 |----------|-----|------|------|
 | control-tower | 4270 | 4272 | 4274 |
 | cv-creator | 4240 | 4242 | 4244 |
-| unilp | 4210 | — | 4214 |
-| utcs | 4220 | — | 4224 |
+| unilp | — | — | 4214 |
+| utcs | — | — | 4224 |
 
-`unilp` y `utcs` no tienen perfil `prod`: son muestras, nunca fueron producción.
+`unilp` y `utcs` existen **sólo en perfil `demo`**: son muestras con datos ya
+ficticios, no las uso yo ni pertenecen a ningún cliente.
 
 ## Secretos
 
@@ -59,17 +64,13 @@ dé acceso a datos reales, y su clave de Gemini es distinta y con cuota baja.
 ```sh
 ./apps/control-tower/deploy-control-tower.sh {dev|prod|demo}
 ./apps/cv-creator/deploy-cv-creator.sh       {dev|prod|demo}
-./sites/unilp/deploy-unilp.sh                {dev|demo}
-./sites/utcs/deploy-utcs.sh                  {dev|demo}
+./sites/unilp/deploy-unilp.sh                demo
+./sites/utcs/deploy-utcs.sh                  demo
 ```
 
 Cada script carga `envs/.env.<perfil>`, comprueba que existe el fichero de
 secretos del perfil, crea la red `noboolsheet_network` si falta y levanta el stack.
 En `prod` y `demo` también crea el directorio de datos.
-
-> En `prod` el script **aborta** si `DOCKER_IFACE` sigue con `CAMBIAME`: hay que
-> poner la IP de Tailscale de vibox (`tailscale ip -4`). Publicar en `0.0.0.0` una
-> app con datos reales, en una máquina con IP pública, no es una opción.
 
 Para publicar una demo hace falta además su bloque en `nbs-infra/caddy/CaddyFile`.
 
