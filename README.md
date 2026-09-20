@@ -74,6 +74,17 @@ En `prod` y `demo` también crea el directorio de datos.
 
 Para publicar una demo hace falta además su bloque en `nbs-infra/caddy/CaddyFile`.
 
+## Datos de las demos
+
+`deploy-control-tower.sh demo` ejecuta el seed (`packages/db/src/seed.ts`) después
+de migrar: **hace TRUNCATE de todas las tablas** y repuebla con una organización
+ficticia determinista. Cada despliegue deja la demo en su estado canónico y borra
+lo que hayan tocado los visitantes — que es lo que se quiere en una demo pública,
+pero conviene saberlo.
+
+Pendiente: el seed crea `owner@example.com` sin credencial en `accounts`, así que
+todavía no hay con qué iniciar sesión. Ver la nota en `apps/control-tower/.env.example`.
+
 ## Desarrollo local de control-tower
 
 Aparte del patrón de arriba, `control-tower` trae `compose.yml` +

@@ -96,4 +96,19 @@ if [ "$migrate_ok" != "true" ]; then
     exit 1
 fi
 
+# 8. Perfil demo: sembrar datos ficticios. El seed hace TRUNCATE de todas las tablas
+#    antes de insertar (UUIDs fijos, idempotente), así que cada despliegue de la demo
+#    la deja en su estado canónico y se lleva por delante lo que hayan tocado los
+#    visitantes. Eso es deseable en una demo pública, pero es destructivo: por eso
+#    sólo corre en `demo`, nunca en prod ni en dev.
+if [ "$ENV" = "demo" ]; then
+    echo "🌱 Sembrando la demo (esto BORRA lo que haya en la BD de demo)..."
+    docker compose --env-file "$ENV_DIR/.env.$ENV" -f "$SCRIPT_DIR/control-tower.docker-compose.$ENV.yml" \
+        exec -T worker pnpm --filter @ct/db seed
+    echo "   ⚠ El seed crea el usuario owner@example.com pero NO su credencial en"
+    echo "     'accounts', así que todavía no se puede iniciar sesión. Crea la cuenta"
+    echo "     una vez por el registro bootstrap y NO vuelvas a sembrar, o añade la"
+    echo "     credencial al seed para que el reset sea repetible."
+fi
+
 echo "✅ control-tower-$ENV desplegado. Health: puerto ${CONTROL_TOWER_APP_EPORT}/api/health"
