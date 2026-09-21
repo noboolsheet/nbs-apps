@@ -2,7 +2,7 @@ name: control-tower-ci
 
 on:
   push:
-    branches: [prod, control-tower-mvp]
+    branches: [prod]
     paths:
       - 'apps/control-tower/**'
       - '.github/workflows/control-tower-ci.yml'
