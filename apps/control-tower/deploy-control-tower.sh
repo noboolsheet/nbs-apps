@@ -102,13 +102,18 @@ fi
 #    visitantes. Eso es deseable en una demo pública, pero es destructivo: por eso
 #    sólo corre en `demo`, nunca en prod ni en dev.
 if [ "$ENV" = "demo" ]; then
+    # SEED_DEMO_PASSWORD (en .env.demo) hace que el seed cree también la credencial de
+    # owner@example.com. Sin ella la demo queda sin forma de entrar: el registro es
+    # bootstrap-only y el usuario sembrado ya ocupa ese hueco.
+    if [ -z "${SEED_DEMO_PASSWORD:-}" ]; then
+        echo "❌ Falta SEED_DEMO_PASSWORD en $SCRIPT_DIR/.env.demo."
+        echo "   Sin ella nadie podría iniciar sesión en la demo. Mínimo 8 caracteres."
+        exit 1
+    fi
     echo "🌱 Sembrando la demo (esto BORRA lo que haya en la BD de demo)..."
     docker compose --env-file "$ENV_DIR/.env.$ENV" -f "$SCRIPT_DIR/control-tower.docker-compose.$ENV.yml" \
-        exec -T worker pnpm --filter @ct/db seed
-    echo "   ⚠ El seed crea el usuario owner@example.com pero NO su credencial en"
-    echo "     'accounts', así que todavía no se puede iniciar sesión. Crea la cuenta"
-    echo "     una vez por el registro bootstrap y NO vuelvas a sembrar, o añade la"
-    echo "     credencial al seed para que el reset sea repetible."
+        exec -T -e SEED_DEMO_PASSWORD="$SEED_DEMO_PASSWORD" worker pnpm --filter @ct/db seed
+    echo "   Acceso a la demo: owner@example.com / (SEED_DEMO_PASSWORD)"
 fi
 
 echo "✅ control-tower-$ENV desplegado. Health: puerto ${CONTROL_TOWER_APP_EPORT}/api/health"

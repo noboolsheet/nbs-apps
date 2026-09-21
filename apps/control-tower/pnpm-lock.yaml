@@ -138,6 +138,9 @@ importers:
 
   packages/db:
     dependencies:
+      '@better-auth/utils':
+        specifier: ^0.4.2
+        version: 0.4.2
       '@ct/domain':
         specifier: workspace:*
         version: link:../domain

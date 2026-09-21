@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm';
+import { hashPassword } from '@better-auth/utils/password';
 import { getDb, getSql, closeDb } from './client';
 import * as s from './schema/index';
 import { logger } from '@ct/shared';
@@ -9,6 +10,15 @@ import { logger } from '@ct/shared';
  * 1 org · 1 user + membership · 1 strategic area · 1 goal · 3 capabilities · 2 services
  * (+ service_capabilities) · 2 clients · 1 contact · 1 opportunity · 3 projects · 1 phase
  * · 5 tasks · 1 deliverable · 2 decisions · 3 knowledge items · 2 assets · 2 portfolio items.
+ *
+ * CREDENCIAL: por defecto el usuario se crea SIN forma de iniciar sesión, que es lo correcto
+ * en desarrollo (te registras por la app) y evita que un seed lleve una contraseña conocida
+ * a una base que no toca. Si se define SEED_DEMO_PASSWORD, además se crea su fila en
+ * `accounts` y entonces sí se puede entrar — es lo que necesita la demo pública, donde el
+ * registro está cerrado (bootstrap-only) y el seed borra cualquier cuenta creada a mano.
+ *
+ * El hash lo produce `@better-auth/utils/password`, la misma función que llama Better Auth,
+ * así que el formato coincide aunque cambien de algoritmo. No replicar el hash a mano.
  */
 
 const ID = {
@@ -97,6 +107,25 @@ async function main(): Promise<void> {
   await db
     .insert(s.organizationMembers)
     .values({ organizationId: ID.org, userId: ID.user, role: 'OWNER' });
+
+  // Credencial del usuario sembrado. Sólo si se pide explícitamente: sin la variable, el
+  // seed se comporta exactamente como antes.
+  const demoPassword = process.env.SEED_DEMO_PASSWORD;
+  if (demoPassword) {
+    if (demoPassword.length < 8) {
+      // Mismo mínimo que `emailAndPassword.minPasswordLength` en la config de Better Auth:
+      // si no, el alta pasa pero el formulario de login rechaza la contraseña.
+      throw new Error('SEED_DEMO_PASSWORD debe tener al menos 8 caracteres');
+    }
+    await db.insert(s.accounts).values({
+      // Para el proveedor 'credential', Better Auth espera accountId = id del usuario.
+      accountId: ID.user,
+      providerId: 'credential',
+      userId: ID.user,
+      password: await hashPassword(demoPassword),
+    });
+    log.info('seed: credencial creada para owner@example.com');
+  }
 
   await db
     .insert(s.strategicAreas)

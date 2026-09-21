@@ -82,8 +82,14 @@ ficticia determinista. Cada despliegue deja la demo en su estado canónico y bor
 lo que hayan tocado los visitantes — que es lo que se quiere en una demo pública,
 pero conviene saberlo.
 
-Pendiente: el seed crea `owner@example.com` sin credencial en `accounts`, así que
-todavía no hay con qué iniciar sesión. Ver la nota en `apps/control-tower/.env.example`.
+El acceso a la demo sale de `SEED_DEMO_PASSWORD`, en `apps/control-tower/.env.demo`:
+con ella el seed crea la credencial de `owner@example.com` usando la misma función
+de hash que Better Auth. Es obligatoria en el perfil `demo` — sin ella nadie podría
+entrar, porque el registro es bootstrap-only y el usuario sembrado ya ocupa ese
+hueco. En `dev` y `prod` no se define: allí el seed no crea credenciales, como antes.
+
+Esa contraseña es pública de facto (la enseñas a quien vea la demo): no la
+reutilices en ningún otro sitio.
 
 ## Desarrollo local de control-tower
 
