@@ -13,7 +13,7 @@
 # Uso:  ./reset-demo.sh          # pide confirmación
 #       ./reset-demo.sh --si     # sin preguntar (para el temporizador)
 #
-# Semanal con systemd: ver ./systemd/ y el README de nbs-apps.
+# Semanal con cron: ver ./cron/nbs-cv-creator-reset y el README de nbs-apps.
 
 set -euo pipefail
 
@@ -21,8 +21,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_DIR="$SCRIPT_DIR/../../envs"
 
 # A mano se corre como tu usuario y hace falta sudo para borrar el bind-mount;
-# desde el temporizador de systemd ya se corre como root y sudo sobraría (y en un
-# entorno sin sudo instalado, fallaría).
+# desde cron ya se corre como root y sudo sobraría (y donde no esté instalado,
+# fallaría).
 SUDO=""; [[ $EUID -ne 0 ]] && SUDO="sudo"
 
 set -a; source "$ENV_DIR/.env.demo"; set +a

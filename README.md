@@ -137,9 +137,9 @@ Tres cosas que hacen fallar un cron en silencio y que este fichero ya evita:
   puede no encontrarse.
 - **Permisos.** Tiene que ser de `root:root` y modo 644, o cron lo descarta.
 
-> A diferencia de un timer de systemd, **cron no recupera una ejecución perdida**:
-> si el servidor está apagado el domingo a las 4:00, esa semana no se vacía y hay
-> que esperar a la siguiente (o lanzarlo a mano).
+> **cron no recupera una ejecución perdida**: si el servidor está apagado el
+> domingo a las 4:00, esa semana no se vacía y hay que esperar a la siguiente (o
+> lanzarlo a mano).
 
 Pruébalo a mano antes de dejarlo automático y comprueba que la demo vuelve a
 levantar y deja registrarse. Un vaciado que rompe la demo cada domingo de
