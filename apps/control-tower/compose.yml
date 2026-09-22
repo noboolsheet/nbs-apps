@@ -1,19 +1,31 @@
 # Control Tower — orquestación de desarrollo local (self-contained).
-# `docker compose up` levanta db + web + worker. Para la Pi (infra compartida del
-# monorepo) usar control-tower.docker-compose.{dev,prod}.yml + deploy-control-tower.sh.
+# `docker compose up` levanta db + web + worker. Para el servidor (infra compartida
+# del monorepo) usar control-tower.docker-compose.{dev,prod}.yml + deploy-control-tower.sh.
+#
+# Éste es el ÚNICO Postgres que queda fuera de nbs-db, el cluster compartido del
+# servidor, y es a propósito: este fichero existe para poder levantar la app
+# entera con un solo comando sin depender del repo nbs-infra, y los tests de
+# integración apuntan a localhost:5432. En el servidor NO se usa (ver CLAUDE.md).
+# Si prefieres un único Postgres también en local, usa el perfil dev:
+#   nbs-infra/postgres/deploy-postgres.sh dev   (nbs-db.dev, en 127.0.0.1:5430)
+#   ./deploy-control-tower.sh dev
 name: control-tower-dev
 
 services:
   db:
-    image: postgres:18
+    # Pineada por minor, como el resto del monorepo: un `up --build` no debe
+    # cambiar de versión sin que se note. Misma versión que nbs-db.
+    image: postgres:18.3
     container_name: control-tower-db-dev
     restart: unless-stopped
     environment:
       POSTGRES_USER: control_tower
       POSTGRES_PASSWORD: control_tower
       POSTGRES_DB: control_tower
+    # Sólo loopback: sin la interfaz explícita, Docker publica en 0.0.0.0 y la
+    # base de datos de desarrollo queda visible para toda la red del café.
     ports:
-      - '5432:5432'
+      - '127.0.0.1:5432:5432'
     volumes:
       - ct_pgdata_dev:/var/lib/postgresql
     healthcheck:

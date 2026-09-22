@@ -107,19 +107,25 @@ Los **secretos** (API keys, tokens, `GOOGLE_SA_KEY_B64`, `GCAL_CALENDAR_ID`) sig
 configuración. Alternativa: migrar la DB local con `pg_dump`/`restore` (trae integraciones + configuration + datos).
 
 ## Backups y restauración (old_9 §28 — "un backup nunca restaurado no cuenta")
+En el servidor **la base ya no es de control-tower**: la database `control_tower`
+vive en `nbs-db`, el único cluster Postgres del servidor (repo `nbs-infra`,
+carpeta `postgres/`). El backup diario de TODAS las databases lo hace
+`nbs-infra/scripts/backup.sh`; lo de aquí es para copias puntuales.
+
 ```sh
-# Backup manual (prod): apunta al contenedor y dir de datos de prod
-DB_CONTAINER=control-tower-db.prod BACKUP_DIR=/opt/noboolsheet/control-tower-backups \
-  POSTGRES_USER=<user> POSTGRES_DB=<db> ./scripts/backup.sh
+# Backup manual (prod), contra el cluster compartido:
+DB_CONTAINER=nbs-db.prod DB_EXEC_USER=postgres POSTGRES_USER=postgres \
+  POSTGRES_DB=control_tower BACKUP_DIR=/opt/noboolsheet/control-tower-backups \
+  ./scripts/backup.sh
 
-# Programa un backup diario (cron del host):
-#   0 3 * * *  cd /ruta/apps/control-tower && DB_CONTAINER=control-tower-db.prod BACKUP_DIR=/opt/... ./scripts/backup.sh
-
-# Prueba de restauración (a una base NUEVA, sin tocar prod) — hazla periódicamente:
-DB_CONTAINER=control-tower-db.prod ./scripts/restore.sh <backup.sql.gz>
+# Prueba de restauración (a una base NUEVA, sin tocar prod) — hazla periódicamente.
+# Crear una database exige el superusuario: el rol `control_tower` sólo es
+# propietario de la suya.
+DB_CONTAINER=nbs-db.prod DB_EXEC_USER=postgres POSTGRES_USER=postgres \
+  ./scripts/restore.sh <backup.sql.gz>
 ```
 El backup incluye `--clean --if-exists`; el restore por defecto crea `control_tower_restore` para no pisar prod.
-**Regla:** guarda una copia de los backups fuera de la Pi.
+**Regla:** guarda una copia de los backups fuera del servidor.
 
 ## Recuperación ante desastre
 Reconstruible desde: **Git (código) + apps/control-tower/.env (config) + último backup de PostgreSQL**.

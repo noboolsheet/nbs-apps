@@ -170,12 +170,20 @@ DB de dev. Añade `DATABASE_URL=...` delante del comando.
 ## Docker / datos
 
 - **Local** (`compose.yml`, `docker compose up`): `control-tower-{web,worker,db}-dev`. web → `localhost:4270`,
-  Postgres → `localhost:5432` (user/pass/db = `control_tower`). Los **datos persisten** en el volumen nombrado
+  Postgres → `127.0.0.1:5432` (user/pass/db = `control_tower`, imagen `postgres:18.3`). Es el **único** Postgres que
+  queda fuera de `nbs-db`, a propósito: existe para levantar la app entera sin depender del repo `nbs-infra`, y los
+  tests de integración apuntan a `localhost:5432`. **No corre en el servidor.** Los **datos persisten** en el volumen nombrado
   `ct_pgdata_dev` (Postgres 18: `PGDATA=/var/lib/postgresql/18/docker`, dentro del montaje). Sólo se borran con
   `docker compose down -v`.
-- **Pi** (`control-tower.docker-compose.{dev,prod}.yml` + `deploy-control-tower.sh <dev|prod>`): la data vive en el
-  bind-mount `${CONTROL_TOWER_DATA_DIR}`; el deploy corre las migraciones en el worker. Puertos 4270/4272, ruta Caddy
-  `control-tower.noboolsheet.local`. Migrar local→Pi = `pg_dump`/restore (los volúmenes son por-máquina, no se copian solos).
+- **Servidor** (`control-tower.docker-compose.{dev,prod,demo}.yml` + `deploy-control-tower.sh <dev|prod|demo>`):
+  **control-tower ya NO lleva Postgres propio**. Su database `control_tower` vive en **`nbs-db`**, el único cluster
+  del servidor (repo `nbs-infra`, carpeta `postgres/`, Postgres 18.3 + pgvector), con el rol `control_tower` como
+  propietario y sin acceso a las databases de n8n/Twenty/Zammad. El compose sólo levanta `web` + `worker`, en la red
+  `noboolsheet_db_<perfil>` además de `noboolsheet_network`. `nbs-db` se despliega **antes**
+  (`nbs-infra/postgres/deploy-postgres.sh <perfil>`) y `deploy-control-tower.sh` aborta si no está healthy —
+  `depends_on` no cruza proyectos de Compose. El deploy sigue corriendo las migraciones en el worker.
+  Puertos 4270/4272/4274, ruta Caddy `control-tower.noboolsheet.local`. Migrar local→servidor = `pg_dump` +
+  restore dentro de la database `control_tower` de `nbs-db`.
 
 ### Imágenes horneadas y hot-reload local
 Las imágenes son **horneadas** (self-contained, inmutables) — correcto y **obligatorio en la Pi**. En **local**,

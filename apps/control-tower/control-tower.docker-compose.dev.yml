@@ -33,12 +33,13 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=${CONTROL_TOWER_APP_IPORT}
-      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DOCKER_CONTROL_TOWER_DB_DDNS}.${DOCKER_PROFILE}:5432/${POSTGRES_DB}
-    depends_on:
-      db:
-        condition: service_healthy
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DOCKER_NBS_DB_DDNS}.${DOCKER_PROFILE}:5432/${POSTGRES_DB}
+    # Sin depends_on de base de datos: nbs-db (el Postgres compartido) lo
+    # despliega otro compose, y `depends_on` no cruza proyectos. El orden lo
+    # garantiza deploy-control-tower.sh, que espera a que nbs-db este healthy.
     networks:
       - custom_net_ref
+      - db_net_ref
 
   worker:
     container_name: ${DOCKER_CONTROL_TOWER_WORKER_DDNS}.${DOCKER_PROFILE}
@@ -65,49 +66,20 @@ services:
       - ./.env.${DOCKER_PROFILE}
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DOCKER_CONTROL_TOWER_DB_DDNS}.${DOCKER_PROFILE}:5432/${POSTGRES_DB}
-    depends_on:
-      db:
-        condition: service_healthy
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DOCKER_NBS_DB_DDNS}.${DOCKER_PROFILE}:5432/${POSTGRES_DB}
+    # Sin depends_on de base de datos: nbs-db (el Postgres compartido) lo
+    # despliega otro compose, y `depends_on` no cruza proyectos. El orden lo
+    # garantiza deploy-control-tower.sh, que espera a que nbs-db este healthy.
     networks:
       - custom_net_ref
-
-  db:
-    image: postgres:18
-    container_name: ${DOCKER_CONTROL_TOWER_DB_DDNS}.${DOCKER_PROFILE}
-    restart: unless-stopped
-    # Techo de memoria (F-31). Valores medidos en local con ~2x de holgura
-    # (db: 72 MB en reposo); ajustables desde el .env del perfil.
-    # Requiere que el kernel del host tenga activo el cgroup de memoria: si no,
-    # Docker avisa, DESCARTA el límite y arranca sin techo. Comprobar con:
-    #   grep memory /sys/fs/cgroup/cgroup.controllers
-    # Contexto completo y la batalla con Raspberry Pi OS: docs/FINDINGS_AND_DEFERRED.md § F-31.
-    mem_limit: ${CONTROL_TOWER_MEM_DB:-512m}
-    # Rotación del log de Docker: sin esto el json-file crece SIN LÍMITE y acaba llenando el disco del servidor
-    # (el worker escribe en cada tick). 10 MB × 3 ficheros = 30 MB como mucho por servicio.
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-    volumes:
-      - ct_pgdata:/var/lib/postgresql
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - custom_net_ref
-
-volumes:
-  ct_pgdata:
+      - db_net_ref
 
 networks:
   custom_net_ref:
     name: ${DOCKER_NETWORK}
+    external: true
+  # Red dedicada de base de datos: la crea nbs-infra/postgres/deploy-postgres.sh.
+  # Es la unica via por la que web y worker llegan a nbs-db.
+  db_net_ref:
+    name: ${DOCKER_DB_NETWORK}
     external: true

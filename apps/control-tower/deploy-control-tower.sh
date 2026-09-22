@@ -35,15 +35,15 @@ set -a
 source "$SCRIPT_DIR/.env.$ENV"
 set +a
 
-# 3b. Avisos de secretos débiles. NO abortan el deploy a propósito: rotar la contraseña de Postgres con la
-#     base ya creada exige un `ALTER USER` además de cambiar el .env, así que abortar dejaría al owner sin
-#     poder desplegar hasta hacer una migración de credenciales a destiempo. Avisar es lo útil.
+# 3b. Avisos de secretos débiles. NO abortan el deploy a propósito: avisar es lo útil.
 if [ "${POSTGRES_PASSWORD:-}" = "control_tower" ]; then
     echo "⚠️  POSTGRES_PASSWORD sigue siendo la de por defecto ('control_tower')."
-    echo "    En prod la red Docker aísla el 5432, pero es un endurecimiento trivial. Para rotarla:"
-    echo "      1) docker exec -it <db> psql -U control_tower -c \"ALTER USER control_tower WITH PASSWORD '<nueva>';\""
-    echo "      2) actualiza POSTGRES_PASSWORD en $SCRIPT_DIR/.env"
-    echo "      3) vuelve a desplegar (los servicios se recrean y toman la nueva)"
+    echo "    Ahora la base vive en nbs-db, un cluster COMPARTIDO con n8n, Twenty y Zammad:"
+    echo "    una contraseña por defecto aquí es una puerta abierta a ese cluster. Para rotarla:"
+    echo "      1) pon la nueva en nbs-infra/postgres/.env  (CONTROL_TOWER_DB_PASSWORD)"
+    echo "      2) pon la MISMA en $SCRIPT_DIR/.env.$ENV   (POSTGRES_PASSWORD)"
+    echo "      3) nbs-infra/postgres/scripts/create-databases.sh $ENV   (aplica el ALTER ROLE)"
+    echo "      4) vuelve a desplegar (los servicios se recrean y toman la nueva)"
 fi
 if [ -z "${BETTER_AUTH_SECRET:-}" ] || [ ${#BETTER_AUTH_SECRET} -lt 32 ]; then
     echo "❌ Error: BETTER_AUTH_SECRET falta o tiene menos de 32 caracteres."
@@ -52,18 +52,33 @@ if [ -z "${BETTER_AUTH_SECRET:-}" ] || [ ${#BETTER_AUTH_SECRET} -lt 32 ]; then
     exit 1
 fi
 
-# 4. Persistencia de PostgreSQL (control-tower-db).
-#    prod: bind-mount a $CONTROL_TOWER_DATA_DIR (/opt/noboolsheet/...), hay que crear el dir.
-#    dev:  volumen Docker con nombre (lo crea Docker solo) — evita el lio de File Sharing
-#          de Docker Desktop en Mac con rutas /opt.
-if [ "$ENV" != "dev" ]; then
-    if [ -z "${CONTROL_TOWER_DATA_DIR:-}" ]; then
-        echo "❌ Error: CONTROL_TOWER_DATA_DIR is not set in .env.$ENV"
-        exit 1
-    fi
-    echo "📁 Ensuring data dir at $CONTROL_TOWER_DATA_DIR..."
-    sudo mkdir -p "$CONTROL_TOWER_DATA_DIR"
+# 4. Base de datos: control-tower ya NO lleva Postgres propio. Su database
+#    `control_tower` vive en nbs-db, el cluster compartido del servidor, cuyos
+#    datos persisten en NBS_DB_DATA_DIR (lo gestiona nbs-infra/postgres/).
+# --- Esperar a nbs-db, el Postgres compartido -------------------------------
+# La base de datos vive en OTRO compose (nbs-infra/postgres/), asi que
+# `depends_on` no llega hasta aqui: `depends_on` no cruza proyectos de Compose.
+# La espera la hace el deploy, que es quien si conoce a los dos.
+NBS_DB_CONTENEDOR="${DOCKER_NBS_DB_DDNS:-nbs-db}.${ENV}"
+if ! docker ps --format '{{.Names}}' | grep -qx "$NBS_DB_CONTENEDOR"; then
+    echo "❌ Error: $NBS_DB_CONTENEDOR no esta corriendo."
+    echo "   Es el Postgres compartido del servidor y se despliega ANTES que esto:"
+    echo "     nbs-infra/postgres/deploy-postgres.sh $ENV"
+    exit 1
 fi
+echo -n "⏳ Esperando a que $NBS_DB_CONTENEDOR este healthy"
+for _ in $(seq 1 30); do
+    ESTADO_DB=$(docker inspect -f '{{.State.Health.Status}}' "$NBS_DB_CONTENEDOR" 2>/dev/null || echo "?")
+    [ "$ESTADO_DB" = "healthy" ] && break
+    echo -n "."
+    sleep 2
+done
+if [ "${ESTADO_DB:-}" != "healthy" ]; then
+    echo " ✗"
+    echo "❌ $NBS_DB_CONTENEDOR no llego a healthy. Revisa: docker logs $NBS_DB_CONTENEDOR"
+    exit 1
+fi
+echo " ✓"
 
 # 5. Create Network if it doesn't exist
 if ! docker network inspect "$DOCKER_NETWORK" >/dev/null 2>&1; then
@@ -73,7 +88,7 @@ else
     echo "🌐 Shared network $DOCKER_NETWORK already exists."
 fi
 
-# 6. Deploy the Stack (web + worker + control-tower-db)
+# 6. Deploy the Stack (web + worker; la base de datos es nbs-db)
 echo "🚀 Starting control-tower-$ENV..."
 docker compose --env-file "$ENV_DIR/.env.$ENV" -f "$SCRIPT_DIR/control-tower.docker-compose.$ENV.yml" up -d --build
 
@@ -88,7 +103,7 @@ for attempt in 1 2 3 4; do
         migrate_ok=true
         break
     fi
-    echo "… migración: intento $attempt falló (worker/db calentando); reintento en 5s"
+    echo "… migración: intento $attempt falló (el worker aún se calienta); reintento en 5s"
     sleep 5
 done
 if [ "$migrate_ok" != "true" ]; then
