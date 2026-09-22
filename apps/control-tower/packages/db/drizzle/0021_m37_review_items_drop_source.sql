@@ -1,0 +1,1 @@
+ALTER TABLE "review_items" DROP COLUMN "source";

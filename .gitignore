@@ -29,8 +29,24 @@ coverage/
 # Datos y volcados — jamás al repo
 backups/
 data/
-*.sql
 *.sql.gz
+*.dump
+
+# Volcados sueltos.
+#
+# ⚠ OJO con este patrón: se tragó las 24 migraciones de Drizzle de control-tower.
+#   Sólo llegaron a git los meta/*.json, así que el repo tenía un _journal.json
+#   listando 24 migraciones y ni un solo .sql. En el portátil no se nota (los
+#   ficheros están en disco, sólo que sin trackear); explota al clonar en limpio
+#   y desplegar:
+#     migration failed: No file .../drizzle/0000_m02_mvp_schema.sql found
+#
+#   Las migraciones SON código fuente: son lo único que reconstruye el esquema.
+#   Por eso van las excepciones de abajo. Si añades una app con migraciones en
+#   otra carpeta, añádela aquí.
+*.sql
+!**/drizzle/*.sql
+!**/migrations/*.sql
 
 # Material fuente interno (originales en ../_assets/)
 imagen-sources/

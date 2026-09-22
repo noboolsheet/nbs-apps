@@ -1,0 +1,1 @@
+ALTER TABLE "projects" ADD COLUMN "personal" boolean DEFAULT false NOT NULL;

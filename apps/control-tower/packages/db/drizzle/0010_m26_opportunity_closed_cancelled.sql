@@ -1,0 +1,2 @@
+ALTER TABLE "opportunities" DROP CONSTRAINT "opportunities_stage_check";--> statement-breakpoint
+ALTER TABLE "opportunities" ADD CONSTRAINT "opportunities_stage_check" CHECK ("opportunities"."stage" IN ('LEAD', 'CONTACTED', 'QUALIFIED', 'MEETING', 'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST', 'CANCELLED', 'CLOSED'));
