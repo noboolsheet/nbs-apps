@@ -91,6 +91,19 @@ hueco. En `dev` y `prod` no se define: allí el seed no crea credenciales, como 
 Esa contraseña es pública de facto (la enseñas a quien vea la demo): no la
 reutilices en ningún otro sitio.
 
+La demo de **cv-creator** va al revés: el registro está **abierto**, porque todos
+sus endpoints exigen sesión y con el registro cerrado un visitante sólo vería la
+pantalla de login. A cambio acumula cuentas y CVs de desconocidos, con datos
+personales dentro, así que hay que vaciarla cada cierto tiempo:
+
+```sh
+./apps/cv-creator/reset-demo.sh          # pide confirmación
+./apps/cv-creator/reset-demo.sh --si     # para un temporizador semanal
+```
+
+Sólo toca el directorio de datos del perfil demo; el de prod es otro y se niega a
+ejecutarse si la ruta no lleva «demo».
+
 ## Desarrollo local de control-tower
 
 Aparte del patrón de arriba, `control-tower` trae `compose.yml` +
