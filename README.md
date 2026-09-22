@@ -104,30 +104,47 @@ personales dentro, así que hay que vaciarla cada cierto tiempo:
 Sólo toca el directorio de datos del perfil demo; el de prod es otro y se niega a
 ejecutarse si la ruta no lleva «demo».
 
-### Dejarlo semanal
+### Dejarlo semanal (cron)
+
+Fedora no siempre trae cron instalado:
 
 ```sh
-sudo cp apps/cv-creator/systemd/nbs-cv-creator-reset.* /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now nbs-cv-creator-reset.timer
+sudo dnf install cronie
+sudo systemctl enable --now crond
 ```
 
-Domingos a las 4:00, con `Persistent=true` para que una semana con la máquina
-apagada no se salte el vaciado. Comprobar:
+Luego:
 
 ```sh
-systemctl list-timers nbs-cv-creator-reset.timer   # cuándo toca
-systemctl start nbs-cv-creator-reset.service       # ejecutarlo YA, para probar
-journalctl -u nbs-cv-creator-reset -n 30           # cómo fue
+sudo cp apps/cv-creator/cron/nbs-cv-creator-reset /etc/cron.d/nbs-cv-creator-reset
+sudo chown root:root /etc/cron.d/nbs-cv-creator-reset
+sudo chmod 644       /etc/cron.d/nbs-cv-creator-reset
 ```
 
-> Antes de dejarlo automático, córrelo una vez a mano y comprueba que la demo
-> vuelve a levantar y deja registrarse. Un vaciado que rompe la demo cada domingo
-> de madrugada es peor que no vaciarla.
+Domingos a las 4:00. La salida va al journal:
 
-La unidad corre como `root` porque el directorio es un bind-mount que escribe el
-contenedor; el script detecta que ya es root y no invoca `sudo`. Ajusta la ruta
-del `ExecStart` si clonaste los repos fuera de `/home/vibox`.
+```sh
+journalctl -t nbs-cv-creator-reset          # cómo fue la última vez
+grep CRON /var/log/cron | tail              # que cron lo lanzó siquiera
+```
+
+Tres cosas que hacen fallar un cron en silencio y que este fichero ya evita:
+
+- **El nombre no lleva extensión.** cronie ignora los ficheros de `/etc/cron.d`
+  cuyo nombre tenga un punto, así que `…reset.cron` no se ejecutaría nunca sin
+  avisar de nada.
+- **`PATH` explícito.** cron arranca con un entorno mínimo; sin esto, `docker`
+  puede no encontrarse.
+- **Permisos.** Tiene que ser de `root:root` y modo 644, o cron lo descarta.
+
+> A diferencia de un timer de systemd, **cron no recupera una ejecución perdida**:
+> si el servidor está apagado el domingo a las 4:00, esa semana no se vacía y hay
+> que esperar a la siguiente (o lanzarlo a mano).
+
+Pruébalo a mano antes de dejarlo automático y comprueba que la demo vuelve a
+levantar y deja registrarse. Un vaciado que rompe la demo cada domingo de
+madrugada es peor que no vaciarla.
+
 
 ## Desarrollo local de control-tower
 

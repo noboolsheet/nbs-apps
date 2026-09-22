@@ -1,0 +1,22 @@
+# Vaciado semanal de la demo publica de cv-creator.
+#
+# Instalar:  sudo cp cron/nbs-cv-creator-reset /etc/cron.d/nbs-cv-creator-reset
+#            sudo chown root:root /etc/cron.d/nbs-cv-creator-reset
+#            sudo chmod 644       /etc/cron.d/nbs-cv-creator-reset
+#
+# El nombre del fichero NO lleva extension a proposito: cronie ignora los
+# ficheros de /etc/cron.d cuyo nombre tenga un punto, asi que "…reset.cron"
+# no se ejecutaria nunca y sin decir nada.
+#
+# Ajusta la ruta del script si clonaste los repos fuera de /home/vibox.
+
+# cron arranca con un entorno minimo: sin esto, 'docker' puede no encontrarse.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# min hora dia mes dia-semana  usuario  comando
+#             domingo (0) a las 04:00. Corre como root porque el directorio de
+#             datos es un bind-mount que escribe el contenedor.
+#             La salida se manda al journal en vez de por correo: se lee con
+#             journalctl -t nbs-cv-creator-reset
+0 4 * * 0 root /home/vibox/nbs-apps/apps/cv-creator/reset-demo.sh --si 2>&1 | /usr/bin/logger -t nbs-cv-creator-reset
