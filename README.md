@@ -98,11 +98,36 @@ personales dentro, así que hay que vaciarla cada cierto tiempo:
 
 ```sh
 ./apps/cv-creator/reset-demo.sh          # pide confirmación
-./apps/cv-creator/reset-demo.sh --si     # para un temporizador semanal
+./apps/cv-creator/reset-demo.sh --si     # sin preguntar
 ```
 
 Sólo toca el directorio de datos del perfil demo; el de prod es otro y se niega a
 ejecutarse si la ruta no lleva «demo».
+
+### Dejarlo semanal
+
+```sh
+sudo cp apps/cv-creator/systemd/nbs-cv-creator-reset.* /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now nbs-cv-creator-reset.timer
+```
+
+Domingos a las 4:00, con `Persistent=true` para que una semana con la máquina
+apagada no se salte el vaciado. Comprobar:
+
+```sh
+systemctl list-timers nbs-cv-creator-reset.timer   # cuándo toca
+systemctl start nbs-cv-creator-reset.service       # ejecutarlo YA, para probar
+journalctl -u nbs-cv-creator-reset -n 30           # cómo fue
+```
+
+> Antes de dejarlo automático, córrelo una vez a mano y comprueba que la demo
+> vuelve a levantar y deja registrarse. Un vaciado que rompe la demo cada domingo
+> de madrugada es peor que no vaciarla.
+
+La unidad corre como `root` porque el directorio es un bind-mount que escribe el
+contenedor; el script detecta que ya es root y no invoca `sudo`. Ajusta la ruta
+del `ExecStart` si clonaste los repos fuera de `/home/vibox`.
 
 ## Desarrollo local de control-tower
 

@@ -1,0 +1,15 @@
+[Unit]
+Description=Vacía los datos de la demo publica de cv-creator
+# Sin Docker arriba el script no puede parar ni arrancar el contenedor.
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+# Como root: el directorio de datos es un bind-mount escrito por el contenedor,
+# que corre como root. El propio script detecta que ya es root y no invoca sudo.
+User=root
+# Ajusta la ruta si clonaste los repos en otro sitio.
+ExecStart=/home/vibox/nbs-apps/apps/cv-creator/reset-demo.sh --si
+StandardOutput=journal
+StandardError=journal
