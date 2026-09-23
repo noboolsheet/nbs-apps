@@ -48,6 +48,102 @@ export const es = {
   // El cierre de una oportunidad son sólo dos stages: ONBOARDED (ganada e incorporada) y LOST. CANCELLED/CLOSED
   // dejaron de existir en este enum (M39, alineado con Twenty); sus etiquetas siguen en el mapa para task/project.
 
+  // ── Contrato de datos del CRM de Twenty (handoff 2026-09-22) ──
+  // Códigos que POSEE Twenty; aquí sólo se traduce la etiqueta que se muestra. El valor guardado no se toca.
+  // Tipo de organización
+  'enum.BUSINESS': 'Empresa',
+  'enum.SCHOOL_EDUCATION': 'Centro educativo',
+  'enum.PUBLIC_BODY': 'Organismo público',
+  'enum.NONPROFIT_ASSOCIATION': 'Asociación sin ánimo de lucro',
+  'enum.FREELANCER_PROFESSIONAL': 'Autónomo o profesional',
+  // Roles de relación (empresa y persona; son multi-select)
+  'enum.COMMERCIAL_ACCOUNT': 'Cuenta comercial',
+  'enum.INDIVIDUAL_CLIENT': 'Cliente particular',
+  'enum.PARTNER': 'Socio',
+  'enum.SUPPLIER': 'Proveedor',
+  'enum.COLLABORATOR': 'Colaborador',
+  'enum.REFERRAL_SOURCE': 'Fuente de recomendación',
+  // Idioma preferido
+  'enum.IT': 'Italiano',
+  'enum.ES': 'Español',
+  'enum.EN': 'Inglés',
+  // Canal de contacto preferido
+  'enum.EMAIL': 'Correo',
+  'enum.PHONE': 'Teléfono',
+  'enum.WHATSAPP': 'WhatsApp',
+  'enum.LINKEDIN': 'LinkedIn',
+  // Tipo de servicio de la oportunidad
+  'enum.TRAINING': 'Formación',
+  'enum.CONSULTING': 'Consultoría',
+  'enum.CUSTOM_PRODUCT': 'Producto a medida',
+  'enum.HYBRID': 'Mixto',
+  'enum.TBD': 'Por definir',
+  // Origen del lead
+  'enum.REFERRAL': 'Recomendación',
+  'enum.INBOUND_WEB': 'Web',
+  'enum.SOCIAL_MEDIA': 'Redes sociales',
+  'enum.EVENT': 'Evento',
+  'enum.OUTBOUND': 'Prospección',
+  'enum.REPEAT_CLIENT': 'Cliente recurrente',
+  'enum.PLATFORM': 'Plataforma',
+  // Motivo de pérdida (se rellena en Twenty; Control Tower sólo lo lee)
+  'enum.NOT_A_FIT': 'No encaja',
+  'enum.NO_ACTUAL_NEED': 'Sin necesidad real',
+  'enum.OUTSIDE_CAPABILITIES': 'Fuera de nuestras capacidades',
+  'enum.NO_BUDGET': 'Sin presupuesto',
+  'enum.PRICE': 'Precio',
+  'enum.TIMING': 'Momento inadecuado',
+  'enum.NO_INTEREST': 'Sin interés',
+  'enum.NO_RESPONSE': 'Sin respuesta',
+  'enum.COMPETITOR': 'Se fue a la competencia',
+  'enum.DUPLICATE': 'Duplicada',
+  'enum.INVALID': 'No válida',
+  // A quién se factura (derivado, nunca almacenado)
+  'enum.ORGANIZATION': 'Organización',
+  'enum.INDIVIDUAL': 'Particular',
+  'enum.UNDETERMINED': 'Sin determinar',
+
+  // ── Motor del SOP CLI 001: puertas y resultados ──
+  'enum.GATE_1': 'Puerta 1',
+  'enum.GATE_2': 'Puerta 2',
+  'enum.GATE_3': 'Puerta 3',
+  'enum.GATE_4': 'Puerta 4',
+  'enum.GATE_5': 'Puerta 5',
+  'enum.GATE_6': 'Puerta 6',
+  'enum.GATE_7': 'Puerta 7',
+  'enum.GATE_8': 'Puerta 8',
+  'enum.GATE_9': 'Puerta 9',
+  'enum.GATE_10': 'Puerta 10',
+  'enum.PASS': 'Superada',
+  // Ojo: 'FAIL' (resultado de una puerta) es distinto de 'FAILED' (un envío que falló).
+  'enum.FAIL': 'No superada',
+  'enum.NOT_READY': 'Todavía no',
+  'enum.NOT_EVALUATED': 'Sin evaluar',
+  'enum.GO': 'Adelante',
+  'enum.CONDITIONAL_GO': 'Adelante con condiciones',
+  'enum.NEED_MORE_INFO': 'Falta información',
+  'enum.NO_GO': 'No seguir',
+  'enum.ACCEPTED': 'Aceptada',
+  'enum.CHANGE_REQUESTED': 'Cambios solicitados',
+  'enum.DEFERRED': 'Aplazada',
+  'enum.REJECTED': 'Rechazada',
+  'enum.REVISE': 'Revisar la propuesta',
+  'enum.REEVALUATE': 'Volver a evaluar',
+  'enum.PAUSE': 'Pausar',
+  'enum.MATERIAL_CHANGE': 'Cambio sustancial',
+  // Estado de una evaluación de puerta y de una petición de transición
+  'enum.RECORDED': 'Registrada',
+  'enum.VOIDED': 'Anulada',
+  'enum.CONFIRMED': 'Confirmada',
+  // Artefactos de Drive del SOP (Control Tower sólo guarda su enlace)
+  'enum.AP_001': 'AP 001 · Análisis preliminar',
+  'enum.RE_001': 'RE 001 · Acta de reunión exploratoria',
+  'enum.DP_001': 'DP 001 · Diagnóstico y evaluación',
+  'enum.PC_001': 'PC 001 · Propuesta comercial',
+  'enum.CONTRACT': 'Contrato',
+  'enum.HO_001': 'HO 001 · Traspaso e incorporación',
+  'enum.FINAL_SNAPSHOT': 'Cierre comercial',
+
   // Projects / tasks / deliverables
   'enum.PLANNED': 'Planificado',
   'enum.WAITING': 'En espera',

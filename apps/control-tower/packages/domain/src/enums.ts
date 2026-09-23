@@ -162,3 +162,104 @@ export const SECTOR_SUGGESTIONS = [
   'Finanzas',
   'Otro',
 ] as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Contrato de datos del CRM de Twenty (handoff 2026-09-22, §3.1 · §4.1 · §5.1).
+//
+// Twenty es el DUEÑO de estos valores: CT los proyecta en solo lectura y los valida contra estas
+// listas blancas antes de guardarlos. Un valor que no esté aquí NO se sustituye por `OTHER` ni por
+// ningún default — se registra como incidencia de reconciliación (el handoff lo prohíbe
+// explícitamente, y es la lección del fallback a LEAD del addendum de ADR-002).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Clasificación de la organización (Company). `Annual Revenue` está DESACTIVADO en Twenty: no se lee. */
+export const ORGANIZATION_TYPE = [
+  'BUSINESS',
+  'SCHOOL_EDUCATION',
+  'PUBLIC_BODY',
+  'NONPROFIT_ASSOCIATION',
+  'FREELANCER_PROFESSIONAL',
+  'OTHER',
+] as const;
+
+/**
+ * Roles de relación. Son MULTI-select: se preservan todos, nunca se reducen a uno (handoff §10).
+ * Company y Person tienen listas DISTINTAS a propósito: una persona puede ser `INDIVIDUAL_CLIENT`
+ * (y eso es lo que clasifica una oportunidad como individual), una empresa es `COMMERCIAL_ACCOUNT`.
+ */
+export const COMPANY_RELATIONSHIP_ROLE = [
+  'COMMERCIAL_ACCOUNT',
+  'PARTNER',
+  'SUPPLIER',
+  'COLLABORATOR',
+  'REFERRAL_SOURCE',
+  'OTHER',
+] as const;
+export const PERSON_RELATIONSHIP_ROLE = [
+  'INDIVIDUAL_CLIENT',
+  'PARTNER',
+  'SUPPLIER',
+  'COLLABORATOR',
+  'REFERRAL_SOURCE',
+  'OTHER',
+] as const;
+
+/** Idioma preferido de comunicación. Alimenta la generación de mensajes sin cambiar el valor guardado. */
+export const PREFERRED_LANGUAGE = ['IT', 'ES', 'EN', 'OTHER'] as const;
+
+/** Canal preferido. Sólo guía la elección cuando `doNotContact` es falso (handoff §10). */
+export const PREFERRED_CONTACT_CHANNEL = ['EMAIL', 'PHONE', 'WHATSAPP', 'LINKEDIN', 'OTHER'] as const;
+
+/** Categoría de servicio esperada. La posee Twenty: la evaluación de CT NO la sobrescribe (§11.4). */
+export const OPPORTUNITY_SERVICE_TYPE = ['TRAINING', 'CONSULTING', 'CUSTOM_PRODUCT', 'HYBRID', 'TBD'] as const;
+
+/** Cómo se originó la oportunidad. Campo nuevo: NO se reutiliza `opportunities.source` (texto libre sin CHECK). */
+export const OPPORTUNITY_LEAD_SOURCE = [
+  'REFERRAL',
+  'INBOUND_WEB',
+  'SOCIAL_MEDIA',
+  'LINKEDIN',
+  'EVENT',
+  'OUTBOUND',
+  'PARTNER',
+  'REPEAT_CLIENT',
+  'PLATFORM',
+  'OTHER',
+] as const;
+
+/**
+ * Motivo de pérdida. **Solo lectura en CT**: lo rellena el usuario en Twenty y CT lo observa. Es
+ * requisito para pasar a LOST y CT nunca lo escribe ni lo infiere (handoff §6.3 y §11.1).
+ */
+export const OPPORTUNITY_LOST_REASON = [
+  'NOT_A_FIT',
+  'NO_ACTUAL_NEED',
+  'OUTSIDE_CAPABILITIES',
+  'NO_BUDGET',
+  'PRICE',
+  'TIMING',
+  'NO_INTEREST',
+  'NO_RESPONSE',
+  'COMPETITOR',
+  'DUPLICATE',
+  'INVALID',
+  'OTHER',
+] as const;
+
+/**
+ * A quién se factura una oportunidad (handoff §2.2 y §7.1). Se DERIVA, nunca se almacena: sus dos
+ * insumos (la Company de la oportunidad y los roles del Point of Contact) los posee Twenty, y
+ * persistir la conclusión crearía un tercer valor sin dueño que CT no podría corregir.
+ * `UNDETERMINED` es lo que sustituye a inventar una Company de relleno, que el handoff prohíbe.
+ */
+export const BILLING_SUBJECT = ['ORGANIZATION', 'INDIVIDUAL', 'UNDETERMINED'] as const;
+
+export type OrganizationType = (typeof ORGANIZATION_TYPE)[number];
+export type CompanyRelationshipRole = (typeof COMPANY_RELATIONSHIP_ROLE)[number];
+export type PersonRelationshipRole = (typeof PERSON_RELATIONSHIP_ROLE)[number];
+export type PreferredLanguage = (typeof PREFERRED_LANGUAGE)[number];
+export type PreferredContactChannel = (typeof PREFERRED_CONTACT_CHANNEL)[number];
+export type OpportunityServiceType = (typeof OPPORTUNITY_SERVICE_TYPE)[number];
+export type OpportunityLeadSource = (typeof OPPORTUNITY_LEAD_SOURCE)[number];
+export type OpportunityLostReason = (typeof OPPORTUNITY_LOST_REASON)[number];
+export type BillingSubject = (typeof BILLING_SUBJECT)[number];

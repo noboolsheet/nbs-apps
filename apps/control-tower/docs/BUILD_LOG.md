@@ -5,6 +5,60 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-09-23 — Twenty: contrato de datos del CRM y motor del SOP (capa de dominio) 🚧
+
+Primer paso de la adaptación al **handoff de implementación de Twenty**
+(`_assets/control-tower/Control_Tower_Twenty_Implementation_Handoff.docx`), que reconfigura la
+frontera: **Twenty posee los registros comerciales y la identidad de facturación; Control Tower
+posee la ejecución del proceso** (puertas, criterios de salida, próximas acciones). Extiende a todo
+el CRM lo que ADR-008 hizo sólo con la oportunidad.
+
+Esta entrega es **sólo la capa de dominio** —pura, sin base de datos ni IO— porque es lo único que no
+depende de dos cosas que faltan: acceso al Twenty real y los once documentos del SOP CLI 001.
+
+**Qué entra** (`packages/domain/`):
+- `enums.ts` — nueve enums del contrato: `ORGANIZATION_TYPE`, `COMPANY_RELATIONSHIP_ROLE` y
+  `PERSON_RELATIONSHIP_ROLE` (listas distintas a propósito: sólo la persona tiene
+  `INDIVIDUAL_CLIENT`), `PREFERRED_LANGUAGE`, `PREFERRED_CONTACT_CHANNEL`,
+  `OPPORTUNITY_SERVICE_TYPE`, `OPPORTUNITY_LEAD_SOURCE`, `OPPORTUNITY_LOST_REASON` y
+  `BILLING_SUBJECT`. `Annual Revenue` queda **desactivado**: no se lee ni se escribe.
+- `crm-classification.ts` — organización vs particular (§2.2). Se **deriva, no se almacena**: sus dos
+  insumos los posee Twenty y persistir la conclusión crearía un tercer valor que CT no podría
+  corregir. `UNDETERMINED` es lo que sustituye a inventar una Company de relleno, que el handoff
+  prohíbe.
+- `billing-rules.ts` — Completitud Administrativa (§7.1) validando sobre **la entidad correcta**
+  (Company si es organización, Person si es particular). Reglas **por país y configurables, como
+  datos**: PEC y SDI son condicionales de Italia, no requisitos universales. Devuelve datos-que-faltan
+  estructurados, no un booleano, para que la interfaz pueda enlazar al registro de Twenty. Sin país
+  fiscal **nunca** se da por completo.
+- `contactability.ts` — `Do Not Contact` como supresión dura (§10), por encima del canal preferido.
+  Hoy CT no tiene outreach (HAB-1 sigue bloqueado), así que queda el guard listo y con test.
+- `sop/` — motor del SOP: `gates.ts` (10 puertas + resultados como unión, con el subconjunto que
+  admite cada una), `matrix.ts` (la tabla §11.3, que **devuelve un conjunto de destinos**, porque la
+  mitad de las filas dicen «permanece o vuelve a X»), `catalog.ts` (los criterios como **datos
+  versionados**, no como código) y `cli-001.ts`, el catálogo a la espera del SOP.
+
+**Decisiones del owner en esta sesión:** se **conserva `PREPARING_PROP`** (idéntico a Twenty; el
+vocabulario del SOP ya se resolvía en las etiquetas, que dicen «Preparando propuesta») · los
+artefactos de Drive se guardan **sólo como URL**, CT no escribe en Drive · los criterios de las
+puertas llegan con los documentos del SOP.
+
+**Dos cosas que salen gratis de la matriz y conviene no perder:** ON_HOLD **no es alcanzable desde
+LEAD ni QUALIFIED** (esperar una respuesta ahí es una Next Action, §11.1) sin necesidad de una regla
+aparte; y `ACCEPTED` va a `CONTRACTING`, **nunca** directo a `WON`. Ambas atadas con test.
+
+**Estado: 🚧 en curso.** Las diez puertas nacen en `PENDING_SOP` y el motor rechaza toda transición
+cuya puerta no esté activa (`SOP_GATE_NOT_CONFIGURED`); se activan **de una en una** según llegue
+cada documento, rellenando `cli-001.ts` — sin tocar la matriz ni los comandos.
+
+**Bloqueado por dos entregas externas:** (1) los **11 documentos del SOP CLI 001**; (2) **acceso al
+Twenty real** para resolver los identificadores de campo de su metadata — el handoff prohíbe
+explícitamente inferirlos, y además hace falta para saber cómo se llama `Lost Reason` allí, sin lo
+cual la transición a LOST no se puede implementar.
+
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
+Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
+
 > **⚑ DÓNDE NOS QUEDAMOS (2026-09-01, sesión 14b).** *(Estado revisado ítem por ítem contra el código: ver la cabecera
 > de `FINDINGS_AND_DEFERRED.md` para la lista agrupada de lo que sigue abierto.)* **Roadmap M01–M18 completo**, **auditoría técnica y de UI/UX
 > cerradas** y, en esta sesión, **vaciado el grueso del backlog de hallazgos**: A-1/A-2/A-3 (gaps de modelo, con
