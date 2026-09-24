@@ -35,6 +35,12 @@ export const externalIdentities = pgTable(
     internalId: uuid('internal_id').notNull(),
     metadata: jsonb('metadata'),
     lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
+    /**
+     * M40 — "el origen dejó de devolver este registro", puesto por la reconciliación de borrados
+     * (`reconcileMissing`). Columna propia y no una clave de `metadata` porque cada sync reescribe `metadata`
+     * entera con la URL de "Open external". Null = el origen lo sigue teniendo.
+     */
+    missingSince: timestamp('missing_since', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -130,6 +136,8 @@ export const syncRuns = pgTable(
     created: integer('created').notNull().default(0),
     updated: integer('updated').notNull().default(0),
     deleted: integer('deleted').notNull().default(0),
+    /** M40 — archivados por la reconciliación (ya no existen en el origen). Distinto de `deleted` (definitivo). */
+    archived: integer('archived').notNull().default(0),
     skippedCount: integer('skipped_count').notNull().default(0),
     /** Detalle de los registros saltados: [{ entity, externalId, error }], recortado a un máximo razonable. */
     skips: jsonb('skips'),

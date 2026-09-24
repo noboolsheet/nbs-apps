@@ -106,6 +106,48 @@ Twenty, GitHub y Calendar se configuran **solo con `.env`** (no usan `integratio
 Los **secretos** (API keys, tokens, `GOOGLE_SA_KEY_B64`, `GCAL_CALENDAR_ID`) siguen en `.env`, **nunca** en la
 configuración. Alternativa: migrar la DB local con `pg_dump`/`restore` (trae integraciones + configuration + datos).
 
+## ⚠ Mover Control Tower a otro servidor: `pg_dump` completo, NO repoblar desde los orígenes
+
+**La única forma correcta de migrar CT es restaurar el backup entero**, con la tabla `external_identities`
+incluida. Levantar CT con la base vacía y «volver a sincronizar» **duplica los datos por diseño**, y pasó de
+verdad en la migración Raspberry Pi → vibox (2026-09-24).
+
+Por qué: la idempotencia de los syncs vive en `external_identities`, que mapea
+`(proveedor, tipo, id externo) → id interno`. Es una tabla **local de CT**: Notion, GitHub y Twenty no saben
+nada de ella. Con esa tabla vacía y los orígenes llenos, el import de Notion crea un registro por página y el
+sync de GitHub crea **otro** por repo, sin que nada los cruce; y el push de vuelta crea páginas nuevas en
+Notion. Una copia más de todo por cada arranque en vacío.
+
+```sh
+# EN EL SERVIDOR VIEJO
+DB_CONTAINER=nbs-db.prod DB_EXEC_USER=postgres POSTGRES_USER=postgres \
+  POSTGRES_DB=control_tower BACKUP_DIR=/ruta ./scripts/backup.sh
+
+# EN EL NUEVO: primero nbs-db, luego el restore, y SÓLO DESPUÉS levantar CT y sincronizar
+nbs-infra/postgres/deploy-postgres.sh prod
+DB_CONTAINER=nbs-db.prod DB_EXEC_USER=postgres POSTGRES_USER=postgres \
+  TARGET_DB=control_tower ./scripts/restore.sh <backup.sql.gz>
+./deploy-control-tower.sh prod
+```
+
+Desde M40 el daño está acotado aunque se haga mal —GitHub **adopta** el asset que ya existe con su misma URL en
+vez de duplicarlo, y la reconciliación archiva lo que ya no está en el origen— pero eso es una red de seguridad,
+no el procedimiento. Si te encuentras la base ya duplicada, el arreglo es el script de limpieza:
+
+```sh
+# Informe, no escribe nada. Cuatro fases: identidades huérfanas · duplicados en CT · repos muertos · Notion.
+docker compose exec worker pnpm --filter @ct/worker exec tsx src/scripts/cleanup-duplicates.ts
+# …repásalo y entonces:
+docker compose exec worker pnpm --filter @ct/worker exec tsx src/scripts/cleanup-duplicates.ts --apply
+```
+
+**Haz un backup antes del `--apply`.** Lo que archiva se recupera desde Ajustes › Archivados; lo que borra son
+punteros de sync, que se regeneran en el siguiente sync.
+
+**Y nunca `pnpm --filter @ct/db seed` en un CT con datos reales:** hace `TRUNCATE` de todas las tablas,
+`external_identities` incluida — es decir, deja la base en el estado exacto que provoca el duplicado. El deploy
+sólo lo ejecuta en el perfil `demo`.
+
 ## Backups y restauración (old_9 §28 — "un backup nunca restaurado no cuenta")
 En el servidor **la base ya no es de control-tower**: la database `control_tower`
 vive en `nbs-db`, el único cluster Postgres del servidor (repo `nbs-infra`,

@@ -220,6 +220,19 @@ IDs de las DBs de Notion en `configuration.databases.<key>` y el `folderId` de D
 - **Notion**: bidireccional con **propiedad por campo** — CT es dueño de las propiedades estructuradas (push CT→Notion),
   Notion es dueño del cuerpo de la página. Motor genérico `syncNotionEntity` + `notion-specs.ts` (una spec por entidad).
   Specs **push-only** (sin `importFromNotion`, p. ej. `resources`): CT único dueño, nunca importa → sin ciclos.
+- **Reconciliación de borrados (M40):** lo que deja de venir en el pull se **archiva** (no se borra) y, si vuelve al
+  origen, se **restaura** solo. Núcleo compartido en `integrations/reconcile.ts` (`reconcileMissing`), que además
+  purga identidades huérfanas — un puntero a una fila borrada hacía que el sync actualizara 0 filas en silencio y el
+  registro no volviera jamás. **Al escribir un sync nuevo:** llama a `reconcileMissing` **antes** del bucle de
+  create/update (necesita ver las identidades como las dejó el sync anterior), pásale el `seen` del pull **crudo**
+  (no del bucle, para no archivar lo que sólo falló), y asegúrate de que la entidad está en `ARCHIVABLE`. Guardias
+  que no se tocan: **pull vacío ⇒ no se archiva nada** (un token caído devuelve `[]` con HTTP 200) y **pull truncado
+  ⇒ error** (tope de páginas, o página llena sin `pageInfo` en Twenty). Notion usa `onlyIfSoleIdentity: true`: allí
+  CT es espejo, no fuente de existencia. Calendar queda fuera: es una caché diaria y sigue borrando.
+- **Migrar CT de servidor = `pg_dump` + restore COMPLETO**, con `external_identities`. Repoblar desde Notion/GitHub
+  **duplica por diseño** (pasó en la migración a vibox): la idempotencia vive entera en esa tabla local. Igual de
+  peligroso: `pnpm --filter @ct/db seed` hace `TRUNCATE` de todo, ella incluida — sólo para `demo`. Para arreglar una
+  base ya duplicada: `apps/worker/src/scripts/cleanup-duplicates.ts` (seco por defecto, `--apply` para escribir).
 - **Si un write-back falla** (F-22), el pull **no sobrescribe** ese registro (client/contact/opportunity con un
   `twenty.push` PENDING/PROCESSING/FAILED se saltan) y el fallo se ve y se reintenta en **Automatización › Estado del
   sistema › Envíos fallidos**. Así un cambio hecho en CT no desaparece en el siguiente sync.
@@ -259,6 +272,9 @@ transaccional** (`emitOutbox` en la misma tx que el cambio). Ejemplo implementad
   que darle su sitio en `PURGE_ORDER` (hijo→padre, según las FKs reales) y, si tiene hijas NO archivables con FK hacia
   ella, borrarlas en `deleteDependents`. Si no, se archiva y **no se purga nunca**, sin error. Lo vigila
   `archive.test.ts` (`purgeOrderMissingEntities()` debe devolver `[]`).
+- **Borrado definitivo de una entidad sincronizada** ⇒ hay que llevarse también sus rastros externos:
+  `external_identities` y `outbox_events` (`deleteExternalTraces` en `archive.ts`, y el equivalente inline en
+  `deleteTasks`). Si no, queda un puntero huérfano y **el registro no vuelve nunca** desde su origen, sin error.
 - **Vocabulario (2026-09-01):** `resources` = **«Recursos»** (infraestructura operativa de proyecto/cliente) y
   `assets` = **«Reutilizables»** (catálogo de plantillas/repos). No volver a llamar «Activos» a ninguno de los dos: la
   palabra significaba las dos cosas y además el filtro de estado (`filter.active`). `deliverables` = «Entregables».

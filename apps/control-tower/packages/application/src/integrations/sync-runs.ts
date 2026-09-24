@@ -15,7 +15,10 @@ const MAX_SKIPS_STORED = 50;
 export interface SyncOutcome {
   created?: number;
   updated?: number;
+  /** Borrado definitivo (hoy sólo la caché de Calendar). */
   deleted?: number;
+  /** Archivados por la reconciliación: ya no existen en el origen (M40). Reversible. */
+  archived?: number;
   skipped?: SyncSkip[];
 }
 
@@ -25,7 +28,7 @@ export interface SyncOutcome {
  * claves `created`/`updated`/`deleted` que encuentre y concatena todos los `skipped`.
  */
 export function toSyncOutcome(summary: unknown): SyncOutcome {
-  const out: SyncOutcome = { created: 0, updated: 0, deleted: 0, skipped: [] };
+  const out: SyncOutcome = { created: 0, updated: 0, deleted: 0, archived: 0, skipped: [] };
   walk(summary, out);
   return out;
 }
@@ -41,8 +44,12 @@ function walk(node: unknown, out: SyncOutcome): void {
       out.skipped!.push(...(value as SyncSkip[]));
     } else if (typeof value === 'number') {
       if (key === 'created' || key === 'pushedCreated') out.created! += value;
-      else if (key === 'updated' || key === 'pushedUpdated' || key === 'upserted' || key === 'imported') out.updated! += value;
+      // `restored` (desarchivado por haber vuelto al origen) cuenta como actualización: la fila cambió.
+      // `adopted` NO se suma: esas filas ya vienen contadas en `updated` por el propio bucle del sync.
+      else if (key === 'updated' || key === 'pushedUpdated' || key === 'upserted' || key === 'imported' || key === 'restored')
+        out.updated! += value;
       else if (key === 'deleted') out.deleted! += value;
+      else if (key === 'archived') out.archived! += value;
     } else {
       walk(value, out);
     }
@@ -75,6 +82,7 @@ export async function recordSyncRun(
       created: run.outcome?.created ?? 0,
       updated: run.outcome?.updated ?? 0,
       deleted: run.outcome?.deleted ?? 0,
+      archived: run.outcome?.archived ?? 0,
       skippedCount: skipped.length,
       skips: skipped.length > 0 ? skipped.slice(0, MAX_SKIPS_STORED) : null,
       error: run.error ?? null,

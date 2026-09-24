@@ -36,4 +36,14 @@ describe('HttpTwentyDataSource', () => {
     expect(rows.map((r) => r.id)).toEqual(['x']);
     expect(n).toBe(1);
   });
+
+  // M40: desde que el sync archiva lo que no viene en el pull, devolver media lista archivaría la otra media.
+  it('página llena sin pageInfo ⇒ lanza en vez de devolver un pull truncado', async () => {
+    const full = Array.from({ length: 60 }, (_, i) => ({ id: `c${i}` }));
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify({ data: { companies: full } }))) as unknown as typeof fetch;
+
+    const ds = new HttpTwentyDataSource({ baseUrl: 'http://twenty', apiKey: 'k', fetchImpl });
+    await expect(ds.companies()).rejects.toThrow(/pageInfo/);
+  });
 });

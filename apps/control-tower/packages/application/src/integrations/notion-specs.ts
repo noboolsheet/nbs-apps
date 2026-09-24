@@ -292,6 +292,26 @@ const reviewItemSpec: NotionEntitySpec<Row<typeof listReviewItems>> = {
     }),
 };
 
+/**
+ * internalType de las specs BIDIRECCIONALES (las que tienen `importFromNotion`). Son exactamente las que
+ * reconcilian borrados (M40), así que todas tienen que estar en `ARCHIVABLE`: hay un test que lo comprueba,
+ * porque si falta una, su reconciliación se salta en silencio y las páginas borradas en Notion se quedarían
+ * colgando en CT sin que nadie se entere.
+ */
+export const NOTION_BIDIRECTIONAL_TYPES: readonly string[] = [
+  decisionSpec,
+  strategicAreaSpec,
+  capabilitySpec,
+  serviceSpec,
+  goalSpec,
+  projectSpec,
+  knowledgeItemSpec,
+  assetSpec,
+  reviewItemSpec,
+]
+  .filter((spec) => !!spec.importFromNotion)
+  .map((spec) => spec.internalType);
+
 /** Clave de configuración (`integrations.configuration.databases.<key>`) → runner de esa entidad. */
 const RUNNERS: Record<
   string,

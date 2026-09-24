@@ -57,21 +57,37 @@ export class HttpTwentyDataSource implements TwentyDataSource {
   /**
    * Lista TODOS los registros de un recurso paginando por cursor (Twenty REST: `pageInfo.hasNextPage`/`endCursor`
    * + `?starting_after=<cursor>`). Degradación grácil: si la respuesta NO trae `pageInfo` (otra versión de la API),
-   * se queda en la primera página (comportamiento previo) → sin regresión. Tope de páginas por seguridad.
+   * se queda en la primera página (comportamiento previo) → sin regresión.
+   *
+   * **Un pull truncado es un error, no media lista (M40).** Desde que el sync reconcilia borrados, lo que no
+   * viene en el pull se ARCHIVA: devolver la primera página de un recurso que tiene más archivaría todo lo
+   * demás. Así que las dos formas de truncamiento posibles —tope de páginas, y página llena sin `pageInfo`
+   * (no hay manera de saber si hay más)— lanzan. El sync falla, se ve en «Envíos fallidos» y no toca nada.
    */
   private async getAllPages(resource: string): Promise<TwentyRawRecord[]> {
+    const PAGE_SIZE = 60;
+    const MAX_PAGES = 100;
     const all: TwentyRawRecord[] = [];
     let cursor: string | undefined;
-    for (let page = 0; page < 100; page++) {
-      const qs = new URLSearchParams({ limit: '60' });
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const qs = new URLSearchParams({ limit: String(PAGE_SIZE) });
       if (cursor) qs.set('starting_after', cursor);
       const json = await this.get(`/rest/${resource}?${qs.toString()}`);
-      all.push(...extractRecords(json, resource));
+      const records = extractRecords(json, resource);
+      all.push(...records);
       const pageInfo = (json as { pageInfo?: { hasNextPage?: boolean; endCursor?: string } } | undefined)?.pageInfo;
-      if (!pageInfo?.hasNextPage || !pageInfo.endCursor) break;
+      if (!pageInfo?.hasNextPage || !pageInfo.endCursor) {
+        if (!pageInfo && records.length >= PAGE_SIZE) {
+          throw new Error(
+            `Twenty ${resource}: la respuesta no trae pageInfo y la página viene llena (${records.length}); ` +
+              'no se puede saber si faltan registros y el sync no debe archivar lo que no ha visto',
+          );
+        }
+        return all;
+      }
       cursor = pageInfo.endCursor;
     }
-    return all;
+    throw new Error(`Twenty ${resource}: tope de ${MAX_PAGES} páginas alcanzado; el pull está incompleto`);
   }
 
   async update(resource: string, id: string, body: Record<string, unknown>): Promise<void> {

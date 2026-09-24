@@ -115,9 +115,13 @@ export async function getExternalIdentityFor(
   provider: string,
   internalType: string,
   internalId: string,
-): Promise<{ externalId: string; metadata: unknown } | null> {
+): Promise<{ externalId: string; metadata: unknown; missingSince: Date | null } | null> {
   const [row] = await db
-    .select({ externalId: externalIdentities.externalId, metadata: externalIdentities.metadata })
+    .select({
+      externalId: externalIdentities.externalId,
+      metadata: externalIdentities.metadata,
+      missingSince: externalIdentities.missingSince,
+    })
     .from(externalIdentities)
     .where(
       and(
@@ -128,6 +132,29 @@ export async function getExternalIdentityFor(
       ),
     );
   return row ?? null;
+}
+
+/**
+ * Borra el puntero (provider, external_type, external_id). Se usa cuando el registro externo ya NO existe y hay
+ * que dejar sitio para uno nuevo: una identidad obsoleta hace que el sync actualice un fantasma en silencio.
+ */
+export async function dropIdentity(
+  db: Database,
+  ctx: OrgContext,
+  provider: string,
+  externalType: string,
+  externalId: string,
+): Promise<void> {
+  await db
+    .delete(externalIdentities)
+    .where(
+      and(
+        orgEq(externalIdentities.organizationId, ctx),
+        eq(externalIdentities.provider, provider),
+        eq(externalIdentities.externalType, externalType),
+        eq(externalIdentities.externalId, externalId),
+      ),
+    );
 }
 
 export async function upsertIdentity(
@@ -153,6 +180,7 @@ export async function upsertIdentity(
       internalId: input.internalId,
       metadata: (input.metadata as object) ?? null,
       lastSyncedAt: new Date(),
+      missingSince: null,
     })
     .onConflictDoUpdate({
       target: [externalIdentities.provider, externalIdentities.externalType, externalIdentities.externalId],
@@ -160,6 +188,9 @@ export async function upsertIdentity(
         internalId: input.internalId,
         lastSyncedAt: new Date(),
         updatedAt: new Date(),
+        // Verlo en el pull es la definición de "no ha desaparecido" (M40): se limpia la marca de la
+        // reconciliación. Si además estaba archivado por ella, `reconcileMissing` ya lo habrá restaurado.
+        missingSince: null,
         // Refresca metadata (p. ej. la URL de "Open external"/"Open in CRM") sólo si el sync la aporta.
         ...(input.metadata !== undefined ? { metadata: (input.metadata as object) ?? null } : {}),
       },

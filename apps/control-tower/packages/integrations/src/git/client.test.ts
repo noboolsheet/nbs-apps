@@ -30,4 +30,15 @@ describe('HttpGitHubDataSource.repos', () => {
     const repos = await ds.repos();
     expect(repos.map((r) => r.id)).toEqual([1]);
   });
+
+  // M40: si se alcanza el tope de páginas el pull está incompleto; el sync archivaría los repos que faltan.
+  it('tope de páginas ⇒ lanza en vez de devolver un pull truncado', async () => {
+    const fetchImpl = (async (url: unknown) =>
+      new Response(JSON.stringify([{ id: 1 }]), {
+        headers: { link: `<${String(url)}&next>; rel="next"` },
+      })) as unknown as typeof fetch;
+
+    const ds = new HttpGitHubDataSource({ token: 't', fetchImpl });
+    await expect(ds.repos()).rejects.toThrow(/incompleto/);
+  });
 });

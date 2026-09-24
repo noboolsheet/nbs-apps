@@ -7,6 +7,7 @@ import { orgEq, type OrgContext } from '../auth/index';
 import { createClient, createContact, createOpportunity } from '../crm/index';
 import { createTask } from '../projects/index';
 import { resolveInternalId, upsertIdentity } from './identity';
+import { reconcileMissing } from './reconcile';
 import { pendingPushTargets } from '../outbox/index';
 import { errMsg, type SyncSkip } from './sync-common';
 
@@ -15,12 +16,20 @@ import { errMsg, type SyncSkip } from './sync-common';
  * Idempotencia: `external_identities` (provider TWENTY). Re-ejecutar no duplica: si la identidad
  * existe se ACTUALIZA la proyección; si no, se CREA la entidad + la identidad.
  * Flujo ERRATA-010: External DTO → mapping (adapter) → domain command → entidad.
+ *
+ * Reconcilia borrados (M40): lo que Twenty deja de devolver se archiva en CT, y si vuelve, se restaura. Twenty
+ * es el SoT del CRM, así que su ausencia manda: esto es lo que evita que una oportunidad borrada allí se quede
+ * colgada aquí para siempre.
  */
 const P = 'TWENTY';
 
 export interface SyncCounts {
   created: number;
   updated: number;
+  /** Archivados por haber desaparecido de Twenty (M40). */
+  archived: number;
+  /** Desarchivados por haber vuelto a Twenty (M40). */
+  restored: number;
 }
 export interface SyncSummary {
   companies: SyncCounts;
@@ -65,12 +74,31 @@ export async function syncTwenty(
     'Hay un cambio hecho en Control Tower que todavía no ha llegado a Twenty; no se sobrescribe. ' +
     'Revisa los envíos fallidos en Automatización › Estado del sistema.';
   const summary: SyncSummary = {
-    companies: { created: 0, updated: 0 },
-    people: { created: 0, updated: 0 },
-    opportunities: { created: 0, updated: 0 },
-    tasks: { created: 0, updated: 0 },
+    companies: { created: 0, updated: 0, archived: 0, restored: 0 },
+    people: { created: 0, updated: 0, archived: 0, restored: 0 },
+    opportunities: { created: 0, updated: 0, archived: 0, restored: 0 },
+    tasks: { created: 0, updated: 0, archived: 0, restored: 0 },
     skipped: [],
   };
+
+  // Reconciliación de borrados, ANTES de los bucles (necesita ver las identidades como las dejó el sync
+  // anterior). `seen` sale del pull crudo, así que un registro que luego falle al procesarse NO se archiva.
+  const RECONCILE: { key: keyof Omit<SyncSummary, 'skipped'>; externalType: string; entityType: string; ids: string[] }[] = [
+    { key: 'companies', externalType: 'company', entityType: 'client', ids: data.companies.map((c) => c.externalId) },
+    { key: 'people', externalType: 'person', entityType: 'contact', ids: data.people.map((p) => p.externalId) },
+    { key: 'opportunities', externalType: 'opportunity', entityType: 'opportunity', ids: data.opportunities.map((o) => o.externalId) },
+    { key: 'tasks', externalType: 'task', entityType: 'task', ids: data.tasks.map((t) => t.externalId) },
+  ];
+  for (const r of RECONCILE) {
+    const recon = await reconcileMissing(db, ctx, {
+      provider: P,
+      externalType: r.externalType,
+      entityType: r.entityType,
+      seen: new Set(r.ids),
+    });
+    summary[r.key].archived = recon.archived;
+    summary[r.key].restored = recon.restored;
+  }
 
   // --- Companies → clients --- (por-registro: un registro inválido no aborta el resto, F-13)
   for (const c of data.companies) {

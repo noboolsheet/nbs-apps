@@ -82,4 +82,34 @@ describe('drive sync (fixture)', () => {
       expect(docs.map((d) => d.name)).toContain('Propuesta v2.pdf');
     });
   });
+  // M40: antes se BORRABA el documento (irreversible, y sin guardia si el pull venía vacío). Ahora se archiva.
+  it('un fichero que sale de la carpeta se archiva, y si vuelve se restaura', async () => {
+    await inRollback(async (tx) => {
+      const ctx = await makeOrg(tx);
+      const files = fixture();
+      await syncDrive(tx, ctx, new DriveAdapter(new FixtureDrive(files)));
+
+      const fuera = await syncDrive(tx, ctx, new DriveAdapter(new FixtureDrive([files[0]!])));
+      expect(fuera.files.archived).toBe(1);
+      const docs = await tx.select().from(s.documents).where(eq(s.documents.organizationId, ctx.organizationId));
+      expect(docs).toHaveLength(2); // no se borra: se archiva
+      expect(docs.find((d) => d.name === 'Contrato.docx')!.archivedAt).not.toBeNull();
+
+      const vuelve = await syncDrive(tx, ctx, new DriveAdapter(new FixtureDrive(files)));
+      expect(vuelve.files.restored).toBe(1);
+      const tras = await tx.select().from(s.documents).where(eq(s.documents.organizationId, ctx.organizationId));
+      expect(tras.every((d) => d.archivedAt === null)).toBe(true);
+    });
+  });
+
+  it('un pull vacío NO archiva nada', async () => {
+    await inRollback(async (tx) => {
+      const ctx = await makeOrg(tx);
+      await syncDrive(tx, ctx, new DriveAdapter(new FixtureDrive(fixture())));
+      const vacio = await syncDrive(tx, ctx, new DriveAdapter(new FixtureDrive([])));
+      expect(vacio.files.archived).toBe(0);
+      const docs = await tx.select().from(s.documents).where(eq(s.documents.organizationId, ctx.organizationId));
+      expect(docs.every((d) => d.archivedAt === null)).toBe(true);
+    });
+  });
 });

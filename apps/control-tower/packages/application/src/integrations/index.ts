@@ -1,5 +1,6 @@
 export * from './identity';
 export * from './sync-common';
+export * from './reconcile';
 export * from './sync-twenty';
 export * from './push-twenty';
 export * from './sync-notion-entity';

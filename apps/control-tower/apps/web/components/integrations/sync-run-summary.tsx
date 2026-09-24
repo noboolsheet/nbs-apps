@@ -9,6 +9,8 @@ export type SyncRunView = {
   created: number;
   updated: number;
   deleted: number;
+  /** M40 — registros archivados porque ya no existen en el origen (reversible, ≠ borrados). */
+  archived: number;
   skippedCount: number;
   skips: { entity: string; externalId: string; error: string }[] | null;
   error: string | null;
@@ -28,18 +30,19 @@ export function SyncRunSummary({ run }: { run: SyncRunView }) {
   return (
     <div className="flex flex-col gap-1 text-xs">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-fg-subtle">Última sync {formatDateTime(run.startedAt)}:</span>
+        <span className="text-fg-subtle">{t('sync.ultimaSync', { fecha: formatDateTime(run.startedAt) })}</span>
         {failed ? (
           <span className="text-danger">{t('ui.fallo')}</span>
         ) : (
           <span className="text-fg-muted">
-            {run.created} creados · {run.updated} actualizados
-            {run.deleted > 0 && ` · ${run.deleted} borrados`}
+            {t('sync.contadores', { creados: run.created, actualizados: run.updated })}
+            {run.archived > 0 && ` · ${t('sync.archivados', { n: run.archived })}`}
+            {run.deleted > 0 && ` · ${t('sync.borrados', { n: run.deleted })}`}
           </span>
         )}
         {warn && (
           <span className="rounded-full bg-warning-soft px-2 py-0.5 font-medium text-warning-soft-fg">
-            {run.skippedCount} saltados
+            {t('sync.saltados', { n: run.skippedCount })}
           </span>
         )}
         {(warn || failed) && (
@@ -49,7 +52,7 @@ export function SyncRunSummary({ run }: { run: SyncRunView }) {
             aria-expanded={open}
             className="text-link underline-offset-2 hover:underline"
           >
-            {open ? 'Ocultar detalle' : 'Ver detalle'}
+            {open ? t('sync.ocultarDetalle') : t('sync.verDetalle')}
           </button>
         )}
       </div>
@@ -63,7 +66,7 @@ export function SyncRunSummary({ run }: { run: SyncRunView }) {
           ))}
           {warn && (run.skips?.length ?? 0) < run.skippedCount && (
             <span className="text-fg-subtle">
-              …y {run.skippedCount - (run.skips?.length ?? 0)} más (sólo se guarda el detalle de los primeros).
+              {t('sync.yNMas', { n: run.skippedCount - (run.skips?.length ?? 0) })}
             </span>
           )}
         </div>

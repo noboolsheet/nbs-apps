@@ -65,15 +65,19 @@ export class HttpGitHubDataSource implements GitDataSource {
   async repos(): Promise<GitRawRepo[]> {
     // Paginación real: seguir `Link: rel="next"` hasta agotar (antes solo traía la 1ª página → tope de 100 repos).
     // Las URLs de `next` son absolutas (las devuelve GitHub), se pasan tal cual. Tope de páginas por seguridad.
+    // Si se alcanza el tope, el pull está TRUNCADO: desde M40 el sync archiva lo que no viene en el pull, así
+    // que devolverlo a medias archivaría los repos que faltan. Se lanza y el sync falla en vez de tocar nada.
+    const MAX_PAGES = 50;
     const all: GitRawRepo[] = [];
     let url: string | null = `${this.baseUrl}${this.path()}`;
-    for (let page = 0; url && page < 50; page++) {
+    for (let page = 0; url && page < MAX_PAGES; page++) {
       const res = await this.f(url, { headers: this.headers() });
       if (!res.ok) throw new Error(`GitHub repos → HTTP ${res.status}`);
       const json = await res.json();
       if (Array.isArray(json)) all.push(...(json as GitRawRepo[]));
       url = nextLink(res.headers.get('link'));
     }
+    if (url) throw new Error(`GitHub repos: tope de ${MAX_PAGES} páginas alcanzado; el pull está incompleto`);
     return all;
   }
 }

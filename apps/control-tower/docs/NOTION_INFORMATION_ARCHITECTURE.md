@@ -88,6 +88,20 @@ Systems, Clients-como-DB, Tasks (ver §4).
   **token de Notion con permiso de edición** en las DBs con dirección CT→Notion.
 - **Pull tipado:** el adapter consulta `POST /v1/databases/{id}/query` por cada DB del contrato y mapea **propiedades
   tipadas** (no `search` genérico como hoy). El sync actual (página→knowledge_item genérico) se **reescribe**.
+- **Borrar una página (M40, 2026-09-24):** el pull de Notion excluye lo que está en la papelera, así que una página
+  borrada deja de venir. La reconciliación (`integrations/reconcile.ts`) marca esa identidad y **archiva** la fila de
+  CT — reversible, visible en Ajustes › Archivados; si la página vuelve, la fila se restaura sola.
+  **Dos límites importantes:**
+  - Sólo aplica a las DBs **bidireccionales** (las que tienen `importFromNotion`). Las **push-only** (`resources`,
+    `learning`) no tienen pull: allí CT es el único autor y borrar la página no significa nada.
+  - CT **no archiva un registro que tenga identidad de otro proveedor** (`onlyIfSoleIdentity`). En Notion CT
+    ESCRIBE: es un espejo, no la fuente de existencia. Que falte la página de un reutilizable que vino de GitHub no
+    quiere decir que el repo no exista; de eso responde GitHub con su propia reconciliación. En ese caso el push
+    **recrea** la página en el siguiente sync, en vez de intentar actualizar una página muerta y dar 404 para
+    siempre.
+  - Consecuencia que conviene tener clara: una entidad creada **en CT** y espejada a Notion sólo tiene identidad de
+    Notion, así que borrar allí su página **sí** la archiva aquí. Es el comportamiento pedido por el owner («si
+    cancelo información en Notion, que se quite también de Control Tower»), y es reversible.
 
 ---
 

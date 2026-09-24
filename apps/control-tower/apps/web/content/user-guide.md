@@ -136,6 +136,29 @@ Los cambios que haces en CT se **empujan al instante** a su sistema dueño (a **
 **Twenty** los campos gestionados de clientes/contactos/oportunidades), sin esperar al sync. Los cambios que hace la
 propia sincronización no se re-empujan (así se evitan los bucles).
 
+### Qué pasa cuando borras algo en el sistema de origen
+
+Las listas de Control Tower **siguen** a sus orígenes en las dos direcciones. Si borras un repositorio en GitHub, una
+oportunidad en Twenty, un fichero de la carpeta de Drive o una página en Notion, en la siguiente sincronización ese
+registro **se archiva** en CT: desaparece de las listas y se queda en **Ajustes › Archivados**, por si lo necesitas.
+
+Se archiva y no se borra a propósito: puede tener trabajo tuyo colgando (tareas, entregables, enlaces a proyectos) y
+esa información no debe evaporarse porque alguien borrara la ficha en el otro sistema. Si lo quieres fuera del todo,
+archivado + la política de retención de Ajustes acaba borrándolo definitivamente.
+
+**Y si vuelve a aparecer en el origen, se restaura solo.** Un repo que recuperas en GitHub o un fichero que devuelves
+a la carpeta de Drive vuelven a su sitio en la siguiente sincronización, sin que tengas que tocar nada. Lo que hayas
+archivado **tú** a mano se respeta: el sync no te lo vuelve a archivar aunque siga sin estar en el origen.
+
+Dos salvaguardas que conviene conocer, porque explican por qué a veces *no* se archiva nada:
+
+- Si una sincronización no devuelve **ningún** registro (token caducado, permiso retirado), CT **no archiva nada**.
+  Una lista vacía casi siempre significa «no he podido mirar», no «ya no queda nada».
+- En **Notion**, CT sólo archiva registros cuyo único origen es Notion. Un reutilizable que viene de GitHub no
+  desaparece porque se borre su página espejo: de ese registro responde GitHub.
+
+Cada ejecución te dice lo que hizo en **Automation › Integraciones**: creados, actualizados y **archivados**.
+
 ## Integridad de los datos: qué se puede y qué no
 
 Control Tower protege la coherencia de tus datos con **reglas duras** que se aplican **en el servidor** (no sólo en la

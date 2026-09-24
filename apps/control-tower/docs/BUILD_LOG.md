@@ -5,6 +5,72 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-09-24 — M40 · Reconciliación de borrados en los syncs (el duplicado de la migración a vibox) ✅
+
+**El incidente.** Tras migrar de la Raspberry Pi a vibox, el owner ve en **Reutilizables** cada repo de GitHub
+**dos veces**, más repos que borró de GitHub hace tiempo. La base «Assets» de Notion está igual: entradas
+duplicadas y las viejas de repos que ya no existen. Pregunta directa: *¿cada vez que reinicio CT se duplica todo?
+¿no controla lo que ya tiene? ¿y lo que ya no está?*
+
+**El diagnóstico (cuatro defectos, todos reales):**
+
+1. **La idempotencia era 100% local.** El único dedup es `external_identities`, una tabla de CT. Con la base
+   vacía en el servidor nuevo (se repobló desde Notion en vez de restaurar el `pg_dump`), el import de Notion
+   creó un asset por página y acto seguido el sync de GitHub creó **otro** por repo, sin que nada los cruzara; y
+   el push posterior creó páginas nuevas en Notion. Cada arranque de CT desde cero añadía una copia de todo.
+2. **Sólo Drive y Calendar reconciliaban borrados.** GitHub, Twenty y Notion sólo creaban y actualizaban: un
+   repo borrado, una oportunidad borrada en Twenty (la que se le quedó colgada al owner) o una página borrada en
+   Notion se quedaban en CT para siempre.
+3. **La purga por retención no limpiaba `external_identities`.** El puntero quedaba apuntando a una fila muerta,
+   el sync hacía `UPDATE … WHERE id = <muerto>`, tocaba 0 filas, contaba «actualizado» y el registro **no volvía
+   a aparecer nunca**. Silencioso. (`deleteTasks` sí lo hacía; la purga, no.)
+4. **Sin unicidad por `(provider, internal_type, internal_id)`**, un registro podía acumular varias páginas de
+   Notion y `getExternalIdentityFor` cogía una arbitraria.
+
+**Qué entra.**
+
+- **`packages/application/src/integrations/reconcile.ts`** — `reconcileMissing`, el núcleo compartido. Se llama
+  **antes** del bucle de create/update de cada sync (ahí es donde se ve el estado que dejó el sync anterior) y
+  hace tres pasadas: **huérfanas** (identidades a filas inexistentes → se borran, así el registro se re-crea en
+  ese mismo sync), **desaparecidas** (no vinieron en el pull → `missing_since` + **archivar**) y **reaparecidas**
+  (vuelven → limpiar marca + **restaurar**).
+- **Se archiva, no se borra**, y sólo en la **transición** a «desaparecido»: si el owner restaura algo a mano, el
+  sync no se lo vuelve a archivar en la siguiente pasada.
+- **Guardia del pull vacío:** si el pull no devuelve nada, no se reconcilia. Un token revocado devuelve `[]` con
+  HTTP 200, y sin esto el primer sync tras el incidente archivaría el catálogo entero.
+- **Un pull truncado ahora es un error** (`twenty/client.ts`, `git/client.ts`): tope de páginas alcanzado, o
+  página llena sin `pageInfo`. Antes se devolvía media lista en silencio; con reconciliación eso archivaría la
+  otra media.
+- **Notion no archiva lo que tiene origen en otro proveedor** (`onlyIfSoleIdentity`): allí CT **escribe**, es un
+  espejo. Que falte la página de un repo no significa que el repo no exista. Y si la página de un registro vivo
+  desapareció, el push **recrea** la página en vez de dar 404 en cada sync para siempre.
+- **Drive pasa de borrar a archivar.** Era el único que borraba de verdad, sin vuelta atrás y sin guardia.
+- **Red de seguridad anti-duplicado en GitHub** (`adoptAssetByUrl`): si un repo no tiene identidad pero ya hay un
+  asset con su misma URL, se **adopta** en vez de crear otro. La URL es el mismo dato en Notion y en GitHub, así
+  que sirve de clave natural para re-vincular tras un arranque en vacío. Es lo que corta la raíz del incidente.
+- **La purga limpia los rastros externos** (`deleteExternalTraces` en `archive.ts`): `external_identities` +
+  `outbox_events`, después del borrado (si la FK lo bloquea, la fila vive y su puntero debe seguir ahí).
+- **Migración `0024_m40_sync_reconciliation.sql`**: `external_identities.missing_since` (columna propia, no una
+  clave de `metadata`: `metadata` se reescribe entera cada sync con la URL de «Open external») + índice parcial,
+  y `sync_runs.archived` (contador propio: `deleted` es definitivo, `archived` es reversible; mezclarlos haría
+  que el historial de syncs mintiera). La UI de Automatización › Integraciones lo muestra.
+- **Script de limpieza puntual** `apps/worker/src/scripts/cleanup-duplicates.ts` — el código nuevo evita que
+  vuelva a pasar, pero no arregla lo ya duplicado. Cuatro fases, **en seco por defecto** (`--apply` para
+  escribir): A identidades huérfanas · B reutilizables duplicados en CT (conserva uno, le lleva los enlaces de
+  proyecto y portafolio, archiva el resto) · C repos muertos (con `GITHUB_TOKEN`) · D páginas duplicadas en la
+  base «Assets» de Notion (con `NOTION_API_KEY`).
+
+**Lo que queda fuera a propósito:** (a) el `UNIQUE` de `external_identities` sigue sin incluir
+`organization_id` y sin cubrir `(provider, internal_type, internal_id)` — CT es mono-organización y añadirlo
+exige decidir qué hacer con los duplicados existentes; anotado como **F-33**. (b) Calendar sigue borrando su
+caché: `calendar_events` es una caché diaria sin `archived_at`, y un día sin eventos es legítimo.
+
+**Regla nueva que hay que recordar:** migrar CT entre servidores es `pg_dump` + restore **completo**,
+`external_identities` incluida. Repoblar desde Notion/GitHub duplica por diseño. Queda escrito en
+`DEPLOYMENT.md`.
+
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` · `pnpm test:integration` · `pnpm build`.
+
 ## 2026-09-23 — Twenty: contrato de datos del CRM y motor del SOP (capa de dominio) 🚧
 
 Primer paso de la adaptación al **handoff de implementación de Twenty**
@@ -59,6 +125,13 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
+> **⚑ ÚLTIMO (2026-09-24): M40 — los syncs ya reconcilian borrados.** Lo que desaparece del origen se **archiva**
+> (y se restaura solo si vuelve), la purga limpia los punteros de sync, GitHub adopta el asset que ya existe con
+> su misma URL en vez de duplicarlo, y un pull truncado o vacío **no** archiva nada. Queda pendiente pasar el
+> script `apps/worker/src/scripts/cleanup-duplicates.ts` en vibox para limpiar lo que ya está duplicado (va en
+> seco por defecto). Detalle en la entrada de esa fecha. **Migrar CT entre servidores = `pg_dump` completo**, no
+> repoblar desde Notion.
+>
 > **⚑ DÓNDE NOS QUEDAMOS (2026-09-01, sesión 14b).** *(Estado revisado ítem por ítem contra el código: ver la cabecera
 > de `FINDINGS_AND_DEFERRED.md` para la lista agrupada de lo que sigue abierto.)* **Roadmap M01–M18 completo**, **auditoría técnica y de UI/UX
 > cerradas** y, en esta sesión, **vaciado el grueso del backlog de hallazgos**: A-1/A-2/A-3 (gaps de modelo, con

@@ -25,6 +25,8 @@ import {
   projectPhases,
   projectAssets,
   serviceCapabilities,
+  externalIdentities,
+  outboxEvents,
 } from '@ct/db/schema';
 import { requireCan, orgEq, type OrgContext } from '../auth/index';
 import { recordAudit } from '../audit/index';
@@ -180,6 +182,37 @@ async function deleteDependents(db: Database, ctx: OrgContext, entityType: strin
 }
 
 /**
+ * Rastros externos de un registro que se acaba de borrar DEFINITIVAMENTE: su puntero de sync y su outbox
+ * pendiente. Mismo motivo que en `deleteTasks`, y no es cosmético:
+ *
+ *  - `external_identities` huérfana ⇒ el sync resuelve la identidad, hace `UPDATE … WHERE id = <muerto>`,
+ *    toca 0 filas, cuenta "actualizado" y el registro **no vuelve a aparecer nunca** aunque siga existiendo en
+ *    GitHub/Twenty/Notion. Silencioso y permanente.
+ *  - `outbox_events` pendiente ⇒ el worker intentaría empujar a Notion/Twenty algo que ya no existe.
+ *
+ * Hasta M40 la purga por retención no limpiaba ninguna de las dos (sólo lo hacía el borrado de tareas).
+ */
+async function deleteExternalTraces(
+  db: Database,
+  ctx: OrgContext,
+  entityType: string,
+  id: string,
+): Promise<void> {
+  await db
+    .delete(externalIdentities)
+    .where(
+      and(
+        orgEq(externalIdentities.organizationId, ctx),
+        eq(externalIdentities.internalType, entityType),
+        eq(externalIdentities.internalId, id),
+      ),
+    );
+  await db
+    .delete(outboxEvents)
+    .where(and(eq(outboxEvents.aggregateType, entityType), eq(outboxEvents.aggregateId, id)));
+}
+
+/**
  * Purga (borrado DEFINITIVO) de los registros archivados hace más de `retentionDays` días, en TODAS las
  * entidades archivables. `retentionDays <= 0` (o null) ⇒ no borra nada ("conservar siempre"). Cada borrado
  * deja rastro en `audit_logs` (acción DELETE, `metadata.reason = 'archived-retention'`).
@@ -222,6 +255,8 @@ export async function purgeArchivedRecords(
         try {
           await deleteDependents(db, ctx, entityType, String(r.id));
           await db.delete(meta.table).where(and(eq(c.id, r.id), orgEq(c.organizationId, ctx)));
+          // DESPUÉS del borrado (si la FK lo bloquea, la fila sigue viva y su puntero tiene que seguir ahí).
+          await deleteExternalTraces(db, ctx, entityType, String(r.id));
           await recordAudit(db, ctx, {
             action: 'DELETE',
             entityType,

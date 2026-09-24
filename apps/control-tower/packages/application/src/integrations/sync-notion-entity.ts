@@ -10,7 +10,8 @@ import {
   writeNumber,
 } from '@ct/integrations';
 import { type OrgContext } from '../auth/index';
-import { resolveInternalId, upsertIdentity, getExternalIdentityFor } from './identity';
+import { resolveInternalId, upsertIdentity, getExternalIdentityFor, dropIdentity } from './identity';
+import { reconcileMissing } from './reconcile';
 import { errMsg, type SyncSkip } from './sync-common';
 
 /**
@@ -20,6 +21,10 @@ import { errMsg, type SyncSkip } from './sync-common';
  *  - **pull-import**: crea en CT las filas de Notion sin identidad CT (bootstrap); no pisa las que CT ya posee.
  *  - **push-all**: CT es dueño de los campos escalares → upsert de cada fila CT en Notion (por `notion_page_id`).
  *  - Relaciones y cuerpo de página quedan gobernados por Notion (no se tocan aquí).
+ *  - **reconciliación** (M40): una página borrada en Notion archiva su fila en CT, y si vuelve, la restaura.
+ *    Sólo para las specs bidireccionales (las push-only no tienen pull: allí CT es el único autor) y sólo para
+ *    registros cuya ÚNICA identidad es Notion — ver `onlyIfSoleIdentity` en `reconcile.ts`. Un asset que vino
+ *    de GitHub no desaparece de CT porque alguien borre su página espejo: de eso responde GitHub.
  */
 const P = 'NOTION';
 
@@ -45,6 +50,8 @@ export interface NotionEntitySummary {
   imported: number; // Notion → CT (nuevas)
   pushedCreated: number; // CT → Notion (fila nueva)
   pushedUpdated: number; // CT → Notion (fila actualizada)
+  archived: number; // CT: archivadas porque su página ya no está en Notion (M40)
+  restored: number; // CT: desarchivadas porque su página ha vuelto (M40)
   skipped: SyncSkip[];
 }
 
@@ -77,7 +84,7 @@ export async function syncNotionEntity<Row>(
   databaseId: string,
   spec: NotionEntitySpec<Row>,
 ): Promise<NotionEntitySummary> {
-  const summary: NotionEntitySummary = { imported: 0, pushedCreated: 0, pushedUpdated: 0, skipped: [] };
+  const summary: NotionEntitySummary = { imported: 0, pushedCreated: 0, pushedUpdated: 0, archived: 0, restored: 0, skipped: [] };
   const info = await ds.retrieveDatabase(databaseId);
   const titleProp = info.titlePropName;
   const T = spec.internalType;
@@ -87,6 +94,21 @@ export async function syncNotionEntity<Row>(
   const importFromNotion = spec.importFromNotion;
   if (importFromNotion) {
     const pages = await ds.queryDatabase(databaseId);
+    // Reconciliación ANTES del bucle: necesita las identidades tal y como las dejó el sync anterior. Un fallo
+    // aquí no debe tumbar el sync de la entidad entera → se anota como "saltado".
+    try {
+      const recon = await reconcileMissing(db, ctx, {
+        provider: P,
+        externalType: T,
+        entityType: T,
+        seen: new Set(pages.map((p) => p.id)),
+        onlyIfSoleIdentity: true,
+      });
+      summary.archived = recon.archived;
+      summary.restored = recon.restored;
+    } catch (e) {
+      summary.skipped.push({ entity: `${T}(reconcile)`, externalId: databaseId, error: errMsg(e) });
+    }
     for (const page of pages) {
       try {
         const existing = await resolveInternalId(db, ctx, P, T, page.id);
@@ -138,9 +160,15 @@ async function pushRow<Row>(
   // propiedad aún no se creó en Notion se omite en vez de romper el push con un 400).
   for (const f of spec.fields) if (f.prop in knownProps) props[f.prop] = buildProp(f.kind, f.value(row));
   const identity = await getExternalIdentityFor(db, ctx, P, spec.internalType, spec.rowId(row));
-  if (identity) {
+  if (identity && identity.missingSince === null) {
     await ds.updatePage(identity.externalId, props);
     return 'updated';
+  }
+  if (identity) {
+    // La reconciliación marcó que esa página ya no está en Notion y aun así el registro sigue vivo en CT
+    // (su origen es otro proveedor: un repo de GitHub, p. ej.). Actualizarla daría 404 en cada sync para
+    // siempre; se tira el puntero muerto y se vuelve a crear el espejo, que es de lo que CT es dueño.
+    await dropIdentity(db, ctx, P, spec.internalType, identity.externalId);
   }
   const page = await ds.createPage(databaseId, props);
   await upsertIdentity(db, ctx, {

@@ -46,6 +46,11 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
 >   sólo borra un revisado **si ya está en la biblioteca**. Antes se perdía información.
 > - ✅ **F-34 HECHO (2026-09-02)** — el buscador ignoraba 4 de las 15 entidades indexadas (Por revisar,
 >   Aprendizaje, Recursos, Pagos). Añadidas, más exclusión de lo archivado y un test que ata ambas listas.
+> - ✅ **F-35 HECHO (2026-09-24, M40)** — los syncs no reconciliaban borrados y la idempotencia no sobrevivía a
+>   una base de CT vacía: eso duplicó los reutilizables al migrar a vibox. Ahora lo que desaparece del origen se
+>   **archiva** (y se restaura si vuelve), la purga limpia los punteros de sync y GitHub adopta el asset que ya
+>   existe con su URL. **Queda pasar `cleanup-duplicates.ts` en vibox** para limpiar lo ya duplicado, y **A-7
+>   queda ampliado**: falta la unicidad `(provider, internal_type, internal_id)`.
 > - ✅ **F-28 HECHO (2026-09-02)** — ordenación por columna (con `aria-sort`), filtro rápido y tope de 500 con
 >   aviso en pantalla. Implementado **una vez** sobre `RecordTable`, como estaba previsto al hacer F-29 antes.
 > - 🟡 **F-31 PARCIAL (reabierto 2026-09-02)** — imagen del worker **1,35 GB → 413 MB** ✅ (y de paso salió que
@@ -127,6 +132,13 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
   `external_id` (colisión de la constraint). En **MVP single-org no afecta** (ERRATA-012).
 - **Para multi-org real:** cambiar la unique a `(organization_id, provider, external_type, external_id)` — ADR + migración.
   Es un cambio de esquema congelado; no se toca en MVP (IMP-002), sólo se registra.
+- **Ampliado (2026-09-24, M40):** falta además unicidad por el OTRO lado, `(provider, internal_type, internal_id)`.
+  Sin ella un mismo registro de CT puede acumular varias páginas de Notion y `getExternalIdentityFor`
+  (`integrations/identity.ts`) devuelve **una arbitraria** (el `select` no lleva `ORDER BY`), así que los updates
+  pueden ir a la página equivocada. Es justo lo que pasó con los reutilizables duplicados tras la migración a
+  vibox. M40 ataca la **causa** (adopción por URL + reconciliación) y el script de limpieza deshace el estado
+  actual, pero la constraint que lo haría imposible sigue sin existir: añadirla exige decidir antes qué hacer
+  con los duplicados que ya haya en la base.
 
 ### A-6 · Enums dominio ↔ físico divergentes (knowledge/assets/decision) ✅ RESUELTO por precedencia
 - **Hallado en:** M02/M07. P. ej. dominio KnowledgeItem `DRAFT→REVIEW→VALIDATED→ACTIVE→OBSOLETE` vs físico `INBOX/DRAFT/REVIEW/APPROVED/ARCHIVED`.
@@ -1028,6 +1040,33 @@ CONFIG_MEMCG                      → =y  (el kernel lo soporta; sólo está apa
     tipo desde `search.type.*`; el `label` del API queda sólo como red de seguridad.
 - **Verificado en vivo:** creado un recurso «Charla sobre Zentauro y colas» en Por revisar, buscar «Zentauro»
   lo devuelve en el grupo `review_item` con `href=/knowledge/review`.
+
+
+### F-35 · Los syncs no reconciliaban borrados y la idempotencia no sobrevivía a un CT vacío ✅ RESUELTO (2026-09-24, M40)
+- **Hallado en:** migración de la Raspberry Pi a vibox. El owner ve cada repo de GitHub **dos veces** en
+  Reutilizables, más repos que había borrado de GitHub, y la base «Assets» de Notion igual de duplicada.
+- **Cuatro defectos reales, no uno:**
+  1. **Idempotencia 100% local.** El único dedup era `external_identities`, tabla de CT. Con la base vacía en el
+     servidor nuevo (se repobló desde Notion en vez de restaurar el `pg_dump`), el import de Notion creó un asset
+     por página y el sync de GitHub creó **otro** por repo, sin cruzarlos; el push posterior creó páginas nuevas
+     en Notion. Cada arranque de CT desde cero añadía una copia de todo.
+  2. **Sólo Drive y Calendar reconciliaban borrados.** GitHub, Twenty y Notion sólo creaban/actualizaban → un
+     repo borrado, la oportunidad que el owner borró en Twenty o una página borrada en Notion se quedaban aquí
+     para siempre.
+  3. **La purga por retención no limpiaba `external_identities`** → puntero a fila muerta; el sync hacía
+     `UPDATE … WHERE id = <muerto>`, tocaba 0 filas, contaba «actualizado» y el registro **no volvía nunca**.
+  4. **Sin unicidad por `(provider, internal_type, internal_id)`** → un registro con varias páginas de Notion.
+- ✅ **Resuelto (M40):** `integrations/reconcile.ts` (`reconcileMissing`, llamado **antes** del bucle de cada
+  sync: purga identidades huérfanas → archiva lo desaparecido → restaura lo que vuelve), guardia del pull vacío,
+  pull truncado convertido en error (`twenty/client.ts`, `git/client.ts`), `onlyIfSoleIdentity` para que Notion no
+  archive lo que tiene origen en otro proveedor, Drive pasa de **borrar** a **archivar**, adopción de assets por
+  URL en `syncGit` (corta la raíz del duplicado), `deleteExternalTraces` en la purga, migración
+  `0024_m40_sync_reconciliation` (`missing_since` + `sync_runs.archived`) y contador visible en Integraciones.
+  Script puntual `apps/worker/src/scripts/cleanup-duplicates.ts` para el estado ya duplicado (seco por defecto).
+- **Sigue abierto, a propósito:** el punto 4 (la constraint) → ver **A-7 ampliado**. Calendar sigue borrando su
+  caché diaria (`calendar_events` no tiene `archived_at` y un día sin eventos es legítimo).
+- **Regla operativa que sale de aquí:** migrar CT entre servidores es `pg_dump` + restore **completo**,
+  `external_identities` incluida. Repoblar desde los orígenes duplica por diseño. En `DEPLOYMENT.md`.
 
 ### E-15 · Notas y comentarios por registro 🟡 futuro (hueco de producto)
 - **Hallado en:** sesión 27.

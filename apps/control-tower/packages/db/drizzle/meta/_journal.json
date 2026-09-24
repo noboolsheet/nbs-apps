@@ -169,6 +169,13 @@
       "when": 1788347667100,
       "tag": "0023_m39_opportunity_stages",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1790000000000,
+      "tag": "0024_m40_sync_reconciliation",
+      "breakpoints": true
     }
   ]
 }

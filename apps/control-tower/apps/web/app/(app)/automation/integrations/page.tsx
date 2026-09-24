@@ -74,6 +74,7 @@ export default async function IntegrationsPage() {
                       created: run.created,
                       updated: run.updated,
                       deleted: run.deleted,
+                      archived: run.archived,
                       skippedCount: run.skippedCount,
                       skips: run.skips as { entity: string; externalId: string; error: string }[] | null,
                       error: run.error,
