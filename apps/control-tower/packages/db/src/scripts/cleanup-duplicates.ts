@@ -17,19 +17,24 @@
  *   C. Repos muertos — assets REPOSITORY cuya URL ya no está en GitHub (necesita GITHUB_TOKEN).
  *   D. Páginas duplicadas en la base «Assets» de Notion (necesita NOTION_API_KEY).
  *
- * Uso (desde `apps/control-tower/`, o dentro del contenedor del worker):
+ * Vive en `@ct/db` y no en el worker **a propósito**: usa Drizzle directamente, y `apps/worker` no declara
+ * `drizzle-orm` (nunca lo importa; va todo a través de `@ct/db`/`@ct/application`). Con el node_modules estricto
+ * de pnpm, un script del worker que importe `drizzle-orm` falla con `ERR_MODULE_NOT_FOUND`. Aquí está en casa,
+ * junto a `migrate` y `seed`, que se ejecutan igual.
  *
- *   pnpm --filter @ct/worker exec tsx src/scripts/cleanup-duplicates.ts            # informe, no toca nada
- *   pnpm --filter @ct/worker exec tsx src/scripts/cleanup-duplicates.ts --apply    # aplica
- *   …                                                             --only=A,B       # sólo algunas fases
+ * Uso en LOCAL, desde `apps/control-tower/`:
  *
- * En el SERVIDOR va dentro del contenedor del worker, y por nombre: allí `docker compose` a secas no encuentra
- * el stack (se levanta con `-f control-tower.docker-compose.<perfil>.yml` y su propio `name:`). Además la imagen
- * es horneada, así que hace falta desplegar antes para que el script exista dentro:
+ *   pnpm --filter @ct/db exec tsx src/scripts/cleanup-duplicates.ts            # informe, no toca nada
+ *   pnpm --filter @ct/db exec tsx src/scripts/cleanup-duplicates.ts --apply    # aplica
+ *   …                                                         --only=A,B       # sólo algunas fases
+ *
+ * En el SERVIDOR, dentro del contenedor del worker (que lleva `packages/` entero) y **por nombre**: allí
+ * `docker compose` a secas no encuentra el stack, que se levanta con `-f control-tower.docker-compose.<perfil>.yml`
+ * y su propio `name:`. Y como la imagen es horneada, hay que desplegar antes para que el script exista dentro:
  *
  *   ./deploy-control-tower.sh prod
  *   W=$(docker ps --filter name=worker --format '{{.Names}}' | grep control-tower)
- *   docker exec -it "$W" pnpm --filter @ct/worker exec tsx src/scripts/cleanup-duplicates.ts
+ *   docker exec -it "$W" pnpm --filter @ct/db exec tsx src/scripts/cleanup-duplicates.ts
  *
  * Variables: DATABASE_URL (obligatoria) · GITHUB_TOKEN + GITHUB_OWNER (fase C) · NOTION_API_KEY (fase D).
  * **Haz un `pg_dump` antes de correrlo con `--apply`.** Lo que archiva es reversible desde Ajustes ›
@@ -37,8 +42,8 @@
  */
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type { AnyPgColumn, PgTable } from 'drizzle-orm/pg-core';
-import { getDb, closeDb } from '@ct/db';
-import * as s from '@ct/db/schema';
+import { getDb, closeDb } from '../client';
+import * as s from '../schema/index';
 
 const APPLY = process.argv.includes('--apply');
 /** `--only=A,B` ⇒ sólo esas fases. Se compara por letra, así que el separador da igual. */

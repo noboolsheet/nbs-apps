@@ -237,7 +237,7 @@ IDs de las DBs de Notion en `configuration.databases.<key>` y el `folderId` de D
 - **Migrar CT de servidor = `pg_dump` + restore COMPLETO**, con `external_identities`. Repoblar desde Notion/GitHub
   **duplica por diseño** (pasó en la migración a vibox): la idempotencia vive entera en esa tabla local. Igual de
   peligroso: `pnpm --filter @ct/db seed` hace `TRUNCATE` de todo, ella incluida — sólo para `demo`. Para arreglar una
-  base ya duplicada: `apps/worker/src/scripts/cleanup-duplicates.ts` (seco por defecto, `--apply` para escribir).
+  base ya duplicada: `packages/db/src/scripts/cleanup-duplicates.ts` (seco por defecto, `--apply` para escribir).
 - **Si un write-back falla** (F-22), el pull **no sobrescribe** ese registro (client/contact/opportunity con un
   `twenty.push` PENDING/PROCESSING/FAILED se saltan) y el fallo se ve y se reintenta en **Automatización › Estado del
   sistema › Envíos fallidos**. Así un cambio hecho en CT no desaparece en el siguiente sync.

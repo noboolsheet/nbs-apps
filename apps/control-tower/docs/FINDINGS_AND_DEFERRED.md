@@ -1062,7 +1062,7 @@ CONFIG_MEMCG                      → =y  (el kernel lo soporta; sólo está apa
   archive lo que tiene origen en otro proveedor, Drive pasa de **borrar** a **archivar**, adopción de assets por
   URL en `syncGit` (corta la raíz del duplicado), `deleteExternalTraces` en la purga, migración
   `0024_m40_sync_reconciliation` (`missing_since` + `sync_runs.archived`) y contador visible en Integraciones.
-  Script puntual `apps/worker/src/scripts/cleanup-duplicates.ts` para el estado ya duplicado (seco por defecto).
+  Script puntual `packages/db/src/scripts/cleanup-duplicates.ts` para el estado ya duplicado (seco por defecto).
 - **Sigue abierto, a propósito:** el punto 4 (la constraint) → ver **A-7 ampliado**. Calendar sigue borrando su
   caché diaria (`calendar_events` no tiene `archived_at` y un día sin eventos es legítimo).
 - **Regla operativa que sale de aquí:** migrar CT entre servidores es `pg_dump` + restore **completo**,

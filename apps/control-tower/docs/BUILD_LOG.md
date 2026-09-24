@@ -54,7 +54,7 @@ duplicadas y las viejas de repos que ya no existen. Pregunta directa: *¿cada ve
   clave de `metadata`: `metadata` se reescribe entera cada sync con la URL de «Open external») + índice parcial,
   y `sync_runs.archived` (contador propio: `deleted` es definitivo, `archived` es reversible; mezclarlos haría
   que el historial de syncs mintiera). La UI de Automatización › Integraciones lo muestra.
-- **Script de limpieza puntual** `apps/worker/src/scripts/cleanup-duplicates.ts` — el código nuevo evita que
+- **Script de limpieza puntual** `packages/db/src/scripts/cleanup-duplicates.ts` — el código nuevo evita que
   vuelva a pasar, pero no arregla lo ya duplicado. Cuatro fases, **en seco por defecto** (`--apply` para
   escribir): A identidades huérfanas · B reutilizables duplicados en CT (conserva uno, le lleva los enlaces de
   proyecto y portafolio, archiva el resto) · C repos muertos (con `GITHUB_TOKEN`) · D páginas duplicadas en la
@@ -128,7 +128,7 @@ Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-b
 > **⚑ ÚLTIMO (2026-09-24): M40 — los syncs ya reconcilian borrados.** Lo que desaparece del origen se **archiva**
 > (y se restaura solo si vuelve), la purga limpia los punteros de sync, GitHub adopta el asset que ya existe con
 > su misma URL en vez de duplicarlo, y un pull truncado o vacío **no** archiva nada. Queda pendiente pasar el
-> script `apps/worker/src/scripts/cleanup-duplicates.ts` en vibox para limpiar lo que ya está duplicado (va en
+> script `packages/db/src/scripts/cleanup-duplicates.ts` en vibox para limpiar lo que ya está duplicado (va en
 > seco por defecto). Detalle en la entrada de esa fecha. **Migrar CT entre servidores = `pg_dump` completo**, no
 > repoblar desde Notion.
 >

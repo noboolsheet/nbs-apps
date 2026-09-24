@@ -147,16 +147,21 @@ porque el stack se levanta con `-f control-tower.docker-compose.<perfil>.yml` y 
 ```sh
 W=$(docker ps --filter name=worker --format '{{.Names}}' | grep control-tower)   # p. ej. ct-worker.prod
 # Informe, no escribe nada. Cuatro fases: identidades huérfanas · duplicados en CT · repos muertos · Notion.
-docker exec -it "$W" pnpm --filter @ct/worker exec tsx src/scripts/cleanup-duplicates.ts
+docker exec -it "$W" pnpm --filter @ct/db exec tsx src/scripts/cleanup-duplicates.ts
 # …repásalo y entonces:
-docker exec -it "$W" pnpm --filter @ct/worker exec tsx src/scripts/cleanup-duplicates.ts --apply
+docker exec -it "$W" pnpm --filter @ct/db exec tsx src/scripts/cleanup-duplicates.ts --apply
 ```
+
+El script vive en **`@ct/db`**, no en el worker: usa Drizzle directamente y `apps/worker` no declara
+`drizzle-orm` (todo le llega a través de `@ct/db`/`@ct/application`), así que con el node_modules estricto de
+pnpm un script del worker que lo importe falla con `ERR_MODULE_NOT_FOUND`. El contenedor del worker lleva
+`packages/` entero, así que desde ahí se ejecuta igual que `migrate` o `seed`.
 
 Con `docker compose` hay que darle el fichero y el env, igual que hace el deploy — desde `apps/control-tower/`:
 
 ```sh
 docker compose --env-file ../../envs/.env.prod -f control-tower.docker-compose.prod.yml \
-  exec worker pnpm --filter @ct/worker exec tsx src/scripts/cleanup-duplicates.ts
+  exec worker pnpm --filter @ct/db exec tsx src/scripts/cleanup-duplicates.ts
 ```
 
 Las fases C y D sólo corren si el worker tiene `GITHUB_TOKEN` / `NOTION_API_KEY` en su `env_file` (ya los tiene
