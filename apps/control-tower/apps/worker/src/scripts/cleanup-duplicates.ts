@@ -23,7 +23,13 @@
  *   pnpm --filter @ct/worker exec tsx src/scripts/cleanup-duplicates.ts --apply    # aplica
  *   …                                                             --only=A,B       # sólo algunas fases
  *
- *   docker compose exec worker pnpm --filter @ct/worker exec tsx src/scripts/cleanup-duplicates.ts
+ * En el SERVIDOR va dentro del contenedor del worker, y por nombre: allí `docker compose` a secas no encuentra
+ * el stack (se levanta con `-f control-tower.docker-compose.<perfil>.yml` y su propio `name:`). Además la imagen
+ * es horneada, así que hace falta desplegar antes para que el script exista dentro:
+ *
+ *   ./deploy-control-tower.sh prod
+ *   W=$(docker ps --filter name=worker --format '{{.Names}}' | grep control-tower)
+ *   docker exec -it "$W" pnpm --filter @ct/worker exec tsx src/scripts/cleanup-duplicates.ts
  *
  * Variables: DATABASE_URL (obligatoria) · GITHUB_TOKEN + GITHUB_OWNER (fase C) · NOTION_API_KEY (fase D).
  * **Haz un `pg_dump` antes de correrlo con `--apply`.** Lo que archiva es reversible desde Ajustes ›

@@ -134,12 +134,33 @@ Desde M40 el daño está acotado aunque se haga mal —GitHub **adopta** el asse
 vez de duplicarlo, y la reconciliación archiva lo que ya no está en el origen— pero eso es una red de seguridad,
 no el procedimiento. Si te encuentras la base ya duplicada, el arreglo es el script de limpieza:
 
+**Primero despliega**: el script vive dentro de la imagen del worker, que es **horneada**. Hasta que no
+reconstruyas, dentro del contenedor no existe.
+
 ```sh
-# Informe, no escribe nada. Cuatro fases: identidades huérfanas · duplicados en CT · repos muertos · Notion.
-docker compose exec worker pnpm --filter @ct/worker exec tsx src/scripts/cleanup-duplicates.ts
-# …repásalo y entonces:
-docker compose exec worker pnpm --filter @ct/worker exec tsx src/scripts/cleanup-duplicates.ts --apply
+./deploy-control-tower.sh prod      # reconstruye la imagen y aplica la migración
 ```
+
+Y luego, **por nombre de contenedor** (lo más simple: en el servidor `docker compose` a secas no encuentra nada,
+porque el stack se levanta con `-f control-tower.docker-compose.<perfil>.yml` y su propio `name:`):
+
+```sh
+W=$(docker ps --filter name=worker --format '{{.Names}}' | grep control-tower)   # p. ej. ct-worker.prod
+# Informe, no escribe nada. Cuatro fases: identidades huérfanas · duplicados en CT · repos muertos · Notion.
+docker exec -it "$W" pnpm --filter @ct/worker exec tsx src/scripts/cleanup-duplicates.ts
+# …repásalo y entonces:
+docker exec -it "$W" pnpm --filter @ct/worker exec tsx src/scripts/cleanup-duplicates.ts --apply
+```
+
+Con `docker compose` hay que darle el fichero y el env, igual que hace el deploy — desde `apps/control-tower/`:
+
+```sh
+docker compose --env-file ../../envs/.env.prod -f control-tower.docker-compose.prod.yml \
+  exec worker pnpm --filter @ct/worker exec tsx src/scripts/cleanup-duplicates.ts
+```
+
+Las fases C y D sólo corren si el worker tiene `GITHUB_TOKEN` / `NOTION_API_KEY` en su `env_file` (ya los tiene
+si esas integraciones funcionan). Si hubiera más de una organización, `ORGANIZATION_ID=<uuid>`.
 
 **Haz un backup antes del `--apply`.** Lo que archiva se recupera desde Ajustes › Archivados; lo que borra son
 punteros de sync, que se regeneran en el siguiente sync.

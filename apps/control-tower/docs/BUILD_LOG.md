@@ -1418,6 +1418,7 @@ sigue el FF directo a prod).
   **Integration tests** (`pnpm test:integration`). Ahora el CI cubre los ~22 tests de integración (aislamiento
   multi-org, syncs, gobernanza, reaper, exclusión de tareas…), no solo los unit.
 - El flujo de merge NO cambia (control-tower-mvp → dev → prod FF; el CI corre en el push a prod y en PRs).
+  *(Nota 2026-09-24: la rama `dev` desapareció en algún momento posterior; hoy el flujo es `control-tower-mvp` → `prod`.)*
 - **Nota:** Docker local apagado → no pude correr integración aquí; el **primer run de CI en prod** validará el
   workflow y los tests (incluidos los añadidos a ciegas: `reaper.test.ts` y el caso nuevo de exclusión en
   `projects.test.ts`). Si algo saliera rojo, se ajusta.

@@ -6,7 +6,8 @@ Guía para Claude Code (claude.ai/code) al trabajar en **Control Tower**. Léela
 
 App web **self-hosted** de gobernanza / puesto de mando que unifica y controla varios sistemas externos sobre un
 modelo propio: **Twenty CRM**, **Notion**, **GitHub** y **Google Drive**. Monorepo **pnpm workspaces**. El objetivo
-final es desplegarla en la Raspberry Pi del owner (noboolsheet).
+final es desplegarla en el servidor del owner, **vibox** (hostname real `fedora`); hasta 2026-09 vivió en una
+Raspberry Pi, y buena parte de la documentación antigua todavía la nombra.
 
 ## ⚑ Para retomar una sesión: dónde está el estado
 
@@ -81,12 +82,16 @@ cabecera de `FINDINGS_AND_DEFERRED.md` mantiene la lista agrupada de lo que sigu
 **Regla práctica:** si al terminar un trabajo NO tocas ningún `.md`, sospecha — o el trabajo era trivial, o te dejaste
 una anotación sin cerrar.
 
-**⚑ FLUJO DE ENTREGA (feedback owner 2026-08-16 — el owner prueba desde la Raspberry Pi):** al terminar CADA cambio
-(verificado: typecheck·lint·build), commitea en `control-tower-mvp` y **SIEMPRE** haz merge **FF `control-tower-mvp` →
-`dev` → `prod`** y `git push origin prod`. Solo `prod` tiene rama remota; `control-tower-mvp` y `dev` se quedan en local
-(no se pushean). No esperes visto bueno para mergear: el owner valida en la Pi contra `prod` ya desplegado. Receta:
+**⚑ FLUJO DE ENTREGA (feedback owner 2026-08-16):** al terminar CADA cambio (verificado: typecheck·lint·build),
+commitea en `control-tower-mvp` y **SIEMPRE** haz merge **FF `control-tower-mvp` → `prod`** y `git push origin prod`.
+No esperes visto bueno para mergear: el owner valida contra `prod` ya desplegado.
+
+**Ramas que existen de verdad en `nbs-apps` (comprobado 2026-09-24):** sólo **`control-tower-mvp`** (local, de
+trabajo) y **`prod`** (la única con remoto, `origin/prod`). **`dev` ya NO existe** — estuvo en la receta durante
+meses y se quedó escrita aquí cuando desapareció; si te la encuentras mencionada en otro documento, sobra.
+`nbs-infra` y los repos de cliente trabajan también sobre `prod`.
+
 ```sh
-git checkout dev  && git merge --ff-only control-tower-mvp
 git checkout prod && git merge --ff-only control-tower-mvp && git push origin prod
 git checkout control-tower-mvp
 ```
