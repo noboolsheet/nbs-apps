@@ -5,6 +5,52 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-09-26 — Sin tareas en Twenty, y saneado lo que la mudanza a vibox dejó mintiendo ✅
+
+Sesión de mantenimiento documental: una decisión del owner que cierra anotaciones, y tres incoherencias
+detectadas al repasar el estado.
+
+**Decisión del owner: NO se van a crear tareas en Twenty.** Las tareas son CT-nativas. Cerrado en todos los sitios
+donde estaba anotado lo contrario:
+- **F-18** ✅ cerrado (el código estaba hecho) con la **verificación en vivo ❌ descartada**: esperaba que el owner
+  creara una tarea de ejemplo en Twenty, y eso no va a pasar. **El código del pull se queda** (`mapTask` + la rama de
+  tasks de `sync-twenty.ts`): es inerte —un pull sin tareas no crea nada, y la guardia de M40 no archiva con pull
+  vacío— y está probado por unit/integración si algún día se quisiera.
+- **E-1** — «write-back de tareas si se decidiera» ❌ descartado; queda sólo el POST de clientes/contactos como
+  pendiente de fase posterior. El único write-back de tarea que sobrevive es la **fecha** (`taskPatch`), que sólo
+  actúa sobre una tarea que ya exista en Twenty.
+- **AUT-30** — el «sync bidireccional de tareas» sale del ítem; queda el enriquecimiento de contactos.
+- Corregidos además `apps/web/content/user-guide.md` (la fila «Tareas importadas» decía que las tareas **no tienen
+  write-back**, que era falso: la fecha sí se empuja), `NOTION_INFORMATION_ARCHITECTURE.md` §4.8 (hablaba de F-18 como
+  «trabajo nuevo» cuando está hecho) y este `CLAUDE.md`.
+
+**Tres incoherencias saneadas:**
+1. **El `UNIQUE` de `external_identities` se anotó como «F-33»** en la entrada de M40, y ese identificador ya era el de
+   «Por revisar» (cerrado el 2026-09-02). Es **A-7 ampliado**, como decía la cabecera de `FINDINGS_AND_DEFERRED.md`.
+2. **El plan del bloque Twenty reservaba la migración `0024_m40_crm_twenty_contract.sql`**, y `0024`/`m40` lo ocupó
+   `sync_reconciliation`. Corregido a **`0025_m41_crm_twenty_contract.sql`** en el plan, y con él la del bloque del
+   SOP, que ocupaba ese hueco → **`0026_m42_sop_process.sql`**.
+3. **La documentación seguía siendo de la Raspberry Pi** en ítems vivos, cuando CT corre en **vibox (Fedora)** desde el
+   2026-09-24. Reescrito lo que era **acción pendiente**, no lo histórico:
+   - **F-31**: el arreglo del cgroup (`/boot/firmware/cmdline.txt`) **es de Raspberry Pi OS y en vibox no existe**.
+     Fedora trae cgroup v2 con `memory` activo, así que lo más probable es que esa mitad del ítem esté resuelta por la
+     mudanza; queda **comprobarlo con un comando** (`grep memory /sys/fs/cgroup/cgroup.controllers` + `docker stats`).
+     Anotado también que **ya no son tres servicios sino dos**: la base salió del compose (vive en `nbs-db`), así que
+     `CONTROL_TOWER_MEM_DB` sólo tiene sentido en local.
+   - **E-14**: los «varios segundos por página» se reportaron **en la Pi** y nunca se midieron. Hay que medir **en
+     vibox** antes de optimizar nada: puede que el ítem se haya ido con la máquina.
+   - `DEPLOYMENT.md`, `SECURITY_CHECKLIST.md`, `README.md`, `.env.example` y los comentarios de los tres compose del
+     servidor: «la Pi» → el servidor / vibox, dejando la historia de la Pi marcada como historia.
+
+**Repaso de cinco ítems contra el código** (petición del owner), todos **siguen abiertos**: **E-15** (no hay tabla de
+notas ni comentarios) · **E-16** (sin adjuntos; pero el enunciado decía «no hay ni un `input type=file`» y sí hay uno,
+la foto de perfil, que guarda un data URL en `users.image` — enunciado recortado) · **F-30** (las claves truncadas y
+los tres `confirm()` siguen ahí; sólo `Última sync` llegó al diccionario, y aparece un literal nuevo en
+`profile-photo.tsx`) · **B-2** (el único tablero de columnas sigue siendo el de oportunidades) · **E-12** (sin endpoint
+de reorden; `sort_order` sólo en `strategic_areas` y `project_phases`).
+
+Sin cambios de código: sólo documentación, `.env.example` y comentarios de compose.
+
 ## 2026-09-24 — M40 · Reconciliación de borrados en los syncs (el duplicado de la migración a vibox) ✅
 
 **El incidente.** Tras migrar de la Raspberry Pi a vibox, el owner ve en **Reutilizables** cada repo de GitHub
@@ -62,7 +108,8 @@ duplicadas y las viejas de repos que ya no existen. Pregunta directa: *¿cada ve
 
 **Lo que queda fuera a propósito:** (a) el `UNIQUE` de `external_identities` sigue sin incluir
 `organization_id` y sin cubrir `(provider, internal_type, internal_id)` — CT es mono-organización y añadirlo
-exige decidir qué hacer con los duplicados existentes; anotado como **F-33**. (b) Calendar sigue borrando su
+exige decidir qué hacer con los duplicados existentes; queda anotado como **A-7 ampliado** (esta entrada decía
+**F-33** por error: ese identificador era ya el de «Por revisar», cerrado el 2026-09-02 — corregido el 2026-09-26). (b) Calendar sigue borrando su
 caché: `calendar_events` es una caché diaria sin `archived_at`, y un día sin eventos es legítimo.
 
 **Regla nueva que hay que recordar:** migrar CT entre servidores es `pg_dump` + restore **completo**,
@@ -125,7 +172,14 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-09-24): M40 — los syncs ya reconcilian borrados.** Lo que desaparece del origen se **archiva**
+> **⚑ ÚLTIMO (2026-09-26): mantenimiento documental.** Decisión del owner: **no se crean tareas en Twenty** (F-18
+> cerrado, su verificación en vivo descartada, y con ella el write-back de tareas de E-1 y la mitad de AUT-30). Y
+> saneadas tres incoherencias: el «F-33» mal puesto de M40 (es **A-7 ampliado**), la migración del plan de Twenty
+> (`0024` estaba ocupada → **`0025_m41`**) y **toda la documentación viva que seguía hablando de la Raspberry Pi**
+> cuando el servidor es **vibox**: F-31 (el arreglo del cgroup era de Raspberry Pi OS, en vibox hay que comprobarlo con
+> un comando) y E-14 (hay que medir en vibox; el síntoma nunca se midió y la máquina es otra).
+>
+> **⚑ ANTERIOR (2026-09-24): M40 — los syncs ya reconcilian borrados.** Lo que desaparece del origen se **archiva**
 > (y se restaura solo si vuelve), la purga limpia los punteros de sync, GitHub adopta el asset que ya existe con
 > su misma URL en vez de duplicarlo, y un pull truncado o vacío **no** archiva nada. Queda pendiente pasar el
 > script `packages/db/src/scripts/cleanup-duplicates.ts` en vibox para limpiar lo que ya está duplicado (va en
@@ -146,11 +200,12 @@ Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-b
 > inventario de índices **no** muestra un agujero evidente → **medir en la Pi antes de tocar nada**. Ojo: el owner
 > **descartó** los esqueletos de carga, así que aquí no vale maquillar la espera.
 >
-> **⚑ Sesión 36 (2026-09-02): el techo de memoria de la Pi no estaba puesto.** El kernel trae el cgroup de memoria
+> **⚑ Sesión 36 (2026-09-02): el techo de memoria de la Pi no estaba puesto.** El kernel traía el cgroup de memoria
 > desactivado, así que Docker **descartaba** los `mem_limit` de F-31 con un aviso: ni techo ni medición
-> (`docker stats` da 0B). **Falta que el owner añada `cgroup_enable=memory` a `/boot/firmware/cmdline.txt` y
-> reinicie** — ver `DEPLOYMENT.md`. En el repo: retirado `memswap_limit` (el swap de la Pi es zram, en RAM, y la raíz
-> un SSD: prohibirlo sólo adelantaba el OOM) y F-31 reabierto.
+> (`docker stats` daba 0B). En el repo: retirado `memswap_limit` (el swap de la Pi era zram, en RAM, y la raíz
+> un SSD: prohibirlo sólo adelantaba el OOM) y F-31 reabierto. **⚠ Caducado por la mudanza (2026-09-24):** el arreglo
+> era de Raspberry Pi OS (`cgroup_enable=memory` en `/boot/firmware/cmdline.txt`) y **en vibox no aplica**; queda
+> comprobarlo allí con un comando — ver F-31 y `DEPLOYMENT.md`.
 >
 > **⚑ Sesión 35 (2026-09-02): Procesos (SOP) en Negocio.** Un SOP es un `knowledge_item` de tipo `PROCESS`, no una
 > entidad nueva: el documento vive en **Notion**, sus anexos en **Drive** y CT gobierna estado y sector. Nueva vista
@@ -176,10 +231,11 @@ Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-b
 > El tope es **opt-in desde las páginas** a propósito: las mismas consultas las usa el push a Notion y un
 > `.limit()` ciego habría dejado de sincronizar en silencio.
 >
-> **⚑ Lo que queda ahora en cabeza:** **E-14** espera a que corras `scripts/measure-perf.sh` **en la Pi** (la
-> instrumentación ya está desplegada) · **E-15** notas por registro es el único hueco de producto que es una
-> ausencia real · y **HAB-1** (bot de Telegram) sigue siendo el bloqueo grande: desatasca el bloque entero de
-> automatizaciones y está parado por decisión tuya, no por trabajo pendiente.
+> **⚑ Lo que queda ahora en cabeza:** **E-14** espera a que corras `scripts/measure-perf.sh` **en vibox** (la
+> instrumentación ya está desplegada; el síntoma se midió nunca y la máquina ya no es la misma) · **E-15** notas por
+> registro es el único hueco de producto que es una ausencia real · y **HAB-1** (bot de Telegram) sigue siendo el
+> bloqueo grande: desatasca el bloque entero de automatizaciones y está parado por decisión tuya, no por trabajo
+> pendiente.
 >
 > **⚑ Sesión 31 (2026-09-02): lote de seguridad.** La web **ya no arranca** sin `BETTER_AUTH_SECRET` (antes
 > arrancaba y sólo fallaba al iniciar sesión, con un 500 opaco) · **F-27** cerrado con barrido amortizado y el

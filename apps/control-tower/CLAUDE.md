@@ -191,8 +191,8 @@ DB de dev. Añade `DATABASE_URL=...` delante del comando.
   restore dentro de la database `control_tower` de `nbs-db`.
 
 ### Imágenes horneadas y hot-reload local
-Las imágenes son **horneadas** (self-contained, inmutables) — correcto y **obligatorio en la Pi**. En **local**,
-`compose.override.yml` (que `docker compose` fusiona automáticamente; la Pi NO lo usa) monta los `src/` del **worker**
+Las imágenes son **horneadas** (self-contained, inmutables) — correcto y **obligatorio en el servidor**. En **local**,
+`compose.override.yml` (que `docker compose` fusiona automáticamente; el servidor NO lo usa) monta los `src/` del **worker**
 y corre `tsx watch` → **el código del worker/application/integrations recarga en caliente al guardar**, sin rebuild.
 - **`web`** sigue horneada: para iterar la UI usa `pnpm dev` (Next dev en :4270) en el host, o reconstruye la imagen web.
 - **Cambio de dependencias** (`package.json`) o **cambio de `web`** sí requieren rebuild:
@@ -219,7 +219,9 @@ IDs de las DBs de Notion en `configuration.databases.<key>` y el `folderId` de D
   `external_identities`); Twenty está alineado 1:1 con CT (**13 stages**, industry TEXT) — si los enums se separan
   no salta ningún error: el pull cae a `LEAD` y el push devuelve `400` (pasó, ver ADR-002 addendum 2026-09-02). **Propiedad por campo en task:** el
   **título** lo posee Twenty (inmutable en CT, se re-pisa en el pull); la **fecha** la posee CT (el pull NO la pisa y el
-  write-back `taskPatch` empuja `dueDate`→`dueAt` a Twenty). **Opportunity (ADR-008):** CT es **sólo su máquina de
+  write-back `taskPatch` empuja `dueDate`→`dueAt` a Twenty). **Ojo (decisión del owner, 2026-09-26): no se crean tareas
+  en Twenty.** Las tareas son CT-nativas; el pull de tasks sigue en el código pero está **inerte** (ver F-18) y CT nunca
+  crea una tarea allí. **Opportunity (ADR-008):** CT es **sólo su máquina de
   estados** — no se crean en CT (`createOpportunity` rechaza actores USER), no hay `PATCH` del registro, y
   `opportunityPatch` empuja **únicamente `stage`**. Ver "inmutabilidad por procedencia" (`@ct/domain/ownership`).
 - **Notion**: bidireccional con **propiedad por campo** — CT es dueño de las propiedades estructuradas (push CT→Notion),

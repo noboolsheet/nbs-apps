@@ -17,7 +17,8 @@ services:
     # Requiere que el kernel del host tenga activo el cgroup de memoria: si no,
     # Docker avisa, DESCARTA el límite y arranca sin techo. Comprobar con:
     #   grep memory /sys/fs/cgroup/cgroup.controllers
-    # Contexto completo y la batalla con Raspberry Pi OS: docs/FINDINGS_AND_DEFERRED.md § F-31.
+    # Contexto completo (incluida la batalla con Raspberry Pi OS, la máquina anterior):
+    # docs/FINDINGS_AND_DEFERRED.md § F-31.
     mem_limit: ${CONTROL_TOWER_MEM_WEB:-768m}
     # Rotación del log de Docker: sin esto el json-file crece SIN LÍMITE y acaba llenando el disco del servidor
     # (el worker escribe en cada tick). 10 MB × 3 ficheros = 30 MB como mucho por servicio.
@@ -53,7 +54,8 @@ services:
     # Requiere que el kernel del host tenga activo el cgroup de memoria: si no,
     # Docker avisa, DESCARTA el límite y arranca sin techo. Comprobar con:
     #   grep memory /sys/fs/cgroup/cgroup.controllers
-    # Contexto completo y la batalla con Raspberry Pi OS: docs/FINDINGS_AND_DEFERRED.md § F-31.
+    # Contexto completo (incluida la batalla con Raspberry Pi OS, la máquina anterior):
+    # docs/FINDINGS_AND_DEFERRED.md § F-31.
     mem_limit: ${CONTROL_TOWER_MEM_WORKER:-512m}
     # Rotación del log de Docker: sin esto el json-file crece SIN LÍMITE y acaba llenando el disco del servidor
     # (el worker escribe en cada tick). 10 MB × 3 ficheros = 30 MB como mucho por servicio.

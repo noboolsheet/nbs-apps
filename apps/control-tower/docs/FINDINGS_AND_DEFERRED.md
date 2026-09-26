@@ -19,8 +19,10 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
 >   lectura a propósito).
 > - **Decisión de producto pendiente:** **E-18** — `primary_contact_id`, `source` y `notes` de las oportunidades no
 >   viajan a Twenty y están vacías; hay que decidir si se mapean, se quedan como datos propios de CT o se retiran.
-> - **Pendiente de una acción en la Pi:** **F-31** — activar el cgroup de memoria (`cgroup_enable=memory` en
->   `/boot/firmware/cmdline.txt` + reinicio) para que los `mem_limit` dejen de descartarse, y medir entonces de verdad.
+> - **Pendiente de una comprobación en vibox:** **F-31** — el techo de memoria no estaba en efecto **en la Raspberry
+>   Pi** (kernel sin cgroup de memoria). Desde la migración a **vibox (Fedora)** el 2026-09-24 el arreglo de la Pi
+>   (`cgroup_enable=memory` en `/boot/firmware/cmdline.txt`) **ya no aplica**: falta confirmar en vibox que
+>   `docker stats` mide de verdad y que los `mem_limit` del compose son los correctos para esa máquina.
 > - **Trabajo pendiente acotado:** B-2 (Kanban de tareas) · drag-reorder de FILAS (E-12) · varias carpetas/DBs por
 >   proveedor (E-4) · ver ejecuciones de los **barridos** y editar cadencias desde el panel (E-8) · edición de perfil e
 >   invitaciones (E-9/E-11) · `Initiatives`/sub-goals (E-3) · tareas por asignado (E-2).
@@ -29,11 +31,11 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
 >   «Regístrate» ya inútil · jerarquía de encabezados y métricas (P2).
 > - **Seguridad** (`SECURITY_CHECKLIST.md`): ✅ guarda de `BETTER_AUTH_SECRET` · ✅ UUID en los params de ruta ·
 >   **queda**: redacción de claves sensibles en el logger · `folderId` de Drive · contraseña de Postgres (acción
->   del owner en la Pi; el deploy ya avisa).
-> - **Rendimiento:** E-14 — medir consultas por página e índices (el owner reporta varios segundos por página en la
->   Pi; 47/47 páginas `force-dynamic` y sólo 18 paralelizan sus consultas). Ahora también **F-28**: ninguna consulta
+>   del owner en vibox; el deploy ya avisa).
+> - **Rendimiento:** E-14 — medir consultas por página e índices (el owner reportó varios segundos por página **en la
+>   Pi**; hay que volver a medir **en vibox**, que es otra máquina: 47/47 páginas `force-dynamic` y sólo 18 paralelizan
+>   sus consultas). Ahora también **F-28**: ninguna consulta
 >   de lista lleva `LIMIT`.
-> - **Verificación en vivo del owner:** F-18 (crear una tarea en Twenty para probar su pull).
 >
 > **⚑ Añadido por la revisión de producto (2026-09-01, sesión 27 — sección G).** Lo que salió **nuevo** al evaluar la
 > app como producto, cotejado antes contra este registro y las dos auditorías:
@@ -55,7 +57,7 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
 >   aviso en pantalla. Implementado **una vez** sobre `RecordTable`, como estaba previsto al hacer F-29 antes.
 > - 🟡 **F-31 PARCIAL (reabierto 2026-09-02)** — imagen del worker **1,35 GB → 413 MB** ✅ (y de paso salió que
 >   `tsx` estaba mal declarado como devDependency: con `--prod` el deploy se quedaba sin poder migrar). Pero el
->   **techo de memoria NO estaba en efecto en la Pi**: el kernel trae el cgroup de memoria desactivado y Docker
+>   **techo de memoria NO estaba en efecto en la Pi**: aquel kernel traía el cgroup de memoria desactivado y Docker
 >   **descartaba** los límites con un aviso. Pendiente: que el owner active `cgroup_enable=memory` y reiniciar.
 > - ✅ **F-27 HECHO (2026-09-02)** — barrido amortizado dentro de `rateLimit()` (nada de temporizadores que
 >   alguien deba arrancar) y `channelId` del webhook validado como UUID antes de tocar el limitador.
@@ -163,7 +165,7 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
   cambia siempre en el desplegable de la tarjeta y el tablero vuelve a ser un componente de **servidor**. El hallazgo
   queda cerrado como descartado, no como pendiente: no hay nada que rehacer aquí.
 
-### B-2 · Task board (To Do/In Progress/Blocked/Done) como lista, no Kanban 🟢 SIGUE ABIERTO
+### B-2 · Task board (To Do/In Progress/Blocked/Done) como lista, no Kanban 🟢 SIGUE ABIERTO (verificado el 2026-09-26: el único tablero de columnas es el de oportunidades)
 - **Hallado en:** M06.
 - **Wireframe:** opción Kanban de tareas.
 - **Hoy:** tareas en tabla con control de estado y **agrupadas por vencimiento** (Vencidas/Hoy/Esta semana/Próximas/
@@ -302,7 +304,9 @@ Prioridades que surgieron al usar la app por primera vez. No son bugs: son el si
     campos que CT no gestiona.
   - Verificado: unit (reverse mappers) + integración (emite en UPDATE, no en CREATE, skip sin identidad, SYSTEM no
     emite) + **smoke en vivo** contra Twenty real (industry '' → TEST-WRITEBACK → restaurado; name/domain intactos).
-- 🟡 **Pendiente (fase posterior):** crear en Twenty desde CT (POST), y write-back de tareas si se decidiera.
+- 🟡 **Pendiente (fase posterior):** crear **clientes/contactos** en Twenty desde CT (POST).
+- ❌ **Descartado (2026-09-26, decisión del owner):** crear tareas en Twenty desde CT. Las tareas son CT-nativas; el
+  único write-back de tarea que queda es la **fecha** (`taskPatch`, CT es su dueño) de una tarea que ya exista allí.
 
 ### E-2 · Today's Work: priorización y vistas de tareas 🟢 hecho (Fase 4)
 - ✅ **Home** muestra sólo tareas activas con fecha == **hoy** (sin vencidas ni completadas), en la zona horaria de la org;
@@ -421,7 +425,8 @@ Prioridades que surgieron al usar la app por primera vez. No son bugs: son el si
 Del trabajo "fila de lista como componente" (`DataTable`, columnas alineadas + selección + **archivar**).
 - **Drag & drop en el Kanban de oportunidades** ✅ HECHO (2026-09-01, ver B-1): eventos nativos de HTML5, sin
   dependencias nuevas.
-- **Drag-reorder** (arrastrar FILAS de lista) 🟡 SIGUE DIFERIDO: necesita orden manual persistido por entidad
+- **Drag-reorder** (arrastrar FILAS de lista) 🟡 SIGUE DIFERIDO (verificado el 2026-09-26: no hay endpoint de reorden
+  y `sort_order` sigue existiendo sólo en `strategic_areas` y `project_phases`): necesita orden manual persistido por entidad
   (`sortOrder`) + endpoint de reorden + UI drag-and-drop. Solo tiene sentido en listas con orden manual (áreas estratégicas, fases, portfolio, y
   listas de hijos como subtareas/entregables/objetivos); choca con los `orderBy` por fecha/nombre del resto. Hoy solo
   `strategic_areas` y `project_phases` tienen `sortOrder`.
@@ -440,10 +445,13 @@ tema claro/oscuro: ✅ hecho (está en el menú de usuario). Tipografía por `ne
 **Añadido (2026-09-01):** tokens `--ring` (foco de teclado) y `--row-selected` (fila seleccionada) → los últimos 4
 colores crudos (`accent-neutral-*`, `bg-blue-50/60`) desaparecen; 0 colores crudos fuera de `markdown`/overlays.
 
-### E-14 · Rendimiento: consultas por página e índices 🟡 EN CURSO — instrumentación ✅ hecha (2026-09-02), falta MEDIR en la Pi
+### E-14 · Rendimiento: consultas por página e índices 🟡 EN CURSO — instrumentación ✅ hecha (2026-09-02), falta MEDIR en **vibox**
 - **Origen:** al retirar el esqueleto de carga (sesión 26) el owner dijo que las páginas tardan **varios segundos**
-  en la Pi. Eso es más de lo que debería tardar aunque el hardware sea modesto, así que **hay que medirlo**, no
-  suponerlo. Ojo: el esqueleto no era la causa, sólo lo hizo visible.
+  en la **Raspberry Pi**. Eso es más de lo que debería tardar aunque el hardware sea modesto, así que **hay que
+  medirlo**, no suponerlo. Ojo: el esqueleto no era la causa, sólo lo hizo visible.
+- **⚑ Ojo al cambiar de máquina (2026-09-24):** CT ya no corre en la Pi, corre en **vibox (Fedora)**. La medición
+  original nunca se hizo, así que **el síntoma está sin confirmar en el hardware actual**: puede haber desaparecido
+  con la máquina. Lo primero es medir en vibox y decidir si este ítem sigue existiendo.
 - **Lo que ya se sabe (recogido el 2026-09-01, sin optimizar nada todavía):**
   - Las **47 páginas** de `(app)` son `force-dynamic` ⇒ cada navegación es un render en servidor con sus consultas.
     No hay ni una estática ni cacheada.
@@ -469,18 +477,18 @@ colores crudos (`accent-neutral-*`, `bg-blue-50/60`) desaparecen; 0 colores crud
     navegador sin instalar nada.
   - **Aviso de consulta lenta** en el log por encima de `DB_SLOW_QUERY_MS` (200 ms por defecto), y
     `DB_LOG_QUERIES=true` para registrar todas en una sesión de diagnóstico.
-  - **`scripts/measure-perf.sh`**: se corre **en la Pi**, inicia sesión y saca una tabla de tiempo de pared por
+  - **`scripts/measure-perf.sh`**: se corre **en el servidor** (hoy vibox), inicia sesión y saca una tabla de tiempo de pared por
     página (fría / mejor / media) más el reparto `db`/`total` de las rutas de API. Cómo interpretarlo, en
     `DEPLOYMENT.md § Medir el rendimiento`.
 - **⚑ Dato que cambia la hipótesis de este ítem.** Medido en el portátil con el build standalone y la app
   caliente: **12–27 ms por página**. El código no hace nada patológico, así que **contar consultas e índices
   probablemente NO es la causa** de los «varios segundos» de la Pi. Sí salieron dos números altos que conviene
   mirar cuando toque optimizar: `/api/v1/context/home` hace **28 consultas** y la búsqueda global **18** (una por
-  entidad). Sospecha principal a comprobar en la Pi: **presión de memoria / swap contra la tarjeta SD** — enlaza
-  directamente con **F-31** (ningún servicio tiene límite de memoria).
+  entidad). La sospecha principal de entonces era **presión de memoria / swap contra la tarjeta SD** de la Pi —
+  enlazaba con **F-31**—, y es justo lo que la mudanza a vibox puede haberse llevado por delante.
 - **Qué queda (en este orden):**
-  1. **Correr `measure-perf.sh` en la Pi** y mirar `free -h` / `docker stats` a la vez. Sin ese dato, cualquier
-     optimización es a ciegas.
+  1. **Correr `measure-perf.sh` en vibox** y mirar `free -h` / `docker stats` a la vez. Sin ese dato, cualquier
+     optimización es a ciegas — y puede que no haya nada que optimizar.
   2. Con el dato, atacar lo que salga: paralelizar los `await` encadenados de las páginas gordas, `EXPLAIN ANALYZE`
      de las consultas lentas, e índices sólo donde el plan los pida.
   3. Revisar si algo se puede sacar de `force-dynamic` (o cachear por poco tiempo) sin romper el aislamiento por
@@ -616,15 +624,15 @@ El detalle cronológico está en [`BUILD_LOG.md`](./BUILD_LOG.md); las decisione
   unitario. Twenty pagina por cursor y Notion respeta `Retry-After` (misma tanda). Scoping: `GITHUB_OWNER` acota a un
   usuario/org (`/users/<owner>/repos`); sin él usa `/user/repos`.
 
-### F-18 · Tareas con doble origen: CT-propias + importadas de Twenty 🟢 código listo (Bloque 2)
+### F-18 · Tareas con doble origen: CT-propias + importadas de Twenty ✅ CERRADO (código hecho) · ❌ la verificación en vivo se descarta (2026-09-26)
 - **Contexto:** Twenty tiene su propio objeto **Task** (relacionado con records/oportunidades) — es la única de las apps
   conectadas con ese objeto. Las tareas de CT deben poder **coexistir**: unas creadas en CT (propiedad de CT) y otras
   importadas de Twenty (marcadas como origen Twenty), **todas juntas en la misma sección** `/tasks` para una visión
   completa, y **creables en ambos sitios sin conflictos** (cada tarea tiene un único dueño = su origen → sin peleas de
   campo).
-- **Estado hoy:** el sync de Twenty (`sync-twenty.ts`) trae company/person/opportunity, **NO** tasks. Todas las tareas
-  de CT son hoy CT-propias.
-- **Para implementarlo (trabajo nuevo):**
+- **Estado al anotarlo:** el sync de Twenty (`sync-twenty.ts`) traía company/person/opportunity, **NO** tasks. Todas
+  las tareas de CT eran CT-propias.
+- **Lo que hacía falta (ya hecho en el Bloque 2):**
   1. Añadir **Task** al pull de Twenty (`twenty/client.ts` + `mapper` + `sync-twenty.ts`): task de Twenty → `tasks` de CT,
      con identidad en `external_identities` (provider=TWENTY, internalType='task') → así el origen se sabe sin columna
      nueva (mismo patrón que el SourceBadge de clients/contacts).
@@ -634,7 +642,13 @@ El detalle cronológico está en [`BUILD_LOG.md`](./BUILD_LOG.md); las decisione
   4. (Opcional, E-1) **push** de tareas CT→Twenty si se quiere crear en CT y que aparezca en Twenty; si no, cada una vive
      en su origen y solo se **leen** juntas.
 - **Notion:** ninguna tarea se refleja a Notion por ahora (ver §4.8 del contrato).
-- ✅ **Hecho (Bloque 2):** pull de Twenty **tasks** → `tasks` de CT (identidad TWENTY/task; sin proyecto), badge de fuente CT/Twenty en la vista global `/tasks`. Pendiente sólo la **verificación en vivo** (el owner no tiene tareas en Twenty aún: crear una de ejemplo).
+- ✅ **Hecho (Bloque 2):** pull de Twenty **tasks** → `tasks` de CT (identidad TWENTY/task; sin proyecto), badge de
+  fuente CT/Twenty en la vista global `/tasks`.
+- ❌ **Verificación en vivo descartada (2026-09-26, decisión del owner): no se van a crear tareas en Twenty.** Las
+  tareas viven en CT. No hay nada que verificar porque el origen nunca tendrá tareas que traer. **El código del pull
+  se queda** (`mapTask` + la rama de tasks de `sync-twenty.ts`): es inerte —un pull sin tareas no crea nada y la
+  reconciliación de M40 no archiva con pull vacío— y si algún día se quisiera usar, ya está construido y probado por
+  unit/integración. Cae con ello el **push** del punto 4 y el write-back de tareas (ver E-1).
 
 ### F-25 · La purga de archivados dejaba fuera media aplicación, y en silencio 🔴 RESUELTO (2026-09-01, bug real)
 - **Aviso del owner (2026-09-01):** «controla que los botones de purga están funcionando bien y no tienen errores,
@@ -793,7 +807,7 @@ El detalle cronológico está en [`BUILD_LOG.md`](./BUILD_LOG.md); las decisione
   su definición). El `Map` de cubetas no se vacía nunca.
 - **Lo que lo agrava:** el webhook del inbox usa como clave `inbox:${channelId}`
   (`app/api/v1/inbox/webhook/[channelId]/route.ts:25`) y ese `channelId` **lo elige quien llama**, sin autenticar
-  todavía. Cualquiera con acceso a la red puede crear entradas nuevas sin límite. En la Pi, con memoria contada,
+  todavía. Cualquiera con acceso a la red puede crear entradas nuevas sin límite. En un servidor con memoria contada,
   importa; el resto de claves (`api:<ip>`) sí son de cardinalidad acotada.
 - **Resuelto (2026-09-02):**
   - **Barrido amortizado dentro de `rateLimit()`**: una de cada 500 llamadas limpia las cubetas caducadas. Se
@@ -826,7 +840,7 @@ El detalle cronológico está en [`BUILD_LOG.md`](./BUILD_LOG.md); las decisione
     correcto. Números como números y **fechas como instantes** (ordenar «10/03» y «9/03» por texto está mal).
   - **Filtro rápido** por texto sobre los valores planos de la fila.
   - Ambos **en cliente, a propósito**: no hay paginación, así que el servidor ya mandó todas las filas; hacerlo
-    por URL costaría un viaje de ida y vuelta por clic, y en la Pi eso se nota.
+    por URL costaría un viaje de ida y vuelta por clic, y en un servidor modesto eso se nota.
 - **El `LIMIT` es opt-in, y esa decisión importa.** `LIST_LIMIT = 500` lo pasa **quien pinta la página**, nunca
   la consulta por su cuenta: `listReviewItems`, `listLearningItems` y `listAssets` **las usa también el push a
   Notion** (`notion-specs.ts`) para saber qué empujar, y un tope ciego ahí habría dejado de sincronizar en
@@ -871,7 +885,7 @@ El detalle cronológico está en [`BUILD_LOG.md`](./BUILD_LOG.md); las decisione
   sobre las 19 rutas contrastando el número de filas renderizadas contra la BD (contactos 6+cabecera=7,
   objetivos 1+1=2, pagos 0 → estado vacío, Tareas conserva sus 4 tablas apiladas con `fixedLayout`).
 
-### F-30 · i18n: claves auto-extraídas del castellano y literales sueltos 🟢 ABIERTO
+### F-30 · i18n: claves auto-extraídas del castellano y literales sueltos 🟢 ABIERTO (repasado contra el código el 2026-09-26)
 - **Hallado en:** sesión 27. Cierra el flanco que dejó **E-10** (i18n), que sí está hecho y bien: `t()` está tipado
   con `MessageKey`, así que una clave inexistente **no compila**, y un test comprueba que los diccionarios cuadran.
 - **Lo que quedó mal, en dos frentes:**
@@ -881,9 +895,11 @@ El detalle cronológico está en [`BUILD_LOG.md`](./BUILD_LOG.md); las decisione
      `crm.creado` y `crm.fuenteDeVerdad` se usan en **Negocio** (`business/goals/[id]`, `capabilities/[id]`,
      `strategic-areas/[id]`).
   2. **Literales que nunca llegaron al diccionario**: `Reemplaza a` / `Reemplazada por`
-     (`knowledge/decisions/page.tsx:48,56`), `Última sync` (`integrations/sync-run-summary.tsx:31`) y el texto en
-     español metido a mano en tres `confirm()` (`projects/forms.tsx:179`, `integrations/controls.tsx:119`,
-     `knowledge/inbox-channels.tsx:97`).
+     (`knowledge/decisions/page.tsx:48,56`), el texto en español metido a mano en tres `confirm()`
+     (`projects/forms.tsx:179`, `integrations/controls.tsx:119`, `knowledge/inbox-channels.tsx:97`) y
+     `'El archivo debe ser una imagen.'` (`settings/profile-photo.tsx`, encontrado el 2026-09-26).
+     ~~`Última sync`~~ ✅ ya está en el diccionario (`sync.ultimaSync`); el resto **sigue igual** (comprobado el
+     2026-09-26: las claves truncadas de `crm.*`/`knowledge.*` siguen ahí y los tres `confirm()` también).
 - **Por qué importa:** la promesa de E-10 era «copia `es.ts`, traduce los valores y no toques las claves». Con
   claves que son frases españolas truncadas, quien traduzca no sabrá a qué pantalla pertenece cada una. No rompe
   nada hoy; encarece el día que se añada idioma.
@@ -891,7 +907,7 @@ El detalle cronológico está en [`BUILD_LOG.md`](./BUILD_LOG.md); las decisione
   mover los literales sueltos al diccionario. El renombrado es seguro: al estar tipado, cualquier olvido **falla en
   el typecheck**, no en producción.
 
-### F-31 · Despliegue: la imagen del worker lleva el proyecto entero y no hay límites de recursos 🟡 REABIERTO (2026-09-02) — el techo de memoria NO estaba en efecto en la Pi
+### F-31 · Despliegue: la imagen del worker lleva el proyecto entero y no hay límites de recursos 🟡 ABIERTO — imagen ✅ · techo de memoria **sin comprobar en vibox** (el arreglo de la Pi ya no aplica)
 - **Hallado en:** sesión 27. **Nuevo** respecto a `SECURITY_CHECKLIST.md`, que ya cubre lo de los contenedores
   **no-root** (§ tabla de prioridades, ítem 3) pero no esto.
 - **Dos cosas distintas:**
@@ -923,7 +939,7 @@ El detalle cronológico está en [`BUILD_LOG.md`](./BUILD_LOG.md); las decisione
   procesa jobs, corre los barridos y escribe su heartbeat; `pnpm --filter @ct/db migrate` sale con **código 0**
   dentro del contenedor; y la etapa `web` sigue construyendo igual (469 MB).
 
-#### 🟡 REABIERTO (2026-09-02, sesión 36) — el techo de memoria se estaba **descartando** en la Pi
+#### 🟡 REABIERTO (2026-09-02, sesión 36) — el techo de memoria se estaba **descartando** en la Pi *(histórico: esa máquina ya no es el servidor)*
 
 El owner reportó que al levantar los contenedores en la Pi, web y worker avisan:
 *«Your kernel does not support memory limit capabilities or the cgroup is not mounted. Limitation discarded.»*
@@ -943,26 +959,36 @@ CONFIG_MEMCG                      → =y  (el kernel lo soporta; sólo está apa
   seguir en la Pi, y las cifras medidas de arriba salieron de **local**, no de la máquina real.
 - **Origen:** no está en `cmdline.txt`; lo inyectan los **device tree blobs** de `/boot/firmware` (Raspberry Pi OS lo
   desactiva por defecto). Los parámetros de `cmdline.txt` se procesan **después**, así que se contrarresta desde ahí.
-- **Acción del owner (pendiente, requiere root + reinicio de la Pi):**
-  ```sh
-  sudo cp /boot/firmware/cmdline.txt /boot/firmware/cmdline.txt.bak
-  sudo sed -i '1 s/$/ cgroup_enable=memory cgroup_memory=1/' /boot/firmware/cmdline.txt
-  cat /boot/firmware/cmdline.txt      # debe seguir siendo UNA sola línea
-  sudo reboot
-  # comprobación: `memory` en /sys/fs/cgroup/cgroup.controllers y `docker stats` sin 0B
-  ```
+- **Acción que quedó escrita para la Pi (ya NO aplica, ver el apartado de vibox más abajo):** añadir
+  `cgroup_enable=memory cgroup_memory=1` a `/boot/firmware/cmdline.txt` y reiniciar. `/boot/firmware/` es de
+  Raspberry Pi OS; en Fedora ese fichero no existe.
 - **Hecho en el repo (2026-09-02):** documentado el requisito del kernel en los dos compose y en `.env.example`, y
   **retirado `memswap_limit` de los tres servicios** (prod y dev). Su razón de ser era falsa: se comprobó que la raíz
   de esta Pi está en un **SSD** (`/dev/sda2`, 477 GB) y que el swap es **zram** — comprimido y **en RAM**, no en la
   tarjeta SD. Ahí swapear sale barato y hace de colchón ante un pico; prohibirlo sólo adelantaba el OOM. Sin
   `memswap_limit`, Docker admite hasta 2× `mem_limit` contando ese zram.
-- **Qué falta para cerrarlo:** que el owner active el cgroup y reinicie, y **medir entonces en la Pi** los tres
-  servicios con `docker stats` para confirmar (o ajustar) 768m/512m/512m. Enlaza con **E-14** (rendimiento): hasta
-  ahora no se ha podido saber si la lentitud tenía que ver con memoria, porque no había forma de medirla por
-  contenedor.
-- **Observado de paso:** en la Pi corre un **`control-tower-worker-dev`** junto al stack de prod, sin su web ni su
-  base de dev, levantado desde hace ~17 h. Si no es intencionado, está consumiendo memoria en una máquina que ya
-  está usando 1 GB de swap (4,3 GB de 7,9 en uso).
+- **Observado de paso (en la Pi):** corría un **`control-tower-worker-dev`** junto al stack de prod, sin su web ni su
+  base de dev, levantado desde hacía ~17 h, en una máquina que ya usaba 1 GB de swap (4,3 GB de 7,9 en uso).
+
+#### ⚑ Qué queda de verdad tras la mudanza a vibox (2026-09-24)
+
+El diagnóstico de arriba es de la **Raspberry Pi**, que ya no es el servidor: CT corre en **vibox (Fedora)**.
+Eso cambia el ítem en tres sitios y **nada de esto está comprobado en la máquina nueva**:
+
+1. **El cgroup de memoria probablemente ya no es un problema.** Fedora arranca con **cgroup v2** y el controlador
+   `memory` activo; lo de la Pi era una peculiaridad de Raspberry Pi OS. Comprobación de un comando en vibox:
+   ```sh
+   grep memory /sys/fs/cgroup/cgroup.controllers && docker stats --no-stream control-tower-web.prod control-tower-worker.prod
+   ```
+   Si sale `memory` y `docker stats` da cifras (no `0B`), **esta mitad del ítem se cierra**.
+2. **Los valores por defecto están sin medir en vibox**: 768m/512m se midieron en el portátil y se pensaron para una
+   Pi de 8 GB. Con la medición del punto 1 se confirman o se ajustan.
+3. **Ya no son tres servicios, son dos.** La base de datos salió del compose (vive en `nbs-db`, repo `nbs-infra`), así
+   que `CONTROL_TOWER_MEM_DB` sólo tiene sentido en el compose **local**. El techo de memoria del Postgres del
+   servidor es cosa de `nbs-infra`.
+
+Enlaza con **E-14**: la sospecha de que la lentitud era presión de memoria era una sospecha **sobre la Pi**; en vibox
+hay que volver a medir antes de dar por bueno el síntoma.
 
 ### F-32 · El e2e por journeys llevaba tiempo roto, y en silencio ✅ RESUELTO (2026-09-01, bug real del tooling)
 - **Hallado en:** sesión 27, al correr `scripts/e2e-journeys.sh` como verificación previa a commit de F-26/F-29.
@@ -1068,7 +1094,7 @@ CONFIG_MEMCG                      → =y  (el kernel lo soporta; sólo está apa
 - **Regla operativa que sale de aquí:** migrar CT entre servidores es `pg_dump` + restore **completo**,
   `external_identities` incluida. Repoblar desde los orígenes duplica por diseño. En `DEPLOYMENT.md`.
 
-### E-15 · Notas y comentarios por registro 🟡 futuro (hueco de producto)
+### E-15 · Notas y comentarios por registro 🟡 futuro (hueco de producto) — **sigue abierto** (verificado contra el código el 2026-09-26: no existe tabla de notas ni comentarios)
 - **Hallado en:** sesión 27.
 - **Qué falta:** no hay tabla de comentarios ni sitio donde escribir texto libre asociado a un registro. Hay
   **historial de auditoría** (qué campo cambió, cuándo y quién, F-4) pero eso responde a «qué pasó», no a «qué
@@ -1080,14 +1106,19 @@ CONFIG_MEMCG                      → =y  (el kernel lo soporta; sólo está apa
   como `change_events`), su endpoint y un bloque en el panel lateral junto a «Historial». Ojo con la retención:
   entidad nueva ⇒ sitio en `PURGE_ORDER` (ver convenciones de `CLAUDE.md`).
 
-### E-16 · Adjuntos 🟢 futuro (probablemente NO, decisión pendiente)
+### E-16 · Adjuntos 🟢 futuro (probablemente NO, decisión pendiente) — enunciado recortado el 2026-09-26
 - **Hallado en:** sesión 27.
-- **Qué falta:** no hay **ni un** `input type="file"` en toda la aplicación. Todo fichero vive fuera (Drive/Notion)
-  y en CT sólo queda la referencia.
+- **Qué falta:** no hay forma de adjuntar un fichero a un registro. Todo fichero vive fuera (Drive/Notion) y en CT
+  sólo queda la referencia.
+- **Corrección del enunciado (2026-09-26):** decía «no hay **ni un** `input type="file"` en toda la aplicación» y eso
+  ya no es cierto: hay **uno**, la **foto de perfil** (`components/settings/profile-photo.tsx`), que redimensiona la
+  imagen en cliente a 256 px y la guarda como **data URL** en `users.image` vía Better Auth. No es almacenamiento de
+  ficheros ni contradice la decisión congelada —no hay disco, ni rutas, ni servir archivos—, pero es el precedente a
+  tener en cuenta si algún día se abre el caso acotado.
 - **Matiz importante:** esto es **coherente con la decisión congelada** de que CT guarda referencias y nunca
   contenido de ficheros. La consecuencia práctica es que un contrato firmado o el logo de un cliente no tienen
   sitio propio. **Decisión del owner pendiente:** o se acepta (y entonces esto se cierra como ❌ descartado), o se
-  admite un caso acotado (p. ej. sólo en Pagos, con el fichero en disco de la Pi y la ruta en la DB).
+  admite un caso acotado (p. ej. sólo en Pagos, con el fichero en disco del servidor y la ruta en la DB).
 
 ### E-17 · Sacar datos: exportación de negocio e informes de evolución 🟢 futuro
 - **Hallado en:** sesión 27.

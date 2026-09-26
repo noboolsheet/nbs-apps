@@ -1,7 +1,7 @@
 # Control Tower
 
 Capa web de **control, agregación, contexto y gobierno** de la empresa (Twenty CRM, Notion, Git,
-Drive, Calendar, n8n, la Raspberry Pi). No reemplaza esas herramientas ni duplica su contenido:
+Drive, Calendar, n8n, el servidor **vibox**). No reemplaza esas herramientas ni duplica su contenido:
 responde *"¿qué está pasando, qué requiere atención, qué he decidido y dónde está la info canónica?"*.
 
 > 📚 **Planificación y progreso:** ver [`docs/IMPLEMENTATION_ROADMAP.md`](./docs/IMPLEMENTATION_ROADMAP.md)
@@ -48,7 +48,7 @@ pnpm lint && pnpm typecheck && pnpm test
 
 Health: `GET /api/health` (liveness) · `GET /api/health/db` (readiness).
 
-## Despliegue (Raspberry Pi / modelo-1 del monorepo)
+## Despliegue (vibox / modelo-1 del monorepo)
 
 ```sh
 cp .env.example .env         # POSTGRES_*, BETTER_AUTH_SECRET, claves de integración

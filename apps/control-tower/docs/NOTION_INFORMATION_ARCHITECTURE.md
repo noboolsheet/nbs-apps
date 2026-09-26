@@ -214,10 +214,10 @@ CT entity: `projects`. **CT dueño de la ficha**; la página de proyecto en Noti
 CT es la herramienta operativa de tareas. Mantener tareas en Notion = doble gestión. Se dejan **solo en CT** respecto a
 Notion. (Si más adelante quieres verlas en Notion, sería CT→Notion read-only.)
 
-> **Origen de las tareas (F-18):** dentro de CT, las tareas tendrán **doble origen** — unas creadas en CT (propiedad de
-> CT) y otras **importadas de Twenty** (Twenty es la única app conectada con objeto Task). Todas se ven juntas en
-> `/tasks`, con badge de fuente (CT/Twenty), cada una con un único dueño (su origen) para crearlas en ambos sitios sin
-> conflictos. Es **trabajo nuevo** anotado en FINDINGS F-18; no afecta al contrato de Notion.
+> **Origen de las tareas (F-18):** CT admite **doble origen** — tareas creadas en CT (propiedad de CT) y tareas
+> **importadas de Twenty** (la única app conectada con objeto Task), todas juntas en `/tasks` con badge de fuente.
+> **Implementado, pero en desuso:** el owner decidió el **2026-09-26** que **no se crearán tareas en Twenty**, así que
+> en la práctica todas las tareas son de CT. No afecta al contrato de Notion (las tareas no se reflejan allí).
 
 ### 4.9 Clients — **Twenty es la verdad**; Notion solo "client knowledge"
 No crear una DB `Clients` que compita con Twenty. En Notion: páginas de conocimiento/documentación por cliente

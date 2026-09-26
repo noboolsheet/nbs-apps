@@ -135,7 +135,7 @@ Lo que ya corre sobre los motores de §0. Úsalo para no duplicar.
 | AUT-27 | **Google Calendar**: evento con nombre de cliente/proyecto → enlazar + **surfacing de contexto** al abrir el día; reunión terminada → crear **tarea de seguimiento** + solicitar notas/decisión. | Calendar·CT | HAB-4 | Alto·M |
 | AUT-28 | **GitHub**: release/tag nuevo → subir **versión del asset** + crear knowledge_item de changelog; issue etiquetada → crear tarea en CT; PR mergeado → registrar actividad del proyecto. | GitHub·CT | HAB-2 | Medio·M |
 | AUT-29 | **Notion**: página en una DB de "peticiones" (o checkbox) → crear **tarea/knowledge** en CT (Notion como entrada, no solo espejo). | Notion·CT | HAB-2 | Medio·M |
-| AUT-30 | **Twenty**: sync bidireccional de **tareas** (hoy diferido) y enriquecimiento de contactos. | Twenty·CT | — | Medio·L |
+| AUT-30 | **Twenty**: enriquecimiento de contactos. *(El **sync bidireccional de tareas** que incluía este ítem queda ❌ **descartado** el 2026-09-26: decisión del owner, no se crean tareas en Twenty — ver F-18.)* | Twenty·CT | — | Medio·M |
 | AUT-31 | **Inbox pipeline** (n8n/ChatGPT/Claude/email → webhook): captura → **auto-clasificación** → knowledge_item → sugerencia de relaciones. *(usa AUT-12)* | Externo·CT·(IA) | HAB-2 | Alto·M |
 | AUT-32 | **Cross-app kickoff** al ganar una oportunidad (= AUT-02 detallado): Drive + Notion + GitHub + tareas, todo idempotente y trazado en audit. | Twenty·Drive·Notion·GitHub·CT | HAB-3 | Alto·L |
 

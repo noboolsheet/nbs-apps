@@ -1,12 +1,15 @@
-# Control Tower — Deployment (Raspberry Pi / self-hosted)
+# Control Tower — Deployment (self-hosted en **vibox**)
 
 Runbook de despliegue (modelo-1 del monorepo). Target: Linux **ARM64**/x64 con Docker + Compose + Caddy.
 Puertos **4270 (dev) / 4272 (prod)**; ruta Caddy `control-tower.noboolsheet.local`.
 
+**Máquina actual: `vibox`** (hostname real `fedora`). Hasta el **2026-09-24** el servidor fue una **Raspberry Pi**;
+lo que aquí se diga «de la Pi» es historia de esa máquina y se señala como tal.
+
 ## Compatibilidad ARM64
-Todas las imágenes son oficiales multi-arch (funcionan en la Pi):
-- `node:24-slim` (web + worker) · `postgres:18` (db) · `caddy` (reverse proxy, ya desplegado en `infrastructure/caddy`).
-El **dominio es portable** (doc 4 §29): Pi → VPS → cloud sin cambiar el código.
+Todas las imágenes son oficiales multi-arch (funcionaban en la Pi ARM64 y funcionan en vibox):
+- `node:24-slim` (web + worker) · `postgres:18` (db, hoy en `nbs-db`) · `caddy` (reverse proxy, ya desplegado en `infrastructure/caddy`).
+El **dominio es portable** (doc 4 §29): Pi → vibox → VPS → cloud sin cambiar el código. La mudanza a vibox lo confirmó.
 
 ## Gate previo a producción (IMP-010)
 ```
@@ -21,7 +24,7 @@ El **dominio es portable** (doc 4 §29): Pi → VPS → cloud sin cambiar el có
 [ ] Reverse proxy: bloque en infrastructure/caddy/CaddyFile — añadido
 ```
 
-## Primer despliegue (en la Pi)
+## Primer despliegue (en el servidor)
 ```sh
 # 1. Secretos de la app (gitignored). Genera un secret fuerte:
 cd apps/control-tower
@@ -242,33 +245,33 @@ API. **Cómo interpretarlo:**
 | Lo que ves | Qué significa |
 |---|---|
 | Páginas lentas y `db` **alto** | Es la base de datos: consultas o índices |
-| Páginas lentas y `db` **bajo** | **No** es la base de datos → render, Node, E/S o memoria. Mira `free -h` y `docker stats` (ojo: si `docker stats` da `0B`, ver la nota del cgroup de memoria más abajo) |
+| Páginas lentas y `db` **bajo** | **No** es la base de datos → render, Node, E/S o memoria. Mira `free -h` y `docker stats` (si `docker stats` da `0B`, ver la nota del cgroup de memoria más abajo) |
 | 1ª pasada lenta, 2ª rápida | Arranque en frío, no un problema de estado estacionario |
 
 > Referencia medida en el portátil (Postgres local, pocos datos): páginas **12–27 ms**, `/api/v1/context/home`
-> **28 consultas**. Si en la Pi el mismo endpoint da un `db` parecido pero la página tarda segundos, el problema
-> **no** está en las consultas.
+> **28 consultas**. Si en el servidor el mismo endpoint da un `db` parecido pero la página tarda segundos, el
+> problema **no** está en las consultas.
 
-### ⚠ Techo de memoria: hay que activar el cgroup en la Pi (F-31)
+### ⚠ Techo de memoria: comprobar que el cgroup está activo (F-31)
 
-Los tres servicios llevan `mem_limit` en los compose de la Pi, pero **Raspberry Pi OS trae el cgroup de memoria
-desactivado** desde el device tree (`cgroup_disable=memory` en `/proc/cmdline`). Con eso, al levantar los
-contenedores Docker avisa —*«Your kernel does not support memory limit capabilities or the cgroup is not mounted.
-Limitation discarded.»*— **descarta el límite** y arranca igual. Nada falla, pero no hay techo: una fuga se lleva la
-Pi entera. Y `docker stats` devuelve `0B` para todo, así que tampoco se puede medir por contenedor.
+`web` y `worker` llevan `mem_limit` en los compose del servidor. Si el host **no** tiene activo el cgroup de memoria,
+al levantar los contenedores Docker avisa —*«Your kernel does not support memory limit capabilities or the cgroup is
+not mounted. Limitation discarded.»*—, **descarta el límite** y arranca igual: nada falla, pero no hay techo (una fuga
+se lleva la máquina entera) y `docker stats` devuelve `0B` para todo, así que tampoco se puede medir por contenedor.
 
-Se activa una sola vez, y requiere reinicio:
+Comprobación en vibox (un comando, sin reiniciar nada):
 
 ```sh
-sudo cp /boot/firmware/cmdline.txt /boot/firmware/cmdline.txt.bak
-sudo sed -i '1 s/$/ cgroup_enable=memory cgroup_memory=1/' /boot/firmware/cmdline.txt
-cat /boot/firmware/cmdline.txt          # debe seguir siendo UNA sola línea
-sudo reboot
+grep memory /sys/fs/cgroup/cgroup.controllers                 # debe aparecer "memory"
+docker stats --no-stream control-tower-web.prod control-tower-worker.prod   # cifras reales, no 0B / 0B
 ```
 
-Comprobación tras el reinicio: `memory` debe aparecer en `/sys/fs/cgroup/cgroup.controllers`, y `docker stats` debe
-mostrar uso y límite reales en vez de `0B / 0B`.
+En **Fedora** esto viene activo (cgroup v2), así que lo esperable es que salga bien. **El caso de la Raspberry Pi**
+(la máquina hasta el 2026-09-24) era la excepción: Raspberry Pi OS traía `cgroup_disable=memory` desde el device tree
+y había que contrarrestarlo añadiendo `cgroup_enable=memory cgroup_memory=1` a `/boot/firmware/cmdline.txt` y
+reiniciar. **Eso no aplica en vibox** — ese fichero es de Raspberry Pi OS.
 
-> Nota: los contenedores **sí pueden usar swap** (no se pone `memswap_limit`). En esta Pi el swap es **zram**
-> —comprimido y en RAM— y la raíz está en un SSD, no en la tarjeta SD: swapear sale barato y hace de colchón ante un
-> pico, mientras que prohibirlo sólo adelantaría el OOM.
+> Nota: los contenedores **sí pueden usar swap** (no se pone `memswap_limit`). La razón original era de la Pi (swap en
+> zram, comprimido y en RAM, con la raíz en SSD: swapear salía barato y hacía de colchón ante un pico, mientras que
+> prohibirlo sólo adelantaba el OOM). Al medir en vibox, revisar si sigue siendo la decisión correcta allí.
+> Los valores por defecto (768m/512m) están medidos **en local** y sin confirmar en vibox.

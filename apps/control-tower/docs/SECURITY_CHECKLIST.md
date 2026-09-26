@@ -4,7 +4,8 @@
 > desplegarse. Complementa a [`SECURITY.md`](./SECURITY.md) (baseline M17) con una revisión exhaustiva por
 > dominios y el veredicto actual. Re-evaluar en cada release y antes de cada cambio de exposición de red.
 >
-> **Contexto actual:** self-hosted en la Raspberry Pi, acceso por LAN + Tailscale, **un solo usuario (owner)**.
+> **Contexto actual:** self-hosted en **vibox** (hostname real `fedora`; hasta el 2026-09-24 era una Raspberry Pi),
+> acceso por LAN + Tailscale, **un solo usuario (owner)**.
 > Los controles marcados 🔵 **solo aplican cuando la app sea pública / multiusuario**; se dejan anotados para
 > ser conscientes de ellos, no son deuda urgente hoy.
 >
@@ -72,17 +73,17 @@
   público.
 
 ## 7. Infraestructura y despliegue
-- 🟡 **Contraseña de Postgres por defecto** (`control_tower`/`control_tower`) en el `.env`. La red Docker aísla el 5432 en prod, pero es un endurecimiento trivial. **Es acción del owner en la Pi** (el `.env` es por-máquina y no está en el repo): desde el 2026-09-02 `deploy-control-tower.sh` **avisa en cada despliegue** si sigue siendo la de por defecto e imprime el procedimiento. No aborta a propósito: rotarla con la base ya creada exige un `ALTER USER` además de tocar el `.env`, y abortar dejaría al owner sin poder desplegar.
+- 🟡 **Contraseña de Postgres por defecto** (`control_tower`/`control_tower`) en el `.env`. La red Docker aísla el 5432 en prod, pero es un endurecimiento trivial. **Es acción del owner en vibox** (el `.env` es por-máquina y no está en el repo): desde el 2026-09-02 `deploy-control-tower.sh` **avisa en cada despliegue** si sigue siendo la de por defecto e imprime el procedimiento. No aborta a propósito: rotarla con la base ya creada exige un `ALTER USER` además de tocar el `.env`, y abortar dejaría al owner sin poder desplegar.
   **Para rotarla:** `ALTER USER control_tower WITH PASSWORD '<nueva>';` → actualiza `POSTGRES_PASSWORD` en `apps/control-tower/.env` → vuelve a desplegar.
 - ❌ **Contenedores como root — NO se cambia (decisión del owner, 2026-09-01).** Web y worker corren como root; se acepta
   para un despliegue single-user tras Tailscale porque el cambio arriesga problemas de permisos en los bind-mounts de la
   Pi. Reabrir si la app se expone públicamente (Parte II).
 - 🔴 **App publicada en `0.0.0.0:4272` en HTTP plano**, saltándose Caddy (TLS + cabeceras). En LAN de confianza es el patrón documentado, pero expone cookies de sesión en claro por ese puerto. → Bindear a loopback/bridge y forzar el tráfico por Caddy (o aceptarlo como decisión consciente en LAN).
-- ✅ **Imágenes horneadas/inmutables** en prod; el bind-mount de `src` es solo `compose.override.yml` (nunca en la Pi).
-- ✅ **Postgres NO expuesto al host** en el deploy de la Pi (solo red interna); el `5432:5432` es solo del compose local de dev.
+- ✅ **Imágenes horneadas/inmutables** en prod; el bind-mount de `src` es solo `compose.override.yml` (nunca en el servidor).
+- ✅ **Postgres NO expuesto al host** en el servidor: desde el 2026-09 la base vive en **`nbs-db`** (repo `nbs-infra`) y CT llega por la red Docker `noboolsheet_db_<perfil>`; el `5432:5432` es solo del compose local de dev.
 - ✅ **Sin secretos horneados** en la imagen (van por `env_file`/`environment` en runtime).
 - 🟡 **Validación de env parcial** (acotado el 2026-09-02): `BETTER_AUTH_SECRET` ✅ ya se valida y la web ✅ ya hace fail-fast al arrancar (`instrumentation.ts`). **Queda**: los secretos de integración (`NOTION_API_KEY`, `TWENTY_API_KEY`, `GOOGLE_SA_KEY_B64`…) siguen sin validarse — hoy fallan en el job del sync, con su error visible en «Envíos fallidos», que es un modo de fallo aceptable.
-- 🟡 **PARCIAL (2026-09-02)** — hay `mem_limit` en los tres servicios, configurable por `.env` y con valores medidos (`memswap_limit` se retiró: el swap de la Pi es zram, en RAM). **Pero en la Pi no se aplicaba**: el kernel trae el cgroup de memoria desactivado y Docker descarta el límite con un aviso. Falta activar `cgroup_enable=memory` en `/boot/firmware/cmdline.txt` y reiniciar — ver **F-31**. Enunciado original: **Ningún servicio tenía límite de memoria ni de CPU**: `control-tower.docker-compose.prod.yml` no declara `deploy.resources.limits` ni `mem_limit` en web/worker/db. En una Raspberry Pi eso significa que un proceso con una fuga se lleva por delante **la máquina entera**, no sólo su contenedor. Los logs sí están acotados (`max-size 10m`, `max-file 3`). → Poner `mem_limit` en los tres, con el margen más generoso para la base de datos. Ver **F-31** en `FINDINGS_AND_DEFERRED.md`.
+- 🟡 **PARCIAL (2026-09-02; pendiente de comprobar en vibox)** — hay `mem_limit` en web y worker, configurable por `.env` y con valores medidos en local (`memswap_limit` se retiró: el swap de la Pi era zram, en RAM). **En la Pi no se aplicaba** (kernel sin cgroup de memoria, Docker descartaba el límite con un aviso); **el arreglo de la Pi ya no aplica en vibox (Fedora, cgroup v2)** y falta confirmarlo allí con `grep memory /sys/fs/cgroup/cgroup.controllers` + `docker stats` — ver **F-31**. Enunciado original: **Ningún servicio tenía límite de memoria ni de CPU**: `control-tower.docker-compose.prod.yml` no declara `deploy.resources.limits` ni `mem_limit` en web/worker/db. En una Raspberry Pi eso significa que un proceso con una fuga se lleva por delante **la máquina entera**, no sólo su contenedor. Los logs sí están acotados (`max-size 10m`, `max-file 3`). → Poner `mem_limit` en los tres, con el margen más generoso para la base de datos. Ver **F-31** en `FINDINGS_AND_DEFERRED.md`.
 - ✅ **RESUELTO (2026-09-02)** — **1,35 GB → 413 MB** con una etapa `--prod --filter "@ct/worker..."`. Enunciado original: **La imagen del worker llevaba el proyecto entero**: el target `worker` del `Dockerfile` parte de la etapa `deps` — código fuente completo, `devDependencies` incluidas, y ejecuta TypeScript con `tsx` en producción. La web sí es `standalone` y mínima. Más superficie de la necesaria justo en el servicio que habla con **todas** las APIs externas. → Compilar en una etapa aparte y copiar sólo el resultado + dependencias de producción. Ver **F-31**.
 
 ## 8. Logging, auditoría y manejo de errores
@@ -99,8 +100,8 @@
 ## 10. Protección de datos y backups
 - ✅ **RESUELTO en M18** — `scripts/backup.sh` + `scripts/restore.sh` con **simulacro de restauración verificado**
   (ver el tracker de `IMPLEMENTATION_ROADMAP.md` y `DEPLOYMENT.md`). Queda como tarea **operativa** del owner: comprobar
-  cada cierto tiempo que el backup de la Pi sigue corriendo y se puede restaurar.
-- ⚠️ **Cifrado en reposo**: los datos viven en el volumen/bind-mount de la Pi; no hay cifrado a nivel app. Considerar cifrado de disco en la Pi si el hardware es físicamente accesible.
+  cada cierto tiempo que el backup del servidor sigue corriendo y se puede restaurar.
+- ⚠️ **Cifrado en reposo**: los datos viven en el cluster `nbs-db` de vibox; no hay cifrado a nivel app. Considerar cifrado de disco en el servidor si el hardware es físicamente accesible.
 - ✅ **Retención**: barridos diarios de tareas completadas, **archivados**, **bandeja procesada** e **historial de syncs**;
   el historial de auditoría se conserva.
 - 🔵 **RGPD / borrado de datos de usuario** (export + delete): aplica al ser multiusuario/público.
@@ -200,8 +201,8 @@ Endurecimientos baratos y de alto valor antes del deploy con datos reales:
 | # | Ítem | Dónde |
 |---|---|---|
 | ~~1~~ | ~~Validar `BETTER_AUTH_SECRET` y llamar `loadEnv()` en la web~~ ✅ **HECHO (2026-09-02)** — la web no arranca sin él | `env.ts`, `apps/web/instrumentation.ts` |
-| 2 | Cambiar la **contraseña por defecto de Postgres** — acción del owner en la Pi; el deploy ya **avisa** en cada despliegue | `.env` |
-| ~~3~~ | ~~Contenedores **no-root**~~ — ❌ **descartado (owner, 2026-09-01)**: se acepta root en single-user tras Tailscale (riesgo de permisos en los bind-mounts de la Pi). Reabrir solo si se expone público. Ver §7 | `Dockerfile` |
+| 2 | Cambiar la **contraseña por defecto de Postgres** — acción del owner en vibox; el deploy ya **avisa** en cada despliegue | `.env` |
+| ~~3~~ | ~~Contenedores **no-root**~~ — ❌ **descartado (owner, 2026-09-01)**: se acepta root en single-user tras Tailscale (riesgo de permisos en los bind-mounts del servidor). Reabrir solo si se expone público. Ver §7 | `Dockerfile` |
 | ~~3~~ | ~~**Límite de memoria** en web/worker/db~~ — ✅ **HECHO (2026-09-02)**, valores medidos y sin swap | prod/dev compose |
 | 4 | Confirmar `BETTER_AUTH_URL=https://…` en prod (cookie **Secure**) | `envs/.env.prod`, `auth.ts` |
 | 5 | Decidir exposición: bindear `4272` a loopback/bridge y forzar Caddy, o aceptar HTTP-en-LAN conscientemente | `envs/.env.prod`, prod compose |
