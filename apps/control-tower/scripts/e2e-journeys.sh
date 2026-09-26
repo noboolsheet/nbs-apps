@@ -181,13 +181,35 @@ SCAP=$(curl -s -b $JAR -X POST "$B/api/v1/knowledge-inbox" -H 'Content-Type: app
 SITEM=$(curl -s -b $JAR -X POST "$B/api/v1/knowledge-inbox/$SCAPID/promote" -H 'Content-Type: application/json' -d '{"title":"Nota con sector","knowledgeType":"NOTE","sector":"IA"}'); SITEMID=$(echo "$SITEM" | uuid)
 check "$(curl -s -b $JAR "$B/api/v1/knowledge-items/$SITEMID" | grep -oE '"sector":"IA"')" '"sector":"IA"' "knowledge item promovido guarda el sector"
 
+echo "J16: Notas por registro (E-15) y orden manual de filas (E-12)"
+# Ojo con el entrecomillado: dentro de `check "$(curl … )"` el payload va en COMILLAS SIMPLES, concatenando las
+# variables. Con `-d "{\"a\":\"$X\"}"` las comillas escapadas las consume el `"$( )"` de fuera, el payload queda
+# desbalanceado y curl acaba tomando los `{}`/`[]` como URLs con glob: hace VARIAS peticiones y `%{http_code}`
+# imprime varios códigos. Pasó al escribir este journey.
+N1=$(curl -s -b $JAR -X POST "$B/api/v1/notes" -H 'Content-Type: application/json' -d '{"entityType":"client","entityId":"'"$CLIID"'","body":"Hablado: entrega a marzo"}'); N1ID=$(echo "$N1" | uuid)
+check "$([ -n "$N1ID" ] && echo ok)" "ok" "nota creada"
+check "$(curl -s -b $JAR "$B/api/v1/notes?entity=client&id=$CLIID" | grep -c 'entrega a marzo')" "1" "la nota se lee del registro"
+check "$(curl -s -b $JAR -o /dev/null -w '%{http_code}' -X POST "$B/api/v1/notes" -H 'Content-Type: application/json' -d '{"entityType":"client","entityId":"'"$CLIID"'","body":"   "}')" "400" "nota vacía rechazada"
+# `integration` no está en NOTE_TARGETS: una nota ahí no se vería desde ninguna pantalla.
+check "$(curl -s -b $JAR -o /dev/null -w '%{http_code}' -X POST "$B/api/v1/notes" -H 'Content-Type: application/json' -d '{"entityType":"integration","entityId":"'"$CLIID"'","body":"x"}')" "400" "entidad que no admite notas rechazada"
+check "$(curl -s -b $JAR -X PATCH "$B/api/v1/notes/$N1ID" -H 'Content-Type: application/json' -d '{"body":"Corregido: abril"}' | grep -c 'abril')" "1" "nota editada"
+check "$(curl -s -b $JAR -o /dev/null -w '%{http_code}' -X DELETE "$B/api/v1/notes/$N1ID")" "200" "nota borrada"
+
+# Orden manual: la subtarea del J12 + una segunda, y se invierte el orden por HTTP.
+ST2=$(curl -s -b $JAR -X POST "$B/api/v1/tasks/$PTID/subtasks" -H 'Content-Type: application/json' -d '{"title":"Paso dos"}'); ST2ID=$(echo "$ST2" | uuid)
+check "$(curl -s -b $JAR -o /dev/null -w '%{http_code}' -X POST "$B/api/v1/reorder" -H 'Content-Type: application/json' -d '{"entityType":"subtask","ids":["'"$ST2ID"'","'"$STID"'"]}')" "200" "reorden de subtareas aceptado"
+check "$(psql_t "select sort_order from tasks where id='$ST2ID';")" "1" "la subtarea movida queda primera"
+check "$(psql_t "select sort_order from tasks where id='$STID';")" "2" "la otra subtarea queda segunda"
+# `client` no es reordenable: la allowlist es lo que evita renumerar una tabla cualquiera.
+check "$(curl -s -b $JAR -o /dev/null -w '%{http_code}' -X POST "$B/api/v1/reorder" -H 'Content-Type: application/json' -d '{"entityType":"client","ids":["'"$CLIID"'","'"$CLIID"'"]}')" "400" "entidad no reordenable rechazada"
+
 echo "Hardening:"
 check "$(curl -s -b $JAR -o /dev/null -w '%{http_code}' -X POST "$B/api/v1/clients" -H 'Origin: http://evil.example' -H 'Content-Type: application/json' -d '{"name":"x"}')" "403" "CSRF: Origin ajeno rechazado (403)"
 check "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/v1/clients" -H 'Content-Type: application/json' -d '{"name":"x"}')" "401" "sin sesión → 401"
 check "$(curl -s -D - -o /dev/null "$B/" | grep -qi 'x-content-type-options: nosniff' && echo present)" "present" "cabecera de seguridad presente"
 
 # --- cleanup ---
-for t in learning_items resources inbox_channels audit_logs change_events outbox_events portfolio_items tasks deliverables decisions documents knowledge_items knowledge_inbox external_identities integrations jobs projects contacts opportunities clients capabilities goals strategic_areas; do
+for t in notes learning_items resources inbox_channels audit_logs change_events outbox_events portfolio_items tasks deliverables decisions documents knowledge_items knowledge_inbox external_identities integrations jobs projects contacts opportunities clients capabilities goals strategic_areas; do
   psql_t "delete from $t where organization_id='$ORGID';" >/dev/null
 done
 psql_t "delete from organization_members where organization_id='$ORGID'; delete from sessions where user_id='$USERID'; delete from accounts where user_id='$USERID'; delete from users where id='$USERID'; delete from organizations where id='$ORGID';" >/dev/null

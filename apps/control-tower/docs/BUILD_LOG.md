@@ -5,6 +5,28 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-09-26 — Verificación en vivo: 186 tests de integración y 69 checks e2e en verde ✅
+
+El owner levantó Docker, así que se pudo correr lo que en las entregas del día quedó **escrito pero sin ejecutar**
+(notas, reorden y los de Twenty reescritos). Resultado: **186/186 integración** y **69/69 e2e por journeys**, con las
+migraciones `0025_m41_notes` y `0026_m42_sort_order` aplicadas sobre la base local sin incidencias.
+
+**Dos fallos, los dos en los tests que escribí, no en el código:**
+1. `reorder.test.ts` esperaba `sort_order = 1` en un objetivo recién creado. Nace en **0** (el default; el relleno de
+   la migración sólo tocó las filas que ya existían). La intención del caso era «no se escribió nada», así que la
+   aserción correcta es 0.
+2. **El journey nuevo (J16) tenía un bug de entrecomillado que conviene no repetir:** dentro de
+   `check "$(curl … )"`, un payload `-d "{\"a\":\"$X\"}"` pierde las comillas escapadas —las consume el `"$( )"`
+   de fuera—, el JSON queda desbalanceado y **curl toma los `{}`/`[]` como URLs con glob**: hacía **tres** peticiones
+   y `%{http_code}` imprimía tres códigos, que al no venir entrecomillados se convertían en tres argumentos y
+   desplazaban los del `check`. Se veía como un «✓ 400» con la descripción equivocada. La forma segura —la que ya usa
+   el resto del script— es **payload en comillas simples** concatenando las variables: `'{"a":"'"$X"'"}'`.
+
+**J16 nuevo** (10 checks): notas por HTTP (crear · leer · vacía rechazada · entidad no permitida rechazada · editar ·
+borrar) y orden manual (reorden aceptado · las dos posiciones guardadas · entidad no reordenable rechazada). Cubre la
+capa de ruta de las dos features del día, que hasta ahora sólo estaban probadas en la capa de aplicación. La limpieza
+del script se lleva también la tabla `notes`.
+
 ## 2026-09-26 — E-12 · Orden manual de filas en las seis listas que lo piden ✅
 
 Último de los cinco ítems. El owner eligió dónde: **áreas estratégicas · portafolio · fases de un proyecto ·
@@ -45,8 +67,9 @@ decide una persona, no un criterio.
 **Fuera a propósito:** las tareas de proyecto y la vista global (van por vencimiento), la lista global de objetivos
 (`sort_order` es una posición *dentro de un área*: usarla ahí interleavaría áreas) y el resto de listas.
 
-Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (139, cuatro nuevos) · `pnpm build`. **Sin correr:**
-`tests/integration/reorder.test.ts` (5 casos) — sigue sin haber Postgres en la sesión.
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (139, cuatro nuevos) · `pnpm build` ·
+`pnpm test:integration` (186/186, con `reorder.test.ts`: los 5 casos) · e2e por journeys (69/69, con el **J16** que
+prueba el reorden por HTTP). Ver la entrada de verificación en vivo, arriba.
 
 ## 2026-09-26 — F-36 · Repaso de componentes comunes: cinco copias de un hook y dos listas sueltas ✅
 
@@ -165,9 +188,9 @@ era el único que era una **ausencia real**.
 - **Endpoints** `GET`/`POST /api/v1/notes` y `PATCH`/`DELETE /api/v1/notes/[id]`, con `parseId`; la auditoría guarda
   a qué registro pertenece la nota (`metadata.targetType`/`targetId`) para que el feed de actividad pueda llegar allí.
 
-Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (136, dos nuevos) · `pnpm build`. **Pendiente de
-verificar:** `tests/integration/notes.test.ts` (4 casos, dos de ellos son los de notas huérfanas al borrar) — en esta
-sesión no había Postgres levantado, así que está escrito pero **sin correr**.
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (136, dos nuevos) · `pnpm build` ·
+`pnpm test:integration` (186/186, con `notes.test.ts`: los 4 casos, dos de ellos los de notas huérfanas al borrar) ·
+e2e por journeys (69/69, con el **J16** que prueba las notas por HTTP). Ver la entrada de verificación en vivo, arriba.
 
 **En la misma sesión: B-2 ❌ descartado** («no hace falta hacer un kanban para las tareas», owner). La lista agrupada
 por vencimiento ya responde a «¿qué hago ahora?»; un tablero por estado sería una segunda forma de ver lo mismo. No es
@@ -381,7 +404,12 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-09-26): E-12 hecho — las filas se reordenan arrastrando.** Seis listas (áreas, portafolio, fases,
+> **⚑ ÚLTIMO (2026-09-26): TODO verificado en vivo.** Con Docker levantado: **186/186 integración** (incluidos notas,
+> reorden y los de Twenty reescritos) y **69/69 e2e**, con un journey nuevo (**J16**) que cubre por HTTP las notas y el
+> reorden. Los dos únicos fallos estaban en mis tests, no en el código (ver la entrada del día). Queda pendiente de ti
+> **F-31** en vibox y pasar `cleanup-duplicates.ts` allí.
+>
+> **⚑ ANTES: E-12 hecho — las filas se reordenan arrastrando.** Seis listas (áreas, portafolio, fases,
 > entregables, subtareas, objetivos de un área), un solo endpoint `/api/v1/reorder` con allowlist `REORDERABLE`,
 > migración `0026_m42`, asa ⠿ con alternativa de teclado y desactivada cuando lo que se ve no es el orden real. Con
 > esto **los cinco ítems del repaso están cerrados**: F-30 ✅ · E-15 ✅ · B-2 ❌ · E-16 ❌ · E-12 ✅.

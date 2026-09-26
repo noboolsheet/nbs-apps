@@ -1232,9 +1232,9 @@ hay que volver a medir antes de dar por bueno el síntoma.
   historial y notas; el test nuevo impide que vuelva a divergir.
 - **Endpoints:** `GET`/`POST /api/v1/notes` (`?entity=&id=`) y `PATCH`/`DELETE /api/v1/notes/[id]`, con
   `parseId` y la auditoría guardando a qué registro pertenece la nota (`metadata.targetType`/`targetId`).
-- Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (136, dos nuevos) · `pnpm build`. **Sin verificar
-  todavía:** `tests/integration/notes.test.ts` (4 casos, incluidos los dos de notas huérfanas) — en esta sesión
-  no había Postgres levantado.
+- Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` · `pnpm build` · **`pnpm test:integration` (186/186,
+  con `notes.test.ts` incluido: los 4 casos, los dos de notas huérfanas entre ellos)** · **e2e por journeys (69/69,
+  con el **J16** nuevo que prueba las notas por HTTP)**.
 
 ### E-16 · Adjuntos ❌ DESCARTADO (2026-09-26, decisión del owner)
 - **Hallado en:** sesión 27.

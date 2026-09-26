@@ -94,8 +94,10 @@ describe('orden manual de listas (E-12)', () => {
 
       await expect(reorderRecords(tx, ctx, { entityType: 'goal', ids: [theirs.id, mine.id] })).rejects.toThrow();
 
+      // Un registro nuevo nace con `sort_order = 0` (el default; el relleno de la migración sólo tocó las filas
+      // que ya existían). Sigue en 0 ⇒ el rechazo no escribió nada.
       const [after] = await tx.select().from(s.goals).where(eq(s.goals.id, mine.id));
-      expect(after!.sortOrder).toBe(1); // el backfill/creación lo dejó como estaba: nada se tocó
+      expect(after!.sortOrder).toBe(0);
     });
   });
 
