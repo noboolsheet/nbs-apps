@@ -43,7 +43,8 @@ y no está cubierto por la errata → **PARAR y señalar** (doc 8 §30).
 - `jobs.status`: `PENDING, PROCESSING, COMPLETED, FAILED, CANCELLED`
 - `outbox_events.status`: `PENDING, PROCESSING, PROCESSED, FAILED`
 - `opportunities.stage`: **13 estados (ADR-002 + addendum 2026-09-02)** — alineados 1:1 con Twenty; la UI agrupa en 4 columnas.
-  Es el **único campo escribible desde CT** (ADR-008): la oportunidad se crea y se edita en Twenty
+  Es el **único campo que Control Tower escribe en Twenty** (ADR-008, generalizado por **ADR-009**: todo lo que
+  llega de Twenty —cliente, contacto, oportunidad, task— es propiedad de Twenty y se edita allí)
 - `portfolio_items.status`: **NOT_ELIGIBLE, CANDIDATE, IN_PREPARATION, PUBLISHED, ARCHIVED (ADR-001)**
 
 ## Simplificaciones MVP (permitidas por el dominio)
@@ -69,3 +70,4 @@ IDs internos UUID; identidad externa vía `external_identities (provider, extern
 - [ADR-006](./adr/ADR-006-decision-supersede-link.md) — enlace de reemplazo entre decisiones (`supersedes_decision_id`) (A-2)
 - [ADR-007](./adr/ADR-007-project-assets.md) — enlace proyecto ↔ reutilizable: tabla puente `project_assets` (A-3)
 - [ADR-008](./adr/ADR-008-opportunity-state-machine.md) — CT es **sólo la máquina de estados** de las oportunidades (se crean y se editan en Twenty)
+- [ADR-009](./adr/ADR-009-twenty-owns-the-crm.md) — **Twenty es el dueño del CRM**: CT no escribe nada en Twenty salvo el `stage` (generaliza ADR-008 a cliente, contacto y task)

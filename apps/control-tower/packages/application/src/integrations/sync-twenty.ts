@@ -65,9 +65,12 @@ export async function syncTwenty(
   // Cambios locales que aún NO han llegado a Twenty (write-back pendiente o fallido). El pull NO los pisa: si el
   // push falló (p. ej. Twenty rechaza el valor de `stage`), reescribir la fila con el dato viejo haría desaparecer
   // el cambio del usuario sin avisar. Se cuenta como "saltado" con el motivo, así se ve en el historial de syncs.
+  // F-22 — no pisar con el pull un registro cuyo write-back aún no ha llegado a Twenty. Desde ADR-009 CT sólo
+  // escribe el `stage` de la oportunidad, así que sólo ahí puede haber un cambio local pendiente que proteger.
+  // Para client/contact se RETIRÓ a propósito: un `twenty.push` pendiente suyo sólo puede ser un residuo de antes
+  // de ADR-009, y mantener el guard dejaría ese registro congelado sin que CT tenga ya forma de resolver el envío
+  // (los residuos se drenan solos —el push devuelve `skip`— y se ven en Automatización › Envíos fallidos).
   const pendingPush: Record<string, Set<string>> = {
-    client: await pendingPushTargets(db, ctx.organizationId, 'twenty.push', 'client'),
-    contact: await pendingPushTargets(db, ctx.organizationId, 'twenty.push', 'contact'),
     opportunity: await pendingPushTargets(db, ctx.organizationId, 'twenty.push', 'opportunity'),
   };
   const PENDING_PUSH_MSG =
@@ -104,10 +107,6 @@ export async function syncTwenty(
   for (const c of data.companies) {
     try {
       const existing = await resolveInternalId(db, ctx, P, 'company', c.externalId);
-      if (existing && pendingPush.client!.has(existing)) {
-        summary.skipped.push({ entity: 'client', externalId: c.externalId, error: PENDING_PUSH_MSG });
-        continue;
-      }
       if (existing) {
         await db
           .update(clients)
@@ -138,10 +137,6 @@ export async function syncTwenty(
         ? (await resolveInternalId(db, ctx, P, 'company', p.companyExternalId)) ?? undefined
         : undefined;
       const existing = await resolveInternalId(db, ctx, P, 'person', p.externalId);
-      if (existing && pendingPush.contact!.has(existing)) {
-        summary.skipped.push({ entity: 'contact', externalId: p.externalId, error: PENDING_PUSH_MSG });
-        continue;
-      }
       if (existing) {
         await db
           .update(contacts)
@@ -215,17 +210,15 @@ export async function syncTwenty(
   for (const t of data.tasks) {
     try {
       const stage = t.status as TaskStatus;
-      // Nota: las tasks NO llevan el guard de "push pendiente". El write-back de una task sólo empuja `dueDate`, y
-      // el pull nunca reescribe ese campo (CT es su dueño); el resto —el título— lo posee Twenty, así que traerlo no
-      // pisa nada del usuario. En client/contact/opportunity sí coinciden los campos de ida y vuelta, y ahí el guard
-      // es lo que evita perder el cambio local.
+      // Las tasks no llevan guard de "push pendiente" porque CT ya no les empuja nada (ADR-009): título y fecha
+      // son de Twenty y el pull los reescribe.
       const existing = await resolveInternalId(db, ctx, P, 'task', t.externalId);
       if (existing) {
-        // NO se reescribe `dueDate`: la fecha de una task ya importada la gestiona CT (reprogramar). En la creación
-        // inicial (rama else) sí se toma la de Twenty como valor de arranque. `title` sí es propiedad de Twenty.
+        // Título Y fecha son de Twenty desde ADR-009 (antes la fecha la gestionaba CT con write-back, que ya no
+        // existe: dejarla sin reescribir guardaría en CT una fecha que Twenty no conoce).
         await db
           .update(tasks)
-          .set({ title: t.title, status: stage, updatedAt: new Date() })
+          .set({ title: t.title, status: stage, dueDate: t.dueDate, updatedAt: new Date() })
           .where(and(eq(tasks.id, existing), orgEq(tasks.organizationId, ctx)));
         await upsertIdentity(db, ctx, { provider: P, externalType: 'task', externalId: t.externalId, internalType: 'task', internalId: existing, metadata: { url: twentyRecordUrl(opts.crmBaseUrl, 'task', t.externalId) } });
         summary.tasks.updated++;

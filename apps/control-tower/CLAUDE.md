@@ -213,19 +213,19 @@ Conectar en la UI `/automation/integrations` → **Sync now** encola `integratio
 guarda `metadata.url` para "Open external"). Config por integración en `integrations.configuration` (jsonb): p. ej. los
 IDs de las DBs de Notion en `configuration.databases.<key>` y el `folderId` de Drive.
 
-- **Twenty**: pull (company→client, person→contact, opportunity→opportunity, task) + **write-back** (E-1): al editar un
-  cliente/contacto **o task** ya sincronizado, o al mover el **stage** de una oportunidad (acción UPDATE de un USER),
-  `recordAudit` encola `twenty.push` →
-  `runTwentyEntityPush` → `PATCH /rest/{objeto}/{id}` con los campos gestionados (reverse mappers en `twenty/mapper.ts`;
-  compuestos name/emails/phones/domainName/amount con su forma exacta). Solo actualiza existentes (id por
-  `external_identities`); Twenty está alineado 1:1 con CT (**13 stages**, industry TEXT) — si los enums se separan
-  no salta ningún error: el pull cae a `LEAD` y el push devuelve `400` (pasó, ver ADR-002 addendum 2026-09-02). **Propiedad por campo en task:** el
-  **título** lo posee Twenty (inmutable en CT, se re-pisa en el pull); la **fecha** la posee CT (el pull NO la pisa y el
-  write-back `taskPatch` empuja `dueDate`→`dueAt` a Twenty). **Ojo (decisión del owner, 2026-09-26): no se crean tareas
-  en Twenty.** Las tareas son CT-nativas; el pull de tasks sigue en el código pero está **inerte** (ver F-18) y CT nunca
-  crea una tarea allí. **Opportunity (ADR-008):** CT es **sólo su máquina de
-  estados** — no se crean en CT (`createOpportunity` rechaza actores USER), no hay `PATCH` del registro, y
-  `opportunityPatch` empuja **únicamente `stage`**. Ver "inmutabilidad por procedencia" (`@ct/domain/ownership`).
+- **Twenty (⚑ ADR-009, 2026-09-26): Twenty es el dueño del CRM y CT NO le escribe nada salvo el `stage`.** Pull
+  (company→client, person→contact, opportunity→opportunity, task) y **un único write-back**: al mover el **stage** de
+  una oportunidad (UPDATE de un USER), `recordAudit` encola `twenty.push` → `runTwentyEntityPush` →
+  `PATCH /rest/opportunities/{id}` con `{ stage }`. Solo actualiza existentes (id por `external_identities`).
+  **Todo lo demás que llega de Twenty es inmutable en CT** (`FIELD_OWNERSHIP` en `@ct/domain/ownership`, bloqueo **por
+  procedencia**): client `name`/`industry`/`websiteUrl`, contact `firstName`/`lastName`/`email`/`phone`/`jobTitle`/
+  `clientId`, task `title`+`dueDate`, opportunity todo menos `stage`. Se bloquea en el panel (🔒 «se edita en el
+  origen») **y** en el comando (`assertNotEditingOwnedFields`), así que tampoco cuela por API. Lo que SÍ es de CT y
+  sigue editable: `status` y `notes` del cliente, `notes` del contacto, y **cualquier cliente/contacto creado en CT**
+  (sin identidad de Twenty). Se retiraron `companyPatch`/`personPatch`/`taskPatch`. Twenty está alineado 1:1 con CT
+  (**13 stages**) — si los enums se separan no salta ningún error: el pull cae a `LEAD` y el push devuelve `400`
+  (pasó, ver ADR-002 addendum 2026-09-02). **Tareas: no se crean en Twenty** (owner 2026-09-26); el pull de tasks
+  sigue en el código pero está **inerte** (ver F-18).
 - **Notion**: bidireccional con **propiedad por campo** — CT es dueño de las propiedades estructuradas (push CT→Notion),
   Notion es dueño del cuerpo de la página. Motor genérico `syncNotionEntity` + `notion-specs.ts` (una spec por entidad).
   Specs **push-only** (sin `importFromNotion`, p. ej. `resources`): CT único dueño, nunca importa → sin ciclos.
@@ -242,8 +242,9 @@ IDs de las DBs de Notion en `configuration.databases.<key>` y el `folderId` de D
   **duplica por diseño** (pasó en la migración a vibox): la idempotencia vive entera en esa tabla local. Igual de
   peligroso: `pnpm --filter @ct/db seed` hace `TRUNCATE` de todo, ella incluida — sólo para `demo`. Para arreglar una
   base ya duplicada: `packages/db/src/scripts/cleanup-duplicates.ts` (seco por defecto, `--apply` para escribir).
-- **Si un write-back falla** (F-22), el pull **no sobrescribe** ese registro (client/contact/opportunity con un
-  `twenty.push` PENDING/PROCESSING/FAILED se saltan) y el fallo se ve y se reintenta en **Automatización › Estado del
+- **Si un write-back falla** (F-22), el pull **no sobrescribe** ese registro (una **oportunidad** con un
+  `twenty.push` PENDING/PROCESSING/FAILED se salta; client/contact salieron del guard con ADR-009, porque CT ya no
+  les escribe y un pendiente suyo sólo puede ser un residuo que congelaría la fila para siempre) y el fallo se ve y se reintenta en **Automatización › Estado del
   sistema › Envíos fallidos**. Así un cambio hecho en CT no desaparece en el siguiente sync.
 - **Logs internos (F-24):** `jobs` y `outbox_events` son los logs **activos**; el barrido diario los **rota por
   tamaño** (5.000 filas terminadas → un lote comprimido en **`log_archives`**, con `kind` JOBS/OUTBOX y `seq` por tipo,

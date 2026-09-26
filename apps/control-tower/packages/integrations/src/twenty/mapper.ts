@@ -117,59 +117,27 @@ export function mapOpportunity(raw: TwentyRawRecord): NormalizedOpportunity {
 }
 
 /**
- * Reverse mappers (write-back CT → Twenty, E-1). Construyen el cuerpo `PATCH /rest/{objeto}/{id}` con la forma
- * EXACTA de los campos compuestos de Twenty (verificada en vivo). Solo se incluyen los campos que CT gestiona;
- * el resto de Twenty queda intacto. Se omiten los `undefined` (no se pisan con null los campos no gestionados).
+ * Reverse mapper (write-back CT → Twenty). Construye el cuerpo de `PATCH /rest/{objeto}/{id}`. Sólo se incluye lo
+ * que CT posee —desde ADR-009, únicamente el `stage` de una oportunidad—; el resto de Twenty queda intacto. Se
+ * omiten los `undefined` (no se pisan con null los campos no gestionados).
  */
-function stripScheme(url: string | null | undefined): string | undefined {
-  const s = (url ?? '').trim();
-  if (!s) return undefined;
-  return s.replace(/^https?:\/\//i, '');
-}
 function put<T extends object>(obj: T, key: string, value: unknown): void {
   if (value !== undefined && value !== null) (obj as Record<string, unknown>)[key] = value;
 }
 
-export interface ClientPushInput { name?: string | null; websiteUrl?: string | null; industry?: string | null }
-export interface ContactPushInput { firstName?: string | null; lastName?: string | null; email?: string | null; phone?: string | null; jobTitle?: string | null }
 /**
- * Write-back de opportunity: **sólo el `stage`** (owner 2026-09-02). CT es la máquina de estados de la oportunidad;
- * el resto de campos (nombre, importe, fecha, empresa) los posee Twenty y el pull los reescribe. Empujarlos desde CT
- * sería peor que inútil: entre dos syncs la copia de CT puede estar vieja y machacaría en Twenty un dato más nuevo.
+ * Write-back de opportunity: **sólo el `stage`**, y es **lo único que Control Tower escribe en Twenty**
+ * (ADR-009, owner 2026-09-26). CT es la máquina de estados de la oportunidad; el resto de campos (nombre, importe,
+ * fecha, empresa) los posee Twenty y el pull los reescribe. Empujarlos desde CT sería peor que inútil: entre dos
+ * syncs la copia de CT puede estar vieja y machacaría en Twenty un dato más nuevo.
+ *
+ * Aquí vivían también `companyPatch` (cliente), `personPatch` (contacto) y `taskPatch` (fecha de una task).
+ * Se retiraron el 2026-09-26: esos campos son de Twenty y CT ni los edita ni los envía.
  */
 export interface OpportunityPushInput { stage?: string | null }
-
-export function companyPatch(c: ClientPushInput): Record<string, unknown> {
-  const body: Record<string, unknown> = {};
-  put(body, 'name', c.name ?? undefined);
-  const domain = stripScheme(c.websiteUrl);
-  if (domain) body.domainName = { primaryLinkUrl: domain };
-  put(body, 'industry', c.industry ?? undefined);
-  return body;
-}
-
-export function personPatch(p: ContactPushInput): Record<string, unknown> {
-  const body: Record<string, unknown> = {};
-  if (p.firstName != null || p.lastName != null) body.name = { firstName: p.firstName ?? '', lastName: p.lastName ?? '' };
-  if (p.email != null && p.email !== '') body.emails = { primaryEmail: p.email };
-  if (p.phone != null && p.phone !== '') body.phones = { primaryPhoneNumber: p.phone };
-  put(body, 'jobTitle', p.jobTitle ?? undefined);
-  return body;
-}
 
 export function opportunityPatch(o: OpportunityPushInput): Record<string, unknown> {
   const body: Record<string, unknown> = {};
   put(body, 'stage', o.stage ?? undefined);
-  return body;
-}
-
-/** Campos de una task que CT empuja a Twenty. Solo la fecha (CT es su dueño); el título lo posee Twenty. */
-export interface TaskPushInput { dueDate?: string | null }
-
-export function taskPatch(t: TaskPushInput): Record<string, unknown> {
-  const body: Record<string, unknown> = {};
-  // `dueDate` = 'YYYY-MM-DD' → dueAt ISO; `null` limpia la fecha en Twenty; `undefined` no toca el campo.
-  if (t.dueDate === null) body.dueAt = null;
-  else if (t.dueDate) body.dueAt = new Date(`${t.dueDate}T00:00:00.000Z`).toISOString();
   return body;
 }

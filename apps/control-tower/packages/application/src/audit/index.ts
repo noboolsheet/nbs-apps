@@ -21,7 +21,12 @@ const NOTION_MIRRORED = new Set([
 
 /** Entidades con write-back a Twenty (E-1): CT empuja sus campos gestionados al editarlas un USER.
  *  `task` empuja SOLO la fecha (CT es dueño de `dueDate`; el título lo posee Twenty). */
-const TWENTY_MIRRORED = new Set(['client', 'contact', 'opportunity', 'task']);
+/**
+ * Entidades que CT empuja a Twenty. **Sólo la oportunidad** (ADR-009, owner 2026-09-26): de ella se empuja
+ * únicamente el `stage`. Client, contact y task se quitaron de aquí — todo lo que llega de Twenty es propiedad de
+ * Twenty y se edita allí.
+ */
+const TWENTY_MIRRORED = new Set(['opportunity']);
 
 /**
  * Auditoría (doc 5 §30/§31, ERRATA-013). Dos conceptos SEPARADOS:
@@ -67,8 +72,8 @@ export async function recordAudit(
   if (a.actorType === 'USER' && e.entityId && e.action !== 'DELETE' && NOTION_MIRRORED.has(e.entityType)) {
     await queueNotionPush(db, ctx, e.entityType, e.entityId);
   }
-  // Write-back a Twenty (E-1): sólo EDICIONES de USUARIO (no CREATE, alcance "solo actualizar existentes"; no DELETE)
-  // sobre client/contact/opportunity. El sync es SYSTEM → no re-emite (evita bucles).
+  // Write-back a Twenty: sólo EDICIONES de USUARIO (no CREATE, alcance "solo actualizar existentes"; no DELETE) y
+  // sólo del `stage` de una oportunidad (ADR-009). El sync es SYSTEM → no re-emite (evita bucles).
   if (a.actorType === 'USER' && e.entityId && e.action !== 'CREATE' && e.action !== 'DELETE' && TWENTY_MIRRORED.has(e.entityType)) {
     await queueTwentyPush(db, ctx, e.entityType, e.entityId);
   }

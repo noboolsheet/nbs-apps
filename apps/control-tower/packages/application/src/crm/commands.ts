@@ -20,6 +20,7 @@ import { requireCan, orgEq, type OrgContext } from '../auth/index';
 import { recordAudit, recordChangeEvent, recordFieldChanges, isSystemActor } from '../audit/index';
 import { emitOutbox } from '../outbox/index';
 import { mapDbError, notFound, opportunityArchived, opportunityExternalOnly } from '../errors';
+import { assertNotEditingOwnedFields } from '../integrations/identity';
 
 /** Casos de uso del módulo CRM. Autorizan, validan, aplican dominio y filtran por organización. */
 
@@ -72,9 +73,10 @@ export async function updateClient(db: Database, ctx: OrgContext, id: string, in
     .from(clients)
     .where(and(eq(clients.id, id), orgEq(clients.organizationId, ctx)));
   if (!current) throw notFound('client');
+  // ADR-009: si el cliente vino de Twenty, sus campos sincronizados son de Twenty y no se editan desde CT. El
+  // guard va en el comando (no sólo en la UI) para que tampoco se pueda por API.
+  await assertNotEditingOwnedFields(db, ctx, 'client', id, data);
   try {
-    // Atomicidad: el UPDATE y el recordAudit (que encola el write-back a Twenty) van en la MISMA transacción,
-    // así no puede quedar la entidad cambiada sin el push encolado (sin deriva silenciosa).
     return await db.transaction(async (tx) => {
       const [row] = await tx
         .update(clients)
@@ -99,6 +101,8 @@ export async function updateContact(db: Database, ctx: OrgContext, id: string, i
     .from(contacts)
     .where(and(eq(contacts.id, id), orgEq(contacts.organizationId, ctx)));
   if (!current) throw notFound('contact');
+  // ADR-009: mismo bloqueo que en cliente para los contactos que llegan de Twenty (person).
+  await assertNotEditingOwnedFields(db, ctx, 'contact', id, data);
   if (data.clientId) await assertBelongs(db, ctx, clients, data.clientId, 'client');
   try {
     return await db.transaction(async (tx) => {

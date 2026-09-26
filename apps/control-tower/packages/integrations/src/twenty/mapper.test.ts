@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mapCompany, mapPerson, mapOpportunity, mapTwentyStage, companyPatch, personPatch, opportunityPatch } from './mapper';
+import { mapCompany, mapPerson, mapOpportunity, mapTwentyStage, opportunityPatch } from './mapper';
 
 describe('twenty mapper', () => {
   it('mapea company defensivamente', () => {
@@ -54,25 +54,9 @@ describe('twenty mapper', () => {
     expect(mapTwentyStage('SOMETHING')).toBe('LEAD');
   });
 
-  describe('reverse mappers (write-back CT → Twenty)', () => {
-    it('companyPatch: name + domainName compuesto (sin esquema) + industry; omite vacíos', () => {
-      expect(companyPatch({ name: 'Acme', websiteUrl: 'https://acme.com', industry: 'Retail' })).toEqual({
-        name: 'Acme',
-        domainName: { primaryLinkUrl: 'acme.com' },
-        industry: 'Retail',
-      });
-      expect(companyPatch({ name: 'Solo' })).toEqual({ name: 'Solo' }); // sin web ni industry → no aparecen
-    });
-
-    it('personPatch: name/emails/phones compuestos + jobTitle', () => {
-      expect(personPatch({ firstName: 'Jane', lastName: 'Doe', email: 'j@a.com', phone: '5551234', jobTitle: 'CTO' })).toEqual({
-        name: { firstName: 'Jane', lastName: 'Doe' },
-        emails: { primaryEmail: 'j@a.com' },
-        phones: { primaryPhoneNumber: '5551234' },
-        jobTitle: 'CTO',
-      });
-    });
-
+  describe('write-back CT → Twenty (ADR-009: sólo el stage de la oportunidad)', () => {
+    // Aquí había también `companyPatch` (cliente) y `personPatch` (contacto). Se retiraron el 2026-09-26 con el
+    // write-back: todo lo que llega de Twenty es de Twenty y se edita allí.
     it('opportunityPatch: SÓLO el stage (CT no posee ningún otro campo de la oportunidad)', () => {
       // Owner 2026-09-02: CT es la máquina de estados de la oportunidad. Nombre/importe/fecha se editan en Twenty,
       // así que el cuerpo del PATCH no debe llevarlos: entre dos syncs la copia de CT puede estar vieja.

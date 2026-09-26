@@ -11,9 +11,10 @@ CT no es una copia de tus otros sistemas: es un panel que los integra respetando
 información tiene UNA fuente de verdad**. Según el dato, la relación es una de estas tres:
 
 - **Referencia (pull):** el dueño es un sistema externo; CT **importa** y muestra una copia. Los repos (GitHub) y
-  documentos (Drive) son solo-lectura en CT. **CRM (Twenty)** es un caso especial: Twenty es el dueño y donde se
-  **crean** los registros, pero CT puede **editar sus campos gestionados** (nombre, web, email, teléfono, importe,
-  stage…) y los **empuja de vuelta** a Twenty (write-back). El resto de campos de Twenty no se tocan.
+  documentos (Drive) son solo-lectura en CT. **CRM (Twenty)** también: Twenty es el dueño de clientes, contactos,
+  oportunidades y tareas, y ahí es donde se crean **y se editan**. Lo único que Control Tower escribe en Twenty es la
+  **etapa** de una oportunidad, que es el trozo del proceso que gobierna CT. Todo lo demás sale con 🔒 y se edita en
+  Twenty.
 - **Propiedad por campo (bidireccional con Notion):** CT es dueño de las **propiedades estructuradas** (las empuja a
   Notion) y Notion es dueño del **cuerpo de la página** (texto libre). Nunca se editan los mismos campos en los dos
   lados, así que no hay bucles.
@@ -64,10 +65,10 @@ Qué información maneja CT, quién es su dueño, de dónde viene y qué hacer p
 
 | Información | Dónde en CT | Dueño (fuente de verdad) | De dónde viene y dirección | Cómo añadir o editar |
 | --- | --- | --- | --- | --- |
-| **Clientes** | CRM › Clients | **Twenty CRM** | company de Twenty → **pull + write-back** de campos gestionados | Créalo **en Twenty**; edítalo en Twenty **o en CT** (nombre, web, industria) y CT lo empuja a Twenty. Los registros nuevos se crean en Twenty. |
-| **Contactos** | CRM › Contacts | **Twenty CRM** | person de Twenty → **pull + write-back** | En Twenty o en CT (nombre, email, teléfono, cargo); CT empuja los cambios a Twenty. |
-| **Oportunidades** | CRM › Opportunities | **Twenty CRM** | opportunity de Twenty → **pull + write-back** | **Se crean y se editan SIEMPRE en Twenty.** En Control Tower lo único que se toca es la **etapa** (ADR-008): CT es la máquina de estados del embudo, nada más. Los 13 stages son los mismos que en Twenty. Al pasar a **WON**, CT crea su proyecto automáticamente. El tablero **Activas** (Kanban de 4 columnas: *Calificación de leads · Propuesta · Negociación · Cerradas*) muestra las abiertas, las ganadas y las recién cerradas; se cambia de etapa con el **desplegable de cada tarjeta** (no se arrastra). Las de la columna **Cerradas** (`LOST`/`ONBOARDED`) pasan solas a la pestaña **Archivadas** (lista, restaurables) ~1 semana después — eso ocurre **solo en CT, no cambia nada en Twenty**. Las **ganadas (WON) NO se archivan solas**: siguen en Negociación hasta que las mueves a `ONBOARDED`. |
-| **Tareas importadas** | Projects › Tasks | **Twenty** (las de origen Twenty) | task de Twenty → pull (marcadas como origen Twenty) | **No se usa: no se crean tareas en Twenty** (decisión del 2026-09-26). Las tareas son de CT. El camino de importación existe y funciona, pero mientras no haya tareas en Twenty no trae nada. Si alguna vez las hubiera: conviven con las de CT sin mezclarse, el **título** lo manda Twenty y la **fecha** la manda CT (al reprogramar en CT, la fecha se empuja a Twenty). |
+| **Clientes** | CRM › Clients | **Twenty CRM** | company de Twenty → **sólo pull** | Créalo y **edítalo en Twenty**: nombre, web e industria son suyos y en CT salen con 🔒 («se edita en el origen»). En CT sí gobiernas su **estado** y sus **notas**, que son datos propios de Control Tower. Un cliente que crees **en CT** no viaja a Twenty y se edita entero aquí. |
+| **Contactos** | CRM › Contacts | **Twenty CRM** | person de Twenty → **sólo pull** | **En Twenty**: nombre, email, teléfono, cargo y la empresa a la que pertenece son suyos (🔒 en CT). Las **notas** son de CT. Un contacto creado en CT se edita entero aquí y no viaja a Twenty. |
+| **Oportunidades** | CRM › Opportunities | **Twenty CRM** | opportunity de Twenty → **pull + write-back de la etapa** | **Se crean y se editan SIEMPRE en Twenty.** En Control Tower lo único que se toca es la **etapa** (ADR-008): CT es la máquina de estados del embudo, nada más. Los 13 stages son los mismos que en Twenty. Al pasar a **WON**, CT crea su proyecto automáticamente. El tablero **Activas** (Kanban de 4 columnas: *Calificación de leads · Propuesta · Negociación · Cerradas*) muestra las abiertas, las ganadas y las recién cerradas; se cambia de etapa con el **desplegable de cada tarjeta** (no se arrastra). Las de la columna **Cerradas** (`LOST`/`ONBOARDED`) pasan solas a la pestaña **Archivadas** (lista, restaurables) ~1 semana después — eso ocurre **solo en CT, no cambia nada en Twenty**. Las **ganadas (WON) NO se archivan solas**: siguen en Negociación hasta que las mueves a `ONBOARDED`. |
+| **Tareas importadas** | Projects › Tasks | **Twenty** (las de origen Twenty) | task de Twenty → pull (marcadas como origen Twenty) | **No se usa: no se crean tareas en Twenty** (decisión del 2026-09-26). Las tareas son de CT. El camino de importación existe y funciona, pero mientras no haya tareas en Twenty no trae nada. Si alguna vez las hubiera: conviven con las de CT sin mezclarse, y **título y fecha** los manda Twenty (se editan allí). |
 | **Proyectos** | Projects | **Control Tower** | nativo (o creado auto desde una oportunidad WON) → espejo a Notion (push) | Créalo **en CT**. Se refleja en Notion. Cada proyecto tiene un **tipo**: *Interno*, *Cliente* o *Laboratorio*; el de tipo **Cliente exige tener cliente asignado** (si no, no deja guardar). Un proyecto **personal** es siempre Interno. |
 | **Fases de proyecto** | Projects › detalle › pestaña **Fases** | **Control Tower** | nativo (lista libre que defines) → NO se sincroniza | Divide el proyecto en etapas propias, ordénalas y marca la **fase actual** (aparece en el Resumen). Solo en CT. |
 | **Tareas de CT y subtareas** | Projects › Tasks, detalle de tarea | **Control Tower** | nativo → NO se envían a Twenty | Créalas **en CT**. Las subtareas se añaden dentro de una tarea. |
@@ -286,13 +287,15 @@ Cada dato tiene **un solo dueño** (ver "Matriz de la información"). Los campos
 (se editarían en vano, porque el próximo sync los volvería a pisar). Se rechaza con **FIELD_OWNED_EXTERNALLY** (*"El
 campo «…» lo gestiona <proveedor> y no puede editarse aquí; se edita en el origen"*). Casos actuales:
 
-- **Tarea importada de Twenty:** el **título** lo posee Twenty (inmutable en CT). La **fecha**, en cambio, la posee CT y
-  sí se edita aquí (y se empuja de vuelta a Twenty).
+- **Cliente importado de Twenty:** nombre, web e industria los posee Twenty. Su **estado** y sus **notas** son de CT.
+- **Contacto importado de Twenty:** nombre, email, teléfono, cargo y empresa los posee Twenty. Las **notas** son de CT.
+- **Tarea importada de Twenty:** **título y fecha** los posee Twenty (hasta el 2026-09-26 la fecha se reprogramaba en
+  CT; con el write-back retirado, guardarla aquí sería guardar una fecha que Twenty no conoce).
 - **Asset importado de GitHub:** nombre, descripción y URLs del repo los posee GitHub (no editables en CT).
 
-Ojo: esto sólo afecta a registros **importados** de ese proveedor. Los registros **nativos de CT** no tienen ningún
-campo bloqueado. Y no confundir con el **write-back** de Twenty (nombre/web/email/importe/stage de clientes, contactos y
-oportunidades): esos sí se editan en CT **a propósito** y se empujan a Twenty.
+Ojo: esto sólo afecta a registros **importados** de ese proveedor. Los registros **nativos de CT** —incluidos un
+cliente o un contacto que crees tú aquí— no tienen ningún campo bloqueado, y tampoco viajan a Twenty. El **único**
+dato que Control Tower empuja a Twenty es la **etapa** de una oportunidad.
 
 ### 6. Aislamiento, auditoría, retención y seguridad del borde
 

@@ -19,6 +19,8 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
 >   lectura a propósito).
 > - **Decisión de producto pendiente:** **E-18** — `primary_contact_id`, `source` y `notes` de las oportunidades no
 >   viajan a Twenty y están vacías; hay que decidir si se mapean, se quedan como datos propios de CT o se retiran.
+>   *(Con **ADR-009** el marco ya está: nada de CT viaja a Twenty salvo el `stage`, así que la pregunta se reduce a
+>   quedárselos como datos propios de CT o retirarlos.)*
 > - **Pendiente de una comprobación en vibox:** **F-31** — el techo de memoria no estaba en efecto **en la Raspberry
 >   Pi** (kernel sin cgroup de memoria). Desde la migración a **vibox (Fedora)** el 2026-09-24 el arreglo de la Pi
 >   (`cgroup_enable=memory` en `/boot/firmware/cmdline.txt`) **ya no aplica**: falta confirmar en vibox que
@@ -70,8 +72,8 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
 >   diccionario y un test nuevo falla si alguien vuelve a nombrar una clave con la frase española.
 > - **Huecos de producto:** ✅ **E-15 HECHO (2026-09-26)** — notas por registro, en el panel lateral, sin espejo a
 >   Notion; de paso, el borrado duro ya limpia las notas y los punteros de sync en un único sitio
->   (`deleteRecordTraces`) · **E-16** adjuntos (necesita decisión: choca con «sólo referencias») · **E-17**
->   exportar datos de negocio e informes de evolución.
+>   (`deleteRecordTraces`) · ❌ **E-16 DESCARTADO (2026-09-26)** — los ficheros siguen viviendo en Drive y CT guarda
+>   el enlace · **E-17** exportar datos de negocio e informes de evolución.
 > - **NO son deuda, comprobado:** el diseño **responsive** es decisión de alcance del owner (sólo escritorio,
 >   2026-08-30) y el atajo **⌘K ya existe**.
 
@@ -295,8 +297,12 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
 
 Prioridades que surgieron al usar la app por primera vez. No son bugs: son el siguiente nivel de producto.
 
-### E-1 · Write-back / push a sistemas externos (bidireccional controlado) 🟢 hecho
+### E-1 · Write-back / push a sistemas externos (bidireccional controlado) 🟢 hecho — **recortado a Twenty=`stage` el 2026-09-26 (ADR-009)**
 - ✅ **Notion:** push en tiempo real por entidad reflejada (propiedad por campo). Ver Fase 5 (BUILD_LOG).
+- ⚑ **ADR-009 (2026-09-26): del write-back de Twenty sólo queda el `stage` de la oportunidad.** Se retiraron los
+  de cliente, contacto y task (`companyPatch`/`personPatch`/`taskPatch` borrados, `TWENTY_MIRRORED` = `{opportunity}`)
+  y los campos que rellena el pull pasaron a `FIELD_OWNERSHIP`: en CT salen bloqueados «se edita en el origen», y el
+  comando los rechaza además de la UI. Lo de abajo es el estado ANTERIOR, que queda como historia de por qué existía.
 - ✅ **Twenty (write-back):** editar en CT un **cliente/contacto** ya sincronizado —o mover el **stage** de una
   oportunidad— empuja sus **campos gestionados** vía Outbox (`twenty.push` → `runTwentyEntityPush` → `PATCH /rest/{objeto}/{id}`), resolviendo el id de
   Twenty por `external_identities`. Alcance v1: **solo actualizar existentes** (los nuevos se crean en Twenty).
@@ -1179,7 +1185,7 @@ hay que volver a medir antes de dar por bueno el síntoma.
   todavía:** `tests/integration/notes.test.ts` (4 casos, incluidos los dos de notas huérfanas) — en esta sesión
   no había Postgres levantado.
 
-### E-16 · Adjuntos 🟢 futuro (probablemente NO, decisión pendiente) — enunciado recortado el 2026-09-26
+### E-16 · Adjuntos ❌ DESCARTADO (2026-09-26, decisión del owner)
 - **Hallado en:** sesión 27.
 - **Qué falta:** no hay forma de adjuntar un fichero a un registro. Todo fichero vive fuera (Drive/Notion) y en CT
   sólo queda la referencia.
@@ -1192,6 +1198,15 @@ hay que volver a medir antes de dar por bueno el síntoma.
   contenido de ficheros. La consecuencia práctica es que un contrato firmado o el logo de un cliente no tienen
   sitio propio. **Decisión del owner pendiente:** o se acepta (y entonces esto se cierra como ❌ descartado), o se
   admite un caso acotado (p. ej. sólo en Pagos, con el fichero en disco del servidor y la ruta en la DB).
+- **❌ DESCARTADO (2026-09-26, owner): se acepta el modelo actual.** Todo fichero vive en **Drive** y Control Tower
+  guarda el enlace. Motivo: es la decisión congelada («sólo referencias, nunca contenido») y el hueco de producto que
+  de verdad dolía —no tener dónde apuntar lo que se habla— era **E-15**, ya resuelto. El precio aceptado es un paso
+  manual: subir a Drive y pegar el enlace.
+- **Si algún día se retoma, el orden recomendado es C antes que B:** (C) ampliar el precedente que ya existe —la foto
+  de perfil guarda un **data URL en la propia DB** (`users.image`)— a imágenes pequeñas con un tope duro, sin disco ni
+  rutas nuevas y con el `pg_dump` siguiendo siendo el backup completo; (B) fichero en disco del servidor, que es la
+  opción con consecuencias ocultas: ruta autenticada para servirlo, tope de tamaño, borrado al purgar el registro y,
+  sobre todo, **estado fuera de Postgres** — el backup deja de ser sólo `pg_dump`.
 
 ### E-17 · Sacar datos: exportación de negocio e informes de evolución 🟢 futuro
 - **Hallado en:** sesión 27.

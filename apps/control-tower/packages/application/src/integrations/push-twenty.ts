@@ -1,25 +1,29 @@
 import { and, eq } from 'drizzle-orm';
 import type { Database } from '@ct/db';
-import { clients, contacts, opportunities, tasks } from '@ct/db/schema';
-import { companyPatch, personPatch, opportunityPatch, taskPatch, type TwentyDataSource } from '@ct/integrations';
+import { opportunities } from '@ct/db/schema';
+import { opportunityPatch, type TwentyDataSource } from '@ct/integrations';
 import { orgEq, type OrgContext } from '../auth/index';
 import { getExternalIdentityFor } from './identity';
 
 /**
- * Write-back CT → Twenty (E-1, Fase 5). CT empuja SOLO los campos que gestiona (PATCH parcial), sobre registros
- * que YA vinieron de Twenty (resueltos por `external_identities`); los creados en CT no se envían (alcance:
- * "solo actualizar existentes"). Se dispara desde el Outbox (`twenty.push`) al editar por un USER; el sync es
- * SYSTEM y no re-empuja, así que no hay bucles.
+ * Write-back CT → Twenty. **Lo único que Control Tower escribe en Twenty es el `stage` de una oportunidad**
+ * (ADR-009, owner 2026-09-26; extiende ADR-008 a todo el CRM): Twenty es el dueño de los registros comerciales y
+ * CT gobierna el avance del embudo.
+ *
+ * Hasta el 2026-09-26 también empujaba cliente (nombre/web/industria), contacto (nombre/email/teléfono/cargo) y la
+ * fecha de una task. Se retiró: esos campos ahora están en `FIELD_OWNERSHIP` como propiedad de Twenty, así que CT
+ * ni los deja editar ni tiene nada que enviar.
+ *
+ * Sigue empujando sólo sobre registros que YA vinieron de Twenty (resueltos por `external_identities`): CT no crea
+ * nada allí. Se dispara desde el Outbox (`twenty.push`) al editar por un USER; el sync es SYSTEM y no re-empuja,
+ * así que no hay bucles.
  */
 
 const P = 'TWENTY';
 
 /** entityType interno → (external_type de identidad, recurso REST de Twenty). */
 const TARGETS: Record<string, { externalType: string; resource: string }> = {
-  client: { externalType: 'company', resource: 'companies' },
-  contact: { externalType: 'person', resource: 'people' },
   opportunity: { externalType: 'opportunity', resource: 'opportunities' },
-  task: { externalType: 'task', resource: 'tasks' },
 };
 
 async function buildBody(
@@ -28,36 +32,14 @@ async function buildBody(
   entityType: string,
   entityId: string,
 ): Promise<Record<string, unknown> | null> {
-  if (entityType === 'client') {
-    const [r] = await db
-      .select({ name: clients.name, websiteUrl: clients.websiteUrl, industry: clients.industry })
-      .from(clients)
-      .where(and(eq(clients.id, entityId), orgEq(clients.organizationId, ctx)));
-    return r ? companyPatch(r) : null;
-  }
-  if (entityType === 'contact') {
-    const [r] = await db
-      .select({ firstName: contacts.firstName, lastName: contacts.lastName, email: contacts.email, phone: contacts.phone, jobTitle: contacts.jobTitle })
-      .from(contacts)
-      .where(and(eq(contacts.id, entityId), orgEq(contacts.organizationId, ctx)));
-    return r ? personPatch(r) : null;
-  }
   if (entityType === 'opportunity') {
-    // CT sólo posee el `stage` (owner 2026-09-02: es la máquina de estados de la oportunidad). Nombre, importe y
-    // fecha se editan en Twenty; empujarlos desde aquí machacaría el original con una copia potencialmente vieja.
+    // Sólo el `stage`. Nombre, importe, fecha y cliente se editan en Twenty; empujarlos desde aquí machacaría el
+    // original con una copia potencialmente vieja.
     const [r] = await db
       .select({ stage: opportunities.stage })
       .from(opportunities)
       .where(and(eq(opportunities.id, entityId), orgEq(opportunities.organizationId, ctx)));
     return r ? opportunityPatch({ stage: r.stage }) : null;
-  }
-  if (entityType === 'task') {
-    // CT es dueño de la FECHA de una task de Twenty (reprogramar) → se empuja `dueDate`. El título lo posee Twenty.
-    const [r] = await db
-      .select({ dueDate: tasks.dueDate })
-      .from(tasks)
-      .where(and(eq(tasks.id, entityId), orgEq(tasks.organizationId, ctx)));
-    return r ? taskPatch({ dueDate: r.dueDate }) : null;
   }
   return null;
 }
@@ -73,7 +55,7 @@ export async function runTwentyEntityPush(
   const target = TARGETS[entityType];
   if (!target) return 'skip';
   const identity = await getExternalIdentityFor(db, ctx, P, entityType, entityId);
-  if (!identity) return 'skip'; // creado en CT, no vino de Twenty → no se crea allá (alcance v1)
+  if (!identity) return 'skip'; // creado en CT, no vino de Twenty → no se crea allá
   const body = await buildBody(db, ctx, entityType, entityId);
   if (!body || Object.keys(body).length === 0) return 'skip';
   await ds.update(target.resource, identity.externalId, body);

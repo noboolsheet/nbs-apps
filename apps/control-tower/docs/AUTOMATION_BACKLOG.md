@@ -43,10 +43,10 @@ Lo que ya corre sobre los motores de §0. Úsalo para no duplicar.
 |---|---|---|---|---|
 | ACT-1 | **Oportunidad WON → Proyecto** | evento `opportunity.won` | Crea el proyecto (idempotente, hereda nombre/cliente) | `automations/createProjectFromWonOpportunity`, emitido en `crm/commands.ts` |
 | ACT-2 | **Push en tiempo real a Notion** | un USER edita una entidad espejo → `recordAudit` encola `notion.push` | Empuja las propiedades gestionadas a su fila de Notion (10 entidades) | `audit/index` + handler `notion.push` |
-| ACT-3 | **Write-back a Twenty** | un USER edita client/contact/opportunity → `twenty.push` | PATCH de los campos gestionados a Twenty (solo existentes) | `push-twenty` + handler `twenty.push` |
+| ACT-3 | **Write-back a Twenty** | un USER mueve el **stage** de una oportunidad → `twenty.push` | PATCH de **sólo `stage`** a Twenty (solo registros existentes). **ADR-009 (2026-09-26): es lo ÚNICO que CT escribe en Twenty** — client/contact/task ya no se empujan | `push-twenty` + handler `twenty.push` |
 | ACT-4 | **Sync programado de integraciones** | 1×/día a `SYNC_DAILY_HOUR` (7am, tz de la org) | Encola el sync de cada integración conectada (dedupe) | `maintenance/scheduler` + tick |
 | ACT-5 | **Barrido de retención** | ~cada hora | Purga tareas completadas antiguas (`settings.completedTaskRetentionDays`) | `maintenance/retention` + tick |
-| ACT-6 | **Sync Twenty** | job `integration.twenty.sync` | Pull company/person/opportunity/task + write-back | `sync-twenty` |
+| ACT-6 | **Sync Twenty** | job `integration.twenty.sync` | Pull company/person/opportunity/task (+ el write-back del stage) | `sync-twenty` |
 | ACT-7 | **Sync Notion** | job `integration.notion.sync` | Pull tipado + push propiedad-por-campo (10 DBs) | `sync-notion-entity` |
 | ACT-8 | **Sync GitHub** | job `integration.github.sync` | Repos → assets (referencia) | `sync-git` |
 | ACT-9 | **Sync Google Drive** | job `integration.gdrive.sync` | Ficheros recursivo → documents + **reconcilia borrados** | `sync-drive` |

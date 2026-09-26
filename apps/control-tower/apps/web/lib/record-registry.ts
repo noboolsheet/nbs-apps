@@ -119,6 +119,11 @@ const CONTACT_OF_CLIENT_REL = { ...CONTACT_REL, dependsOn: { field: 'clientId', 
 const DECISION_REL = { source: '/api/v1/decisions', labelFields: ['title'] };
 
 export const RECORDS: Record<string, RecordSpec> = {
+  /**
+   * ADR-009 (owner 2026-09-26): **todo lo que llega de Twenty es propiedad de Twenty**. Los campos que rellena su
+   * pull van con `ownedBy: ['TWENTY']` → se bloquean SOLO si este cliente concreto vino de Twenty («se edita en el
+   * origen»); un cliente creado en CT sigue siendo editable entero. `status` y `notes` son columnas propias de CT.
+   */
   client: {
     entity: 'client',
     label: t('entity.client'),
@@ -129,13 +134,14 @@ export const RECORDS: Record<string, RecordSpec> = {
     source: true,
     pick: (d) => (d as { client: Record<string, unknown> }).client,
     fields: [
-      { name: 'name', label: t('field.name'), type: 'text', required: true },
+      { name: 'name', label: t('field.name'), type: 'text', required: true, ownedBy: ['TWENTY'] },
       { name: 'status', label: t('field.status'), type: 'select', options: CLIENT_STATUS },
-      { name: 'industry', label: t('field.industry'), type: 'text' },
-      { name: 'websiteUrl', label: t('field.websiteUrl'), type: 'text' },
+      { name: 'industry', label: t('field.industry'), type: 'text', ownedBy: ['TWENTY'] },
+      { name: 'websiteUrl', label: t('field.websiteUrl'), type: 'text', ownedBy: ['TWENTY'] },
       { name: 'notes', label: t('field.notes'), type: 'textarea' },
     ],
   },
+  /** ADR-009: igual que el cliente — lo que trae el pull de Twenty (person) no se edita aquí. `notes` es de CT. */
   contact: {
     entity: 'contact',
     label: t('entity.contact'),
@@ -146,12 +152,12 @@ export const RECORDS: Record<string, RecordSpec> = {
     source: true,
     contextCreate: { client: { presetField: 'clientId' } },
     fields: [
-      { name: 'firstName', label: t('field.name'), type: 'text' },
-      { name: 'lastName', label: t('field.lastName'), type: 'text' },
-      { name: 'email', label: t('field.email'), type: 'text' },
-      { name: 'phone', label: t('field.phone'), type: 'text' },
-      { name: 'jobTitle', label: t('field.jobTitle'), type: 'text' },
-      { name: 'clientId', label: t('field.clientId'), type: 'relation', relation: CLIENT_REL },
+      { name: 'firstName', label: t('field.name'), type: 'text', ownedBy: ['TWENTY'] },
+      { name: 'lastName', label: t('field.lastName'), type: 'text', ownedBy: ['TWENTY'] },
+      { name: 'email', label: t('field.email'), type: 'text', ownedBy: ['TWENTY'] },
+      { name: 'phone', label: t('field.phone'), type: 'text', ownedBy: ['TWENTY'] },
+      { name: 'jobTitle', label: t('field.jobTitle'), type: 'text', ownedBy: ['TWENTY'] },
+      { name: 'clientId', label: t('field.clientId'), type: 'relation', relation: CLIENT_REL, ownedBy: ['TWENTY'] },
       { name: 'notes', label: t('field.notes'), type: 'textarea' },
     ],
   },
@@ -230,7 +236,9 @@ export const RECORDS: Record<string, RecordSpec> = {
       { name: 'status', label: t('field.status'), type: 'select', options: TASK_STATUS, defaultValue: 'TODO', commitPath: (id) => `/api/v1/tasks/${id}/status` },
       { name: 'description', label: t('field.description'), type: 'textarea' },
       { name: 'priority', label: t('field.priority'), type: 'select', options: PRIORITY },
-      { name: 'dueDate', label: t('field.dueDate'), type: 'date' },
+      // ADR-009: la fecha de una task de Twenty también es de Twenty (antes se reprogramaba en CT y se empujaba
+      // con `taskPatch`; ese write-back se retiró). En una task nativa de CT sigue siendo editable.
+      { name: 'dueDate', label: t('field.dueDate'), type: 'date', ownedBy: ['TWENTY'] },
       // F-8: proyecto SELECCIONABLE. Al crear desde la vista global (`/tasks`) permite elegir proyecto en vez de
       // dejar la tarea huérfana; en edición permite reasignarla (el comando aplica la exclusión proyecto/
       // oportunidad/personal). Se oculta cuando es heredado: subtarea (parentTaskId) o tarea de preventa.

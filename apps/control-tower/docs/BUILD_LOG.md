@@ -5,6 +5,51 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-09-26 — ADR-009 · Twenty es el dueño del CRM: CT deja de escribirle (salvo el `stage`) ✅
+
+**La decisión del owner:** *«tampoco vamos a hacer ninguna escritura desde Control Tower hacia Twenty de clientes ni
+contactos… toda la información que venga desde Twenty (excepto el estado en las oportunidades) será sólo propiedad de
+Twenty y no debería poder ser cambiada desde Control Tower»*. Es la generalización de **ADR-008**, que ya había hecho
+esto con la oportunidad: el mismo problema estaba sin resolver en cliente, contacto y task.
+
+**Por qué era un problema de verdad y no un gusto:** dos sistemas escribiendo el mismo campo necesitan un arbitraje, y
+el único que había era el guard de F-22 («el pull no pisa un registro con push pendiente»), que es una **ventana de
+tiempo**, no una regla de propiedad. Encima el push mandaba la copia que CT tenía, que entre dos syncs puede estar
+vieja: tocar un campo en CT podía machacar en Twenty un dato más nuevo. Las dos cosas, en silencio.
+
+**Qué entra.**
+- **`push-twenty.ts` se queda con un destino y un campo:** `opportunity` → `{ stage }`. Fuera `companyPatch`,
+  `personPatch` y `taskPatch` (borrados de `twenty/mapper.ts`, con sus tipos y sus tests).
+- **`TWENTY_MIRRORED` = `{ opportunity }`:** `recordAudit` ya no encola `twenty.push` al editar client/contact/task.
+- **`FIELD_OWNERSHIP` (dominio) recoge todo lo que rellena el pull:** client `name`/`industry`/`websiteUrl`; contact
+  `firstName`/`lastName`/`email`/`phone`/`jobTitle`/`clientId`; task `title` **y `dueDate`**. Bloqueo **por
+  procedencia**: sólo si ese registro concreto vino de Twenty.
+- **Doble cierre, UI y backend:** `ownedBy: ['TWENTY']` en el registro del panel (🔒 «se edita en el origen») y
+  `assertNotEditingOwnedFields` en `updateClient`/`updateContact` (ya estaba en `updateTask`), así que tampoco cuela
+  por API.
+- **La fecha de una task de Twenty deja de ser de CT** y el pull la reescribe. Era la última excepción: se reprogramaba
+  en CT y se empujaba con `taskPatch`; sin write-back, dejarla editable guardaría una fecha que Twenty no conoce.
+- **El guard de F-22 se acota a la oportunidad.** Para client/contact un `twenty.push` pendiente sólo puede ser
+  **residuo** de antes de esta decisión; mantener el guard dejaría esa fila congelada sin que CT pueda ya resolver el
+  envío. Los residuos se drenan solos (el push devuelve `skip`) y se ven en Envíos fallidos.
+- **Lo que NO cambia, a propósito:** `status` y `notes` del cliente y `notes` del contacto son columnas **propias de
+  CT** que Twenty no conoce, y siguen editables; y un cliente o contacto **creado en CT** sigue siendo editable entero,
+  porque no tiene identidad de Twenty. Cerrar también la creación sería otra decisión (queda escrita en el ADR).
+- **`docs/adr/ADR-009-twenty-owns-the-crm.md`**, más `DECISIONS_FROZEN`, `AUTOMATION_BACKLOG` (ACT-3), `CLAUDE.md` y la
+  **guía del usuario** (la matriz decía que clientes y contactos se editaban en CT y se empujaban).
+
+**Tests reescritos:** `tests/integration/twenty-push.test.ts` pasa de «editar un cliente empuja name+domainName+
+industry» a comprobar las dos mitades de la decisión —el stage sí se empuja; cliente, contacto y la fecha de una task
+**se rechazan** y no encolan nada; lo nativo de CT se edita y no viaja—, y el test de sync de tasks ahora exige que el
+pull reescriba **título y fecha**. **Sin correr** (no había Postgres en la sesión).
+
+**En la misma sesión: E-16 ❌ descartado (opción A del owner).** Los ficheros siguen viviendo en Drive y CT guarda el
+enlace: es la decisión congelada, y el hueco que dolía —dónde apuntar lo que se habla— era E-15, ya resuelto. Queda
+anotado en el ítem qué haría falta si algún día se retoma, y por qué el data URL (como la foto de perfil) es preferible
+al fichero en disco: el disco saca estado fuera de Postgres y el backup deja de ser sólo `pg_dump`.
+
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (134; bajan 2 al retirar los mappers) · `pnpm build`.
+
 ## 2026-09-26 — E-15 · Notas por registro ✅
 
 **El hueco.** No había dónde apuntar *«hablado con el cliente, mueve la entrega a marzo»*. Existía el historial
@@ -261,7 +306,14 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-09-26): E-15 hecho — hay notas por registro.** Bloque «Notas» en el panel lateral (tabla
+> **⚑ ÚLTIMO (2026-09-26): ADR-009 — Twenty es el dueño del CRM.** CT ya **no escribe nada** en Twenty salvo el
+> `stage` de una oportunidad: fuera el write-back de cliente, contacto y task, y todo lo que rellena su pull queda
+> **bloqueado por procedencia** (🔒 en el panel y rechazado en el comando). Siguen siendo de CT el `status`/`notes` del
+> cliente, las `notes` del contacto y cualquier cliente/contacto creado aquí. **E-16 descartado**: los ficheros se
+> quedan en Drive. **Siguiente: E-12** (falta que el owner diga en qué listas quiere el drag-reorden), después de
+> comprobar si los componentes comunes están reutilizados o duplicados.
+>
+> **⚑ ANTES: E-15 hecho — hay notas por registro.** Bloque «Notas» en el panel lateral (tabla
 > polimórfica `notes`, migración `0025_m41`), sin espejo a Notion. De paso: el borrado duro limpia notas y punteros
 > de sync en un **único** sitio (`deleteRecordTraces`), la purga de tareas completadas **no limpiaba nada** (mismo
 > bug que M40) y el «Historial» de un aprendizaje salía vacío por un nombre de entidad divergente. **Siguiente:

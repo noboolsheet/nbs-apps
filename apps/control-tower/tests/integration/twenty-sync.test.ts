@@ -190,20 +190,25 @@ describe('twenty sync (fixture)', () => {
     });
   });
 
-  it('un segundo sync NO pisa la fecha reprogramada en CT (CT es dueño de dueDate), pero sí re-sincroniza el título', async () => {
+  // ADR-009 (2026-09-26): título Y fecha de una task de Twenty son de Twenty. Antes la fecha se podía reprogramar
+  // en CT y se empujaba con `taskPatch`; al retirarse el write-back, dejarla editable guardaría en CT una fecha que
+  // Twenty no conoce y que desaparecería en el siguiente sync.
+  it('un segundo sync re-sincroniza título Y fecha, y CT no deja reprogramar una task de Twenty', async () => {
     await inRollback(async (tx) => {
       const ctx = await makeOrg(tx);
       const data = { ...fixture(), tasks: [{ id: 't1', title: 'Llamar a Acme', status: 'TODO', dueAt: '2026-12-31T10:00:00Z' }] };
       await syncTwenty(tx, sync(ctx), new TwentyAdapter(new FixtureSource(data)));
       const [task] = await tx.select().from(s.tasks).where(and(eq(s.tasks.organizationId, ctx.organizationId), eq(s.tasks.title, 'Llamar a Acme')));
-      // El owner reprograma en CT.
-      await updateTask(tx, ctx, task!.id, { dueDate: new Date('2027-03-01') });
-      // Twenty vuelve a mandar la fecha vieja y un título nuevo.
-      const data2 = { ...fixture(), tasks: [{ id: 't1', title: 'Llamar a Acme (act.)', status: 'TODO', dueAt: '2026-12-31T10:00:00Z' }] };
+
+      // Reprogramar en CT ya no se permite: la fecha es de Twenty.
+      await expect(updateTask(tx, ctx, task!.id, { dueDate: new Date('2027-03-01') })).rejects.toThrow();
+
+      // Y el pull reescribe las dos cosas.
+      const data2 = { ...fixture(), tasks: [{ id: 't1', title: 'Llamar a Acme (act.)', status: 'TODO', dueAt: '2027-05-05T10:00:00Z' }] };
       await syncTwenty(tx, sync(ctx), new TwentyAdapter(new FixtureSource(data2)));
       const [after] = await tx.select().from(s.tasks).where(eq(s.tasks.id, task!.id));
-      expect(after!.dueDate).toBe('2027-03-01'); // la fecha de CT prevalece
-      expect(after!.title).toBe('Llamar a Acme (act.)'); // el título sí se re-sincroniza
+      expect(after!.title).toBe('Llamar a Acme (act.)');
+      expect(after!.dueDate).toBe('2027-05-05');
     });
   });
 
