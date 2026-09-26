@@ -6,7 +6,7 @@ import type { ButtonHTMLAttributes } from 'react';
  * claro y oscuro, sin `dark:`. Se exportan tanto el componente `<Button>` como las cadenas `btnPrimary`/`btnSecondary`/
  * `btnGhost`/`btnDanger` para cablearlas en `<button>` existentes con mínimo cambio.
  */
-export type ButtonVariant = 'primary' | 'secondary' | 'surface' | 'ghost' | 'danger';
+export type ButtonVariant = 'primary' | 'secondary' | 'surface' | 'ghost' | 'danger' | 'link' | 'linkDanger';
 export type ButtonSize = 'sm' | 'md';
 
 const BASE =
@@ -26,6 +26,11 @@ const VARIANTS: Record<ButtonVariant, string> = {
   surface: 'border border-line-strong bg-surface text-fg shadow-sm hover:bg-surface-muted',
   ghost: 'text-fg-muted hover:bg-surface-muted',
   danger: 'bg-danger text-white hover:opacity-90',
+  // Botón que se LEE como enlace (subrayado al pasar, sin caja): acciones secundarias dentro de una fila o un
+  // bloque —«Editar», «Desenlazar», «Limpiar»—. Existía copiado a mano en 18 sitios porque no había variante.
+  // Sin `px/py` de caja: se le quita el tamaño con `buttonCls('link', …)`, que sólo aporta la tipografía.
+  link: 'underline-offset-2 hover:underline text-fg-muted',
+  linkDanger: 'underline-offset-2 hover:underline text-danger',
 };
 
 /** Cadena de clase de un botón (tamaño md), para cablearla en un `<button>` existente. */
@@ -36,6 +41,9 @@ export const btnPrimary = buttonCls('primary');
 export const btnSecondary = buttonCls('secondary');
 export const btnGhost = buttonCls('ghost');
 export const btnDanger = buttonCls('danger');
+/** Botón-enlace (sin caja): mismo peso visual que un `<a>`, pero es una acción. `sm` = xs, como el texto que acompaña. */
+export const btnLink = `${BASE} text-xs ${VARIANTS.link}`;
+export const btnLinkDanger = `${BASE} text-xs ${VARIANTS.linkDanger}`;
 
 export function Button({
   variant = 'primary',

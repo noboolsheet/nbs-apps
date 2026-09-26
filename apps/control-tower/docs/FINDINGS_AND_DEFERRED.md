@@ -1138,6 +1138,34 @@ hay que volver a medir antes de dar por bueno el síntoma.
 - **Regla operativa que sale de aquí:** migrar CT entre servidores es `pg_dump` + restore **completo**,
   `external_identities` incluida. Repoblar desde los orígenes duplica por diseño. En `DEPLOYMENT.md`.
 
+### F-36 · Componentes comunes: el 95% estaba reutilizado, pero había cinco copias del mismo hook y dos listas fuera de `RecordTable` ✅ RESUELTO (2026-09-26)
+- **Hallado en:** repaso pedido por el owner («¿los componentes comunes existen uno por instancia o son uno
+  reutilizable?») antes de abordar E-12.
+- **Lo que estaba bien (y conviene no tocar):** las piezas compartidas son **únicas y reutilizadas** —`RecordTable`
+  en 23 ficheros, `StatusBadge` en 38, `RecordLink` en 29, `EmptyState` en 19, `DescriptionList` y
+  `NewRecordButton` en 16, `InlineEditSection` en 14— y el panel lateral es **uno solo**, montado en `app-shell`.
+  Las tres «tablas» (`EntityTable` → `DataTable` → `RecordTable`) son **capas**, no copias: tipos de columna →
+  cliente con selección/orden/filtro → composición con estado vacío. Eso es el resultado de F-29 y aguanta.
+- **Las cuatro grietas encontradas, todas cerradas el mismo día:**
+  1. **El hook de formulario estaba copiado CINCO veces**: `useSubmit()` byte a byte en los `forms.tsx` de
+     projects/business/portfolio/knowledge, más `useAction()` en `integrations/controls.tsx` (igual + mensaje de
+     éxito). Un arreglo ahí había que acordarse de hacerlo cinco veces. → **`lib/use-form-action.ts`**, una sola
+     implementación con `okMsg` opcional.
+  2. **Dos listas pintaban su propio `<table>`**: `learning-list` y `library-list`. Al haberse escrito antes de
+     F-28, **se habían quedado sin ordenación por columna, sin filtro rápido y sin aviso de tope**, y nadie lo
+     había notado. → Las dos pasan a `RecordTable`; los desplegables de sector/tipo/estado se conservan porque
+     acotan por valor exacto, que es otra cosa que buscar texto.
+  3. **18 botones con clases a mano** frente a 14 ficheros con primitivas. Casi todos eran botones-enlace, y
+     **no existía esa variante**. → Añadidas `btnLink`/`btnLinkDanger` a `button.tsx` y cableados; los que
+     reproducían `btnSecondary` a mano (incluido el `const btn` local de `controls.tsx`) ahora lo usan.
+  4. **Siete ficheros con campos fuera de `fieldCls`.** → Arreglados login (tenía **dos** variantes distintas de
+     input, una sin `bg-field`), el textarea de configuración de integraciones y el de notas (que había escrito
+     yo esa misma mañana). Quedan a propósito: `status-select` y `searchable-select` (son primitivas propias), el
+     input oculto de la foto de perfil y la **barra del buscador** del diálogo, que no es un campo de formulario
+     —eso sí, se le quitó el `outline-none`, que se saltaba la regla de no matar el foco sin alternativa—.
+- **De paso:** `learning-list` pintaba su enlace externo con `text-blue-600 dark:text-blue-400`, saltándose los
+  tokens del tema (DESIGN_TOKENS prohíbe `dark:` a mano); ahora usa `ExternalSourceLink`.
+
 ### E-15 · Notas y comentarios por registro ✅ RESUELTO (2026-09-26)
 - **Hallado en:** sesión 27.
 - **Qué falta:** no hay tabla de comentarios ni sitio donde escribir texto libre asociado a un registro. Hay

@@ -5,6 +5,38 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-09-26 — F-36 · Repaso de componentes comunes: cinco copias de un hook y dos listas sueltas ✅
+
+Encargo del owner antes de entrar en E-12: *«comprueba una cosa: todos los componentes comunes… ¿existen uno a uno
+por cada instancia o son un componente único reutilizable?»*.
+
+**La respuesta corta: están reutilizados.** `RecordTable` en 23 ficheros, `StatusBadge` en 38, `RecordLink` en 29,
+`EmptyState` en 19, `DescriptionList`/`NewRecordButton` en 16, `InlineEditSection` en 14, y el panel lateral es **uno
+solo** montado en `app-shell`. Las tres «tablas» son **capas** (`EntityTable` → `DataTable` → `RecordTable`), no tres
+copias. Eso es lo que dejó F-29 y sigue en pie.
+
+**Pero había cuatro grietas, y se arreglan aquí:**
+1. **El hook de formulario estaba copiado cinco veces** —`useSubmit()` idéntico en cuatro `forms.tsx` y `useAction()`
+   en `integrations/controls.tsx`—, así que cualquier arreglo había que hacerlo cinco veces. Ahora es
+   **`lib/use-form-action.ts`**, con `okMsg` opcional (que era la única diferencia real).
+2. **`learning-list` y `library-list` pintaban su propio `<table>`** y por eso **se habían quedado fuera de F-28**:
+   sin ordenación por columna, sin filtro rápido y sin aviso de tope, sin que nadie lo notara. Las dos pasan a
+   `RecordTable`. Los desplegables de sector/tipo/estado se quedan: acotan por valor exacto, que no es lo mismo que
+   buscar texto. Dentro de la lista, «cero filas» ya no dice «aún no hay conocimiento» (lo pinta la página cuando de
+   verdad no hay nada) sino «nada coincide con el filtro», que es lo que pasa.
+3. **Faltaba la variante de botón-enlace.** Los 18 botones con clases a mano eran casi todos de ese tipo; ahora hay
+   `btnLink`/`btnLinkDanger` en `button.tsx` y los que reproducían `btnSecondary` (incluido el `const btn` de
+   `controls.tsx`) usan la primitiva.
+4. **Campos fuera de `fieldCls`:** arreglados el login (que tenía **dos** variantes de input, una sin `bg-field`), el
+   textarea de configuración de integraciones y el de notas. Se quedan fuera a propósito `status-select` y
+   `searchable-select` (son primitivas), el input oculto de la foto y la **barra del buscador**, a la que sí se le
+   quitó el `outline-none` —mataba el foco sin alternativa visible, contra la regla del repo—.
+
+**Hallazgo de paso:** `learning-list` pintaba su enlace externo con `text-blue-600 dark:text-blue-400`, saltándose los
+tokens (DESIGN_TOKENS: nada de `dark:` a mano). Ahora usa `ExternalSourceLink`.
+
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (134) · `pnpm build`.
+
 ## 2026-09-26 — ADR-009 · Twenty es el dueño del CRM: CT deja de escribirle (salvo el `stage`) ✅
 
 **La decisión del owner:** *«tampoco vamos a hacer ninguna escritura desde Control Tower hacia Twenty de clientes ni
@@ -306,7 +338,12 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-09-26): ADR-009 — Twenty es el dueño del CRM.** CT ya **no escribe nada** en Twenty salvo el
+> **⚑ ÚLTIMO (2026-09-26): F-36 — repaso de componentes comunes.** Están reutilizados (el panel es uno solo, las
+> tablas son capas), pero había **cinco copias del hook de formulario** (ahora `lib/use-form-action.ts`), **dos listas
+> con `<table>` a mano** que se habían quedado sin lo de F-28 (ya usan `RecordTable`), faltaba la variante
+> **botón-enlace** y cuatro campos no usaban `fieldCls`. **Siguiente: E-12** (drag-reorder de filas).
+>
+> **⚑ ANTES: ADR-009 — Twenty es el dueño del CRM.** CT ya **no escribe nada** en Twenty salvo el
 > `stage` de una oportunidad: fuera el write-back de cliente, contacto y task, y todo lo que rellena su pull queda
 > **bloqueado por procedencia** (🔒 en el panel y rechazado en el comando). Siguen siendo de CT el `status`/`notes` del
 > cliente, las `notes` del contacto y cualquier cliente/contacto creado aquí. **E-16 descartado**: los ficheros se

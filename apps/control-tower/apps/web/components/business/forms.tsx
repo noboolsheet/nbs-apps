@@ -1,31 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { SERVICE_STATUS, CAPABILITY_STATUS } from '@ct/domain';
 import { postJson } from '@/lib/client';
 import { StatusSelect } from '@/components/ui/status-select';
 import { fieldCls } from '@/components/ui/input';
 import { btnSecondary } from '@/components/ui/button';
+import { useFormAction } from '@/lib/use-form-action';
 import { t } from '@/lib/i18n';
 
 const inputCls = fieldCls;
-
-function useSubmit() {
-  const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  async function run(fn: () => Promise<{ error?: { message: string } }>) {
-    setBusy(true);
-    setError(null);
-    const res = await fn();
-    setBusy(false);
-    if (res.error) setError(res.error.message);
-    else router.refresh();
-    return !res.error;
-  }
-  return { error, busy, run };
-}
 
 /** Control para cambiar el estado (valida transición en el servidor). */
 export function StatusControl({
@@ -50,7 +34,7 @@ export function LinkCapabilityControl({
   options: { id: string; name: string }[];
 }) {
   const [capabilityId, setCapabilityId] = useState('');
-  const { error, busy, run } = useSubmit();
+  const { error, busy, run } = useFormAction();
   if (options.length === 0) return <p className="text-sm text-fg-muted">{t('business.capabilityLinkAllUsed')}</p>;
   return (
     <form

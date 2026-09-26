@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn, signUp } from '@/lib/auth-client';
+import { btnLink, btnPrimary } from '@/components/ui/button';
+import { fieldCls } from '@/components/ui/input';
 import { t } from '@/lib/i18n';
 
 type Mode = 'signin' | 'signup';
@@ -51,7 +53,7 @@ export default function LoginPage() {
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
         {mode === 'signup' && (
           <input
-            className="rounded border border-line-strong bg-field px-3 py-2 text-sm"
+            className={`${fieldCls} px-3 py-2`}
             placeholder={t('field.name')}
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -59,7 +61,7 @@ export default function LoginPage() {
           />
         )}
         <input
-          className="rounded border border-line-strong px-3 py-2 text-sm"
+          className={`${fieldCls} px-3 py-2`}
           type="email"
           placeholder={t('field.email')}
           value={email}
@@ -68,7 +70,7 @@ export default function LoginPage() {
           required
         />
         <input
-          className="rounded border border-line-strong px-3 py-2 text-sm"
+          className={`${fieldCls} px-3 py-2`}
           type="password"
           placeholder={t('login.password')}
           value={password}
@@ -81,7 +83,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="rounded bg-primary px-3 py-2 text-sm font-medium text-primary-fg hover:opacity-90 disabled:opacity-50"
+          className={btnPrimary}
         >
           {loading ? '…' : mode === 'signin' ? 'Entrar' : 'Registrarse'}
         </button>
@@ -90,7 +92,7 @@ export default function LoginPage() {
       <button
         type="button"
         onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
-        className="text-sm text-fg-muted underline"
+        className={btnLink}
       >
         {mode === 'signin' ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
       </button>

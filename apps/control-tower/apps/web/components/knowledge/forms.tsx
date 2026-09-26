@@ -2,33 +2,17 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { KNOWLEDGE_ITEM_STATUS, DECISION_STATUS, ASSET_STATUS, REVIEW_ITEM_STATUS } from '@ct/domain';
 import { postJson, deleteJson } from '@/lib/client';
 import { StatusSelect } from '@/components/ui/status-select';
 import { fieldCls } from '@/components/ui/input';
-import { btnPrimary, btnSecondary } from '@/components/ui/button';
+import { btnLink, btnLinkDanger, btnPrimary, btnSecondary } from '@/components/ui/button';
+import { useFormAction } from '@/lib/use-form-action';
 import { t } from '@/lib/i18n';
 
 const inputCls = fieldCls;
 const submitBtn = btnPrimary;
 const ghostBtn = btnSecondary;
-
-function useSubmit() {
-  const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  async function run(fn: () => Promise<{ error?: { message: string } }>) {
-    setBusy(true);
-    setError(null);
-    const res = await fn();
-    setBusy(false);
-    if (res.error) setError(res.error.message);
-    else router.refresh();
-    return !res.error;
-  }
-  return { error, busy, run };
-}
 
 
 export function KnowledgeItemStatusControl({ id, current }: { id: string; current: string }) {
@@ -47,7 +31,7 @@ export function AssetStatusControl({ id, current }: { id: string; current: strin
 export function CaptureForm() {
   const [rawContent, setRawContent] = useState('');
   const [sourceType, setSourceType] = useState('MANUAL');
-  const { error, busy, run } = useSubmit();
+  const { error, busy, run } = useFormAction();
   return (
     <form
       className="flex flex-col gap-2"
@@ -73,7 +57,7 @@ export function CaptureForm() {
  * **Eliminar** (borrado definitivo, con confirmación) — también en las procesadas/descartadas de solo lectura.
  */
 export function InboxPanelActions({ id, resolved, onDone }: { id: string; resolved: boolean; onDone: () => void }) {
-  const { error, busy, run } = useSubmit();
+  const { error, busy, run } = useFormAction();
   const [confirmDelete, setConfirmDelete] = useState(false);
   return (
     <div className="mt-2 flex flex-col gap-2 border-t border-line pt-3">
@@ -105,14 +89,14 @@ export function InboxPanelActions({ id, resolved, onDone }: { id: string; resolv
         </div>
       )}
       {!confirmDelete ? (
-        <button className="self-start text-xs text-danger hover:underline" type="button" onClick={() => setConfirmDelete(true)}>
+        <button className={`${btnLinkDanger} self-start`} type="button" onClick={() => setConfirmDelete(true)}>
           {t('common.remove')}
         </button>
       ) : (
         <div className="flex items-center gap-2 text-xs">
           <span className="text-fg-muted">{t('knowledge.confirmDelete')}</span>
           <button
-            className="font-medium text-danger hover:underline"
+            className={btnLinkDanger}
             type="button"
             disabled={busy}
             onClick={async () => {
@@ -122,7 +106,7 @@ export function InboxPanelActions({ id, resolved, onDone }: { id: string; resolv
           >
             {t('common.confirmRemove')}
           </button>
-          <button className="text-fg-muted hover:underline" type="button" onClick={() => setConfirmDelete(false)}>
+          <button className={btnLink} type="button" onClick={() => setConfirmDelete(false)}>
             {t('common.cancel')}
           </button>
         </div>
@@ -135,7 +119,7 @@ export function InboxPanelActions({ id, resolved, onDone }: { id: string; resolv
 export function CreateDocumentForm({ projectId, clientId }: { projectId?: string; clientId?: string }) {
   const [name, setName] = useState('');
   const [externalUrl, setExternalUrl] = useState('');
-  const { error, busy, run } = useSubmit();
+  const { error, busy, run } = useFormAction();
   return (
     <form
       className="flex flex-wrap items-end gap-2"
@@ -173,7 +157,7 @@ export function ReviewItemPanelActions({
   knowledgeItemId: string | null;
   onDone: () => void;
 }) {
-  const { error, busy, run } = useSubmit();
+  const { error, busy, run } = useFormAction();
   if (status !== 'REVIEWED' && !knowledgeItemId) return null;
 
   return (

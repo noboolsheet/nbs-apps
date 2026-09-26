@@ -10,7 +10,7 @@ import { enumLabel } from '@/lib/labels';
 import { TaskPanelActions } from '@/components/projects/forms';
 import { InboxPanelActions, ReviewItemPanelActions } from '@/components/knowledge/forms';
 import { fieldCls } from './input';
-import { btnPrimary } from './button';
+import { btnPrimary, buttonCls } from './button';
 import { SearchableSelect } from './searchable-select';
 import { SourceBadge } from './source-badge';
 import { ExternalSourceLink } from './external-source-link';
@@ -357,7 +357,7 @@ export function RecordPanel() {
               </Link>
             )}
           </div>
-          <button type="button" onClick={close} aria-label={t('common.close')} className="shrink-0 rounded p-1 text-fg-muted hover:bg-neutral-soft">
+          <button type="button" onClick={close} aria-label={t('common.close')} className={`${buttonCls('ghost', 'sm')} shrink-0`}>
             ✕
           </button>
         </header>

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { deleteJson, getJson, patchJson, postJson } from '@/lib/client';
-import { btnGhost, btnPrimary } from '@/components/ui/button';
+import { btnGhost, btnLink, btnLinkDanger, btnPrimary } from '@/components/ui/button';
 import { fieldCls } from '@/components/ui/input';
 import { t } from '@/lib/i18n';
 import { formatDateTime } from '@/lib/i18n/format';
@@ -148,7 +148,7 @@ export function RecordNotes({ entity, id }: { entity: string; id: string }) {
                   <div className="flex gap-2 text-fg-subtle">
                     <button
                       type="button"
-                      className="underline-offset-2 hover:underline"
+                      className={btnLink}
                       onClick={() => {
                         setEditingId(n.id);
                         setEditDraft(n.body);
@@ -158,7 +158,7 @@ export function RecordNotes({ entity, id }: { entity: string; id: string }) {
                     </button>
                     <button
                       type="button"
-                      className="text-danger underline-offset-2 hover:underline"
+                      className={btnLinkDanger}
                       disabled={busy}
                       onClick={() => void remove(n.id)}
                     >

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { postJson } from '@/lib/client';
-import { btnPrimary } from './button';
+import { btnLink, btnPrimary } from './button';
 import { fieldCls } from './input';
 import { t, tPlural } from '@/lib/i18n';
 import { formatDate } from '@/lib/i18n/format';
@@ -192,7 +192,7 @@ export function DataTable({
               {busy ? action.busyVerb : action.verb}
             </button>
           )}
-          <button type="button" onClick={() => setSelected(new Set())} className="text-fg-muted underline">
+          <button type="button" onClick={() => setSelected(new Set())} className={btnLink}>
             {t('table.clearSelection')}
           </button>
           {error && <span className="text-xs text-danger">{error}</span>}

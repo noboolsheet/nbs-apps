@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { buttonCls } from '@/components/ui/button';
 import { t, type MessageKey } from '@/lib/i18n';
 
 interface Hit {
@@ -113,7 +114,7 @@ export function GlobalSearch() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 rounded border border-line-strong px-2 py-1 text-sm text-fg-muted"
+        className={`${buttonCls('secondary', 'sm')} gap-2 text-fg-muted`}
       >
         <span>{t('search.trigger')}</span>
         <kbd className="rounded bg-surface-muted px-1 text-xs">{t('search.shortcut')}</kbd>
@@ -135,7 +136,10 @@ export function GlobalSearch() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder={t('search.placeholder')}
-              className="w-full border-b border-line bg-transparent px-4 py-3 text-sm outline-none"
+              // Barra de búsqueda del diálogo: a propósito NO usa `fieldCls` (no es un campo de formulario, es la barra
+              // del modal). Se le quitó el `outline-none` que tenía: la regla del repo es no matar el foco sin dar una
+              // alternativa visible, y aquí el anillo global (`:focus-visible`) es la alternativa.
+              className="w-full border-b border-line bg-transparent px-4 py-3 text-sm"
             />
             <div className="max-h-96 overflow-y-auto p-2">
               {loading && <p className="px-2 py-3 text-sm text-fg-muted">{t('search.searching')}</p>}

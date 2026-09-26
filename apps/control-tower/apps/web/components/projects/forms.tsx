@@ -1,30 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { PROJECT_STATUS, TASK_STATUS, DELIVERABLE_STATUS } from '@ct/domain';
 import { patchJson, deleteJson } from '@/lib/client';
 import { StatusSelect } from '@/components/ui/status-select';
 import { fieldCls } from '@/components/ui/input';
+import { useFormAction } from '@/lib/use-form-action';
+import { btnLink, btnLinkDanger, btnSecondary, buttonCls } from '@/components/ui/button';
 import { t } from '@/lib/i18n';
 
 const inputCls = fieldCls;
-
-function useSubmit() {
-  const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  async function run(fn: () => Promise<{ error?: { message: string } }>) {
-    setBusy(true);
-    setError(null);
-    const res = await fn();
-    setBusy(false);
-    if (res.error) setError(res.error.message);
-    else router.refresh();
-    return !res.error;
-  }
-  return { error, busy, run };
-}
 
 export function ProjectStatusControl({ id, current }: { id: string; current: string }) {
   return <StatusSelect endpoint={`/api/v1/projects/${id}/status`} field="status" current={current} options={PROJECT_STATUS} />;
@@ -58,11 +43,11 @@ export function TaskPanelActions({ id, dueDate }: { id: string; dueDate: string 
  * desde el servidor). Reutiliza el mismo PATCH que TaskDueDateControl. Útil para vencidas en el Home.
  */
 export function TaskDueTodayButton({ id, today }: { id: string; today: string }) {
-  const { error, busy, run } = useSubmit();
+  const { error, busy, run } = useFormAction();
   return (
     <span className="inline-flex items-center gap-1">
       <button
-        className="rounded border border-line-strong px-2 py-1.5 text-sm hover:bg-surface-muted disabled:opacity-50"
+        className={btnSecondary}
         disabled={busy}
         onClick={() => void run(() => patchJson(`/api/v1/tasks/${id}`, { dueDate: today }))}
         title={t('tasks.rescheduleToday')}
@@ -79,11 +64,11 @@ export function TaskDueTodayButton({ id, today }: { id: string; today: string })
  * Usa el endpoint de estado (`/status`) como el resto de cambios de estado. Útil para vencidas en el Home.
  */
 export function TaskCompleteButton({ id }: { id: string }) {
-  const { error, busy, run } = useSubmit();
+  const { error, busy, run } = useFormAction();
   return (
     <span className="inline-flex items-center gap-1">
       <button
-        className="rounded border border-line-strong px-2 py-1.5 text-sm hover:bg-surface-muted disabled:opacity-50"
+        className={btnSecondary}
         disabled={busy}
         onClick={() => void run(() => patchJson(`/api/v1/tasks/${id}/status`, { status: 'DONE' }))}
         title={t('tasks.markCompleted')}
@@ -100,7 +85,7 @@ export function TaskCompleteButton({ id }: { id: string }) {
  * Útil sobre todo para tareas vencidas ("dale una fecha nueva").
  */
 export function TaskDueDateControl({ id, current }: { id: string; current: string | null }) {
-  const { error, busy, run } = useSubmit();
+  const { error, busy, run } = useFormAction();
   const [value, setValue] = useState(current ?? '');
   return (
     <span className="inline-flex items-center gap-1">
@@ -140,7 +125,7 @@ export function PhaseActions({
   isCurrent: boolean;
   frozen?: boolean;
 }) {
-  const { error, busy, run } = useSubmit();
+  const { error, busy, run } = useFormAction();
   const currentBadge = (
     <span className="inline-flex items-center rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success-soft-fg">
       {t('projects.phaseCurrent')}
@@ -154,7 +139,7 @@ export function PhaseActions({
           {currentBadge}
           <button
             type="button"
-            className="text-xs text-fg-muted underline disabled:opacity-50"
+            className={btnLink}
             disabled={busy}
             onClick={() => void run(() => patchJson(`/api/v1/projects/${projectId}/current-phase`, { phaseId: null }))}
           >
@@ -164,7 +149,7 @@ export function PhaseActions({
       ) : (
         <button
           type="button"
-          className="rounded border border-line-strong px-2 py-1 text-xs hover:bg-surface-muted disabled:opacity-50"
+          className={buttonCls('secondary', 'sm')}
           disabled={busy}
           onClick={() => void run(() => patchJson(`/api/v1/projects/${projectId}/current-phase`, { phaseId }))}
         >
@@ -173,7 +158,7 @@ export function PhaseActions({
       )}
       <button
         type="button"
-        className="text-xs text-danger underline disabled:opacity-50"
+        className={btnLinkDanger}
         disabled={busy}
         onClick={() => {
           if (confirm(t('projects.confirmDeletePhase'))) void run(() => deleteJson(`/api/v1/project-phases/${phaseId}`));

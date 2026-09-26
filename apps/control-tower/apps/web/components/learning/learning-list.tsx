@@ -3,8 +3,12 @@
 import { useMemo, useState } from 'react';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { RecordLink } from '@/components/ui/record-link';
+import { RecordTable } from '@/components/ui/record-table';
+import { ExternalSourceLink } from '@/components/ui/external-source-link';
+import { type Column } from '@/components/ui/entity-table';
 import { enumLabel } from '@/lib/labels';
 import { fieldCls } from '@/components/ui/input';
+import { btnLink } from '@/components/ui/button';
 import { t } from '@/lib/i18n';
 
 export interface LearningRow {
@@ -19,7 +23,13 @@ export interface LearningRow {
 
 const selCls = fieldCls;
 
-/** Lista de Learning Path con filtros por sector, tipo y estado (todo cliente, sobre las filas ya cargadas). */
+/**
+ * Lista de Learning Path con filtros por sector, tipo y estado (cliente, sobre las filas ya cargadas).
+ *
+ * La tabla es **`RecordTable`**, como las demás vistas: antes pintaba su propio `<table>` y por eso se había
+ * quedado sin la ordenación por columna ni el filtro rápido de F-28. Los desplegables se conservan: acotan por un
+ * valor exacto, que es otra cosa que buscar texto.
+ */
 export function LearningList({ items }: { items: LearningRow[] }) {
   const [sector, setSector] = useState('');
   const [kind, setKind] = useState('');
@@ -32,6 +42,32 @@ export function LearningList({ items }: { items: LearningRow[] }) {
   const rows = items.filter(
     (i) => (!sector || i.sector === sector) && (!kind || i.kind === kind) && (!status || i.status === status),
   );
+
+  const columns: Column<LearningRow>[] = [
+    {
+      header: t('field.title'),
+      value: (r) => r.title,
+      cell: (r) => (
+        <RecordLink entity="learning" id={r.id} className="font-medium underline-offset-2 hover:underline">
+          {r.title}
+        </RecordLink>
+      ),
+    },
+    { header: t('field.kind'), value: (r) => r.kind, cell: (r) => r.kind },
+    { header: t('field.sector'), value: (r) => r.sector, cell: (r) => r.sector ?? <span className="text-fg-subtle">—</span> },
+    { header: t('field.status'), value: (r) => r.status, cell: (r) => <StatusBadge status={r.status} /> },
+    {
+      header: t('projects.colProgress'),
+      value: (r) => r.progress,
+      cell: (r) => (r.progress != null ? `${r.progress}%` : <span className="text-fg-subtle">—</span>),
+    },
+    {
+      header: t('entity.resource'),
+      // El enlace usa `ExternalSourceLink`: aquí estaba escrito a mano con `text-blue-600 dark:text-blue-400`,
+      // que se salta los tokens del tema (DESIGN_TOKENS: nada de `dark:` a mano).
+      cell: (r) => (r.url ? <ExternalSourceLink url={r.url} label={t('common.open')} /> : <span className="text-fg-subtle">—</span>),
+    },
+  ];
 
   return (
     <div className="flex flex-col gap-3">
@@ -49,43 +85,19 @@ export function LearningList({ items }: { items: LearningRow[] }) {
           {statuses.map((s) => <option key={s} value={s}>{enumLabel(s)}</option>)}
         </select>
         {(sector || kind || status) && (
-          <button type="button" onClick={() => { setSector(''); setKind(''); setStatus(''); }} className="text-sm text-fg-muted underline">
+          <button type="button" onClick={() => { setSector(''); setKind(''); setStatus(''); }} className={btnLink}>
             {t('filter.clear')}
           </button>
         )}
         <span className="ml-auto self-center text-xs text-fg-subtle">{rows.length} de {items.length}</span>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[40rem] border-collapse text-left text-sm">
-          <thead>
-            <tr className="text-xs uppercase tracking-wide text-fg-muted">
-              <th className="border-b border-line px-2 py-1.5">{t('field.title')}</th>
-              <th className="border-b border-line px-2 py-1.5">{t('field.kind')}</th>
-              <th className="border-b border-line px-2 py-1.5">{t('field.sector')}</th>
-              <th className="border-b border-line px-2 py-1.5">{t('field.status')}</th>
-              <th className="border-b border-line px-2 py-1.5">{t('projects.colProgress')}</th>
-              <th className="border-b border-line px-2 py-1.5">{t('entity.resource')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id}>
-                <td className="border-b border-line-subtle px-2 py-1.5">
-                  <RecordLink entity="learning" id={r.id} className="font-medium underline-offset-2 hover:underline">{r.title}</RecordLink>
-                </td>
-                <td className="border-b border-line-subtle px-2 py-1.5">{r.kind}</td>
-                <td className="border-b border-line-subtle px-2 py-1.5">{r.sector ?? <span className="text-fg-subtle">—</span>}</td>
-                <td className="border-b border-line-subtle px-2 py-1.5"><StatusBadge status={r.status} /></td>
-                <td className="border-b border-line-subtle px-2 py-1.5">{r.progress != null ? `${r.progress}%` : <span className="text-fg-subtle">—</span>}</td>
-                <td className="border-b border-line-subtle px-2 py-1.5">
-                  {r.url ? <a className="text-blue-600 underline-offset-2 hover:underline dark:text-blue-400" href={r.url} target="_blank" rel="noreferrer">{t('common.open')}</a> : <span className="text-fg-subtle">—</span>}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <RecordTable
+        columns={columns}
+        rows={rows}
+        getKey={(r) => r.id}
+        empty={{ title: t('table.noMatches') }}
+      />
     </div>
   );
 }

@@ -3,30 +3,16 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { postJson, deleteJson, patchJson } from '@/lib/client';
+import { btnSecondary } from '@/components/ui/button';
+import { fieldCls } from '@/components/ui/input';
+import { useFormAction } from '@/lib/use-form-action';
 import { t } from '@/lib/i18n';
 
-const btn = 'rounded border border-line-strong px-3 py-1.5 text-sm disabled:opacity-50';
+const btn = btnSecondary;
 
-function useAction() {
-  const router = useRouter();
-  const [msg, setMsg] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  async function run(fn: () => Promise<{ error?: { message: string } }>, okMsg?: string) {
-    setBusy(true);
-    setMsg(null);
-    const res = await fn();
-    setBusy(false);
-    if (res.error) setMsg(res.error.message);
-    else {
-      if (okMsg) setMsg(okMsg);
-      router.refresh();
-    }
-  }
-  return { msg, busy, run };
-}
 
 export function ConnectProviderButton({ provider, displayName }: { provider: string; displayName: string }) {
-  const { msg, busy, run } = useAction();
+  const { msg, busy, run } = useFormAction();
   return (
     <span className="inline-flex items-center gap-2">
       <button className={btn} disabled={busy} onClick={() => run(() => postJson('/api/v1/integrations', { provider, displayName }))}>
@@ -38,7 +24,7 @@ export function ConnectProviderButton({ provider, displayName }: { provider: str
 }
 
 export function SyncNowButton({ id }: { id: string }) {
-  const { msg, busy, run } = useAction();
+  const { msg, busy, run } = useFormAction();
   return (
     <span className="inline-flex items-center gap-2">
       <button className={btn} disabled={busy} onClick={() => run(() => postJson(`/api/v1/integrations/${id}/sync`, {}), t('automation.syncQueued'))}>
@@ -90,7 +76,7 @@ export function IntegrationConfigForm({ id, provider, configuration }: { id: str
       <summary className="cursor-pointer text-xs text-fg-muted">{t('automation.configuration')}</summary>
       <div className="mt-2 flex flex-col gap-2">
         <textarea
-          className="w-full rounded border border-line-strong bg-transparent px-2 py-1.5 font-mono text-xs"
+          className={`${fieldCls} w-full font-mono !text-xs`}
           rows={6}
           spellCheck={false}
           value={value}
@@ -109,7 +95,7 @@ export function IntegrationConfigForm({ id, provider, configuration }: { id: str
 }
 
 export function DisconnectButton({ id, displayName }: { id: string; displayName: string }) {
-  const { msg, busy, run } = useAction();
+  const { msg, busy, run } = useFormAction();
   return (
     <span className="inline-flex items-center gap-2">
       <button
