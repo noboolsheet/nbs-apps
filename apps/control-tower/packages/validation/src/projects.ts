@@ -58,7 +58,9 @@ export const PROJECT_PHASE_STATUS = ['PLANNED', 'ACTIVE', 'COMPLETED'] as const;
 export const createProjectPhaseSchema = z.object({
   name,
   description: optionalText,
-  status: z.enum(PROJECT_PHASE_STATUS).default('ACTIVE'),
+  // Nace PLANIFICADA (owner 2026-09-27): una fase se crea al planificar el proyecto, no al empezarla. La fase o
+  // fases EN CURSO son las que estén en ACTIVE, que es lo que sustituyó al viejo `current_phase_id`.
+  status: z.enum(PROJECT_PHASE_STATUS).default('PLANNED'),
   sortOrder: z.number().int().min(0).optional(), // si se omite, el comando lo autoasigna (última + 1)
 });
 export type CreateProjectPhaseInput = z.infer<typeof createProjectPhaseSchema>;
@@ -73,7 +75,6 @@ export const updateProjectPhaseSchema = z.object({
 export type UpdateProjectPhaseInput = z.infer<typeof updateProjectPhaseSchema>;
 
 /** Fijar/limpiar la fase actual del proyecto (phaseId null = quitar). */
-export const setCurrentPhaseSchema = z.object({ phaseId: z.string().uuid().nullable() });
 
 export const createTaskSchema = z.object({
   title: z.string().trim().min(1).max(300),

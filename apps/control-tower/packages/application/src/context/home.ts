@@ -82,6 +82,7 @@ export async function getHomeDashboard(db: Database, ctx: OrgContext) {
     inboxPending,
     decisionsReview,
     recentDecisions,
+    wonWithoutProject,
     paymentsOverdueN,
     integrationsAll,
     jobsPending,
@@ -133,6 +134,22 @@ export async function getHomeDashboard(db: Database, ctx: OrgContext) {
     toCount(db.select({ n: count() }).from(knowledgeInbox).where(and(orgEq(knowledgeInbox.organizationId, ctx), inArray(knowledgeInbox.status, ['NEW', 'PROCESSING'])))),
     toCount(db.select({ n: count() }).from(decisions).where(and(orgEq(decisions.organizationId, ctx), eq(decisions.status, 'REVIEW')))),
     db.select({ id: decisions.id, title: decisions.title, status: decisions.status }).from(decisions).where(and(orgEq(decisions.organizationId, ctx), isNull(decisions.archivedAt))).orderBy(desc(decisions.createdAt)).limit(5),
+    // Ganadas SIN proyecto: desde que la automatización del ganado está suspendida (el owner confirma cada vez),
+    // este estado es normal y hay que PROPONERLO aquí; si no, una oportunidad ganada se queda sin proyecto y sin
+    // que nada lo diga hasta que alguien entra en su ficha.
+    db
+      .select({ id: opportunities.id, name: opportunities.name })
+      .from(opportunities)
+      .leftJoin(projects, eq(projects.opportunityId, opportunities.id))
+      .where(
+        and(
+          orgEq(opportunities.organizationId, ctx),
+          eq(opportunities.status, 'WON'),
+          isNull(opportunities.archivedAt),
+          isNull(projects.id),
+        ),
+      )
+      .limit(10),
     // Pagos retrasados: pendientes cuya fecha prevista ya pasó (mismo criterio que las tareas vencidas).
     toCount(
       db
@@ -192,6 +209,14 @@ export async function getHomeDashboard(db: Database, ctx: OrgContext) {
   for (const p of atRisk) {
     attention.push({ kind: 'project_at_risk', label: `Proyecto en riesgo: ${p.name}`, href: `/projects/${p.id}`, severity: 'high' });
   }
+  for (const o of wonWithoutProject) {
+    attention.push({
+      kind: 'opportunity_won_no_project',
+      label: `Oportunidad ganada sin proyecto: ${o.name} — créalo cuando quieras`,
+      href: `/crm/opportunities/${o.id}`,
+      severity: 'medium',
+    });
+  }
   if (overdueN > 0) {
     attention.push({ kind: 'tasks_overdue', label: `${overdueN} tarea(s) vencida(s) — reprograma su fecha`, href: '/tasks', severity: 'high' });
   }
@@ -217,6 +242,15 @@ export async function getHomeDashboard(db: Database, ctx: OrgContext) {
     });
   }
 
+  // El PROYECTO de cada tarea de Home: sin él, con varios proyectos activos no se sabe de cuál es cada tarea
+  // (petición del owner). Se resuelve con `allProjects`, que ya está cargado: ninguna consulta nueva.
+  const projectNameById = new Map(allProjects.map((p) => [p.id, p.name]));
+  const withProject = <T extends { projectId: string | null }>(rows: T[]) =>
+    rows.map((r) => ({
+      ...r,
+      projectName: r.projectId ? (projectNameById.get(r.projectId) ?? null) : null,
+    }));
+
   return {
     snapshot: {
       clients: clientsN,
@@ -228,8 +262,8 @@ export async function getHomeDashboard(db: Database, ctx: OrgContext) {
     today,
     attention,
     activeProjects,
-    todaysWork,
-    overdue,
+    todaysWork: withProject(todaysWork),
+    overdue: withProject(overdue),
     todaysEvents,
     recentDecisions,
     recentActivity,

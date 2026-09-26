@@ -257,7 +257,8 @@ export const RECORDS: Record<string, RecordSpec> = {
     contextCreate: { project: { presetField: 'projectId', createPath: (pid) => `/api/v1/projects/${pid}/phases` } },
     fields: [
       { name: 'name', label: t('field.name'), type: 'text', required: true },
-      { name: 'status', label: t('field.status'), type: 'select', options: PROJECT_PHASE_STATUS, defaultValue: 'ACTIVE' },
+      // Se crea PLANIFICADA: la fase o fases en curso son las que estén «Activa» (ya no hay «fase actual» aparte).
+      { name: 'status', label: t('field.status'), type: 'select', options: PROJECT_PHASE_STATUS, defaultValue: 'PLANNED' },
       { name: 'description', label: t('field.description'), type: 'textarea' },
       { name: 'sortOrder', label: t('field.sortOrder'), type: 'number' },
     ],

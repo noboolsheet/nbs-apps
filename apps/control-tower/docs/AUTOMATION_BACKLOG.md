@@ -41,7 +41,7 @@ Lo que ya corre sobre los motores de §0. Úsalo para no duplicar.
 
 | ID | Automatización | Disparo | Qué hace | Dónde vive |
 |---|---|---|---|---|
-| ACT-1 | **Oportunidad WON → Proyecto** | evento `opportunity.won` | Crea el proyecto (idempotente, hereda nombre/cliente) | `automations/createProjectFromWonOpportunity`, emitido en `crm/commands.ts` |
+| ACT-1 | ⏸ **Oportunidad WON → Proyecto — SUSPENDIDA (owner 2026-09-27)** | evento `opportunity.won` | **Nace desactivada** (`defaultPaused`): crear un proyecto es una decisión, no un trámite. CT lo **propone** —aviso en Inicio «Oportunidad ganada sin proyecto» + botón «Crear su proyecto» en la ficha— y lo crea cuando se confirma (`POST /api/v1/opportunities/[id]/project`, mismo comando idempotente). Se puede reactivar desde Automatización | `automations/createProjectFromWonOpportunity`, emitido en `crm/commands.ts` |
 | ACT-2 | **Push en tiempo real a Notion** | un USER edita una entidad espejo → `recordAudit` encola `notion.push` | Empuja las propiedades gestionadas a su fila de Notion (10 entidades) | `audit/index` + handler `notion.push` |
 | ACT-3 | **Write-back a Twenty** | un USER mueve el **stage** de una oportunidad → `twenty.push` | PATCH de **sólo `stage`** a Twenty (solo registros existentes). **ADR-009 (2026-09-26): es lo ÚNICO que CT escribe en Twenty** — client/contact/task ya no se empujan | `push-twenty` + handler `twenty.push` |
 | ACT-4 | **Sync programado de integraciones** | 1×/día a `SYNC_DAILY_HOUR` (7am, tz de la org) | Encola el sync de cada integración conectada (dedupe) | `maintenance/scheduler` + tick |
@@ -80,7 +80,7 @@ Lo que ya corre sobre los motores de §0. Úsalo para no duplicar.
 ### CRM (Clientes / Contactos / Oportunidades)
 | ID | Disparo → Acción | Sistemas | Prereq | Imp·Esf |
 |---|---|---|---|---|
-| AUT-01 | ✅ **oportunidad → WON** → crear proyecto. **YA ACTIVA (ver ACT-1)** — se deja como referencia del patrón. | CT | — | — |
+| AUT-01 | ⏸ **oportunidad → WON** → crear proyecto. **Implementada pero SUSPENDIDA (ver ACT-1)**: el owner quiere confirmarlo cada vez. Se deja como referencia del patrón. | CT | — | — |
 | AUT-02 | oportunidad → WON → **bootstrap completo**: carpeta en Drive + página de proyecto en Notion + (opcional) repo en GitHub + tareas de kickoff. | CT·Drive·Notion·GitHub | HAB-3 | Alto·L |
 | AUT-03 | oportunidad → PREPARING_PROP → crear tarea "enviar propuesta" + recordatorio; enlazar la propuesta desde Drive. | CT·Drive | HAB-1 | Medio·S |
 | AUT-04 | oportunidad → LOST → **post-mortem**: crear una nota/decisión DRAFT "motivo de pérdida" para capturar el aprendizaje. | CT | — | Medio·S |
@@ -92,7 +92,7 @@ Lo que ya corre sobre los motores de §0. Úsalo para no duplicar.
 | AUT-06 | **proyecto → DELIVERED/CLOSED** → disparar el "flywheel": crear decisión DRAFT de **retrospectiva** + capturas de **lecciones** (knowledge inbox) + `portfolio_item` CANDIDATE. | CT | HAB-2 | Alto·M |
 | AUT-07 | proyecto → BLOCKED/WAITING → marcar atención + **notificar**. | CT | HAB-1,HAB-2 | Medio·S |
 | AUT-08 | **tarea vencida** → escalar prioridad automáticamente y/o **notificar** (el Home ya las lista; falta el aviso). | CT | HAB-1 | Alto·S |
-| AUT-09 | **tarea DONE** y era la última activa de su fase → **avanzar `current_phase`** del proyecto. | CT | HAB-2 | Medio·M |
+| AUT-09 | **tarea DONE** y era la última activa de su fase → **pasar esa fase a Completada y la siguiente a Activa** (desde el 2026-09-27 no hay `current_phase_id`: la fase en curso es la que está ACTIVE). | CT | HAB-2 | Medio·M |
 | AUT-10 | **todos los entregables APPROVED/DELIVERED** → sugerir pasar el proyecto a REVIEW/DELIVERED. | CT | HAB-2 | Medio·S |
 | AUT-11 | entregable → REVIEW → crear tarea de revisión / notificar. | CT | HAB-1,HAB-2 | Bajo·S |
 

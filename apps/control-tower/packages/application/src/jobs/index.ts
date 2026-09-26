@@ -176,6 +176,29 @@ export function listJobsForExport(db: Database, ctx: OrgContext, limit = 5000) {
     .limit(limit);
 }
 
+/**
+ * Estado de UN job de esta organización. Lo consulta la UI para seguir un «Sincronizar ahora» hasta que termina:
+ * el POST sólo **encola** (el worker lo ejecuta en su tick), así que sin esto la pantalla no tenía forma de saber
+ * si acabó bien o mal y se quedaba con el «encolada» puesto hasta que alguien recargaba.
+ *
+ * Acotado por organización; los jobs globales (`organization_id` NULL) no son de nadie y no se devuelven.
+ */
+export async function getJobStatus(db: Database, ctx: OrgContext, id: string) {
+  const [row] = await db
+    .select({
+      id: jobs.id,
+      jobType: jobs.jobType,
+      status: jobs.status,
+      attempts: jobs.attempts,
+      maxAttempts: jobs.maxAttempts,
+      lastError: jobs.lastError,
+      updatedAt: jobs.updatedAt,
+    })
+    .from(jobs)
+    .where(and(eq(jobs.id, id), eq(jobs.organizationId, ctx.organizationId)));
+  return row ?? null;
+}
+
 export function listRecentJobs(db: Database, limit = 20) {
   return db.select().from(jobs).orderBy(desc(jobs.createdAt)).limit(limit);
 }

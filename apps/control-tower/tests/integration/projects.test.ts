@@ -19,7 +19,7 @@ import {
   listCompletedTasks,
   createOpportunity,
   createProjectPhase,
-  setCurrentPhase,
+  updateProjectPhase,
   deleteProjectPhase,
   createAsset,
   linkProjectAsset,
@@ -182,7 +182,7 @@ describe('projects use cases', () => {
     });
   });
 
-  it('fases: crear autoasigna orden; fijar actual; borrar la fase actual la desmarca', async () => {
+  it('fases: nacen PLANIFICADAS con orden autoasignado, y las EN CURSO son las activas', async () => {
     await inRollback(async (tx) => {
       const ctx = await makeOrg(tx);
       const p = await createProject(tx, ctx, { name: 'P' });
@@ -190,14 +190,21 @@ describe('projects use cases', () => {
       const f2 = await createProjectPhase(tx, ctx, p.id, { name: 'Diseño' });
       expect(f1.sortOrder).toBe(0);
       expect(f2.sortOrder).toBe(1); // orden autoasignado (última + 1)
+      // Owner 2026-09-27: una fase se crea al PLANIFICAR el proyecto, no al empezarla.
+      expect(f1.status).toBe('PLANNED');
+      expect(f2.status).toBe('PLANNED');
 
-      const proj = await setCurrentPhase(tx, ctx, p.id, f2.id);
-      expect(proj.currentPhaseId).toBe(f2.id);
+      // Ya no existe «fase actual» (`setCurrentPhase` retirado): la fase en curso es la que se pone ACTIVE, y
+      // pueden solaparse dos sin que nada se contradiga.
+      await updateProjectPhase(tx, ctx, f2.id, { status: 'ACTIVE' });
+      const activas = (await tx.select().from(s.projectPhases).where(eq(s.projectPhases.projectId, p.id))).filter(
+        (ph) => ph.status === 'ACTIVE',
+      );
+      expect(activas.map((ph) => ph.name)).toEqual(['Diseño']);
 
-      // Borrar la fase que es la actual → el proyecto queda sin fase actual (sin puntero colgado).
       await deleteProjectPhase(tx, ctx, f2.id);
-      const [after] = await tx.select({ currentPhaseId: s.projects.currentPhaseId }).from(s.projects).where(eq(s.projects.id, p.id));
-      expect(after!.currentPhaseId ?? null).toBeNull();
+      const quedan = await tx.select().from(s.projectPhases).where(eq(s.projectPhases.projectId, p.id));
+      expect(quedan.map((ph) => ph.name)).toEqual(['Descubrimiento']);
     });
   });
 

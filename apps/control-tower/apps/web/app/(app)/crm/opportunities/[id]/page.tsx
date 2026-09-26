@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { getDb } from '@ct/db';
 import {
   getOpportunity,
+  getProjectByOpportunity,
   listClients,
   listContacts,
   listOpportunityTasks,
@@ -20,7 +21,7 @@ import { type Column } from '@/components/ui/entity-table';
 import { ContextNewButton } from '@/components/ui/context-new-button';
 import { RecordLink } from '@/components/ui/record-link';
 import { TaskStatusControl } from '@/components/projects/forms';
-import { OpportunityStageControl } from '@/components/crm/forms';
+import { CreateProjectFromOpportunityButton, OpportunityStageControl } from '@/components/crm/forms';
 import { enumLabel } from '@/lib/labels';
 import { t } from '@/lib/i18n';
 import { formatDate, formatDateTime } from '@/lib/i18n/format';
@@ -39,11 +40,12 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
     if (isAppError(e) && e.kind === 'NOT_FOUND') notFound();
     throw e;
   }
-  const [clients, contacts, tasks, identity] = await Promise.all([
+  const [clients, contacts, tasks, identity, linkedProject] = await Promise.all([
     listClients(getDb(), ctx.org),
     listContacts(getDb(), ctx.org),
     listOpportunityTasks(getDb(), ctx.org, id),
     getIdentityForInternal(getDb(), ctx.org, 'opportunity', id),
+    getProjectByOpportunity(getDb(), ctx.org, id),
   ]);
   const crmUrl = (identity?.metadata as { url?: string } | null)?.url ?? null;
   const clientName = opp.clientId ? clients.find((c) => c.id === opp.clientId)?.name : null;
@@ -134,6 +136,21 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
                           </Link>
                         ) : null,
                       },
+                      {
+                        // Ganada → proyecto. La automatización está SUSPENDIDA (owner 2026-09-27): aquí se ve si
+                        // ya tiene proyecto, y si no, se ofrece crearlo preguntando antes.
+                        label: t('crm.projectOfOpportunity'),
+                        value: linkedProject ? (
+                          <Link className="underline underline-offset-2" href={`/projects/${linkedProject.id}`}>
+                            {linkedProject.name}
+                          </Link>
+                        ) : opp.status === 'WON' && !archived ? (
+                          <span className="flex flex-col gap-1">
+                            <CreateProjectFromOpportunityButton id={opp.id} name={opp.name} />
+                            <span className="text-xs text-fg-subtle">{t('crm.createProjectHint')}</span>
+                          </span>
+                        ) : null,
+                      },
                       { label: t('crm.closedAt'), value: opp.closedAt ? formatDateTime(opp.closedAt) : null },
                       { label: t('crm.archivedAt'), value: opp.archivedAt ? formatDateTime(opp.archivedAt) : null },
                       { label: t('meta.sourceOfTruth'), value: <SourceBadge source={identity?.provider ?? 'NATIVE'} url={crmUrl} linkLabel={t('crm.openInCrm')} /> },
@@ -145,7 +162,7 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
             ),
           },
           {
-            label: `Tareas (${tasks.length})`,
+            label: `${t('projects.tasks')} (${tasks.length})`,
             content: (
               <div className="flex flex-col gap-3">
                 {!archived && (

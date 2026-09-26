@@ -323,6 +323,12 @@ export const es = {
 
   // ─── Salud del proyecto ─────────────────────────────────────────────────────────────────────────────
   'health.title': 'Salud (derivada por el sistema; no editable)',
+  // POR QUÉ un proyecto no está saludable. La salud se deriva de dos cosas (su estado y su fecha objetivo), así que
+  // el motivo se puede decir exacto en vez de dejar «En riesgo» a secas.
+  'health.reasonLabel': 'Motivo',
+  'health.reasonStatusBlocked': 'El proyecto está bloqueado: algo externo impide avanzar. Desbloquéalo cambiando su estado cuando se resuelva.',
+  'health.reasonStatusWaiting': 'El proyecto está en espera de un tercero (cliente, proveedor o una decisión pendiente).',
+  'health.reasonTargetDatePassed': 'Su fecha objetivo ({fecha}) ya pasó y el proyecto sigue abierto: reprográmala o ciérralo.',
 
   // ─── Tabla: selección y confirmaciones ──────────────────────────────────────────────────────────────
   'table.clearSelection': 'Deseleccionar',
@@ -439,10 +445,10 @@ export const es = {
   'common.createWithNewButton': 'Crea uno con el botón «Nuevo».',
 
   // ─── Proyectos (ficha) ──────────────────────────────────────────────────────────────────────────────
-  'projects.phaseCurrent': 'Actual',
   'common.summary': 'Resumen',
   'projects.closedNotice': 'Cerrado — no editable (crea un proyecto nuevo para cambios)',
-  'projects.currentPhase': 'Fase actual',
+  // Retirado el marcado de «fase actual» (owner 2026-09-27): las fases en curso son las que están en «Activa».
+  'projects.activePhases': 'Fases en curso',
   'projects.phases': 'Fases',
   'projects.tasks': 'Tareas',
   'projects.newPhase': 'Nueva fase',
@@ -755,7 +761,6 @@ export const es = {
   'automation.withWarnings': 'Con advertencias',
   'common.unset': 'Quitar',
   'tasks.moveToToday': 'Pasar a hoy',
-  'projects.markCurrentPhase': 'Marcar actual',
   'common.openLink': 'Abrir ↗',
   'projects.unlinkReusable': 'Desenlazar',
   'automation.syncNow': 'Sincronizar ahora',
@@ -830,6 +835,12 @@ export const es = {
   // ─── Columnas y pestañas ────────────────────────────────────────────────────────────────────────────
   'crm.opportunitiesFromTwentyHint': 'Las oportunidades se crean en Twenty y llegan aquí con el sync. Conecta la integración o lanza «Sync now» en Automatización › Integraciones.',
   'crm.stageOnlyEditableHint': 'Lo único que se cambia desde Control Tower. El resto de datos se editan en Twenty.',
+  // Oportunidad ganada → proyecto: la automatización está suspendida y se pregunta cada vez (owner 2026-09-27).
+  'crm.createProject': 'Crear su proyecto',
+  'crm.createProjectHint': 'Esta oportunidad está ganada y todavía no tiene proyecto. Se crea cuando tú lo digas: hereda el cliente y queda enlazado a la oportunidad.',
+  'crm.confirmCreateProject': '¿Crear el proyecto de «{name}»? Heredará su cliente y quedará enlazado a esta oportunidad.',
+  'crm.createProjectFailed': 'No se pudo crear el proyecto.',
+  'crm.projectOfOpportunity': 'Proyecto',
   'crm.boardHint': 'Cambia la etapa en el desplegable de cada tarjeta. Las oportunidades se crean y se editan en Twenty; aquí sólo se mueven de etapa.',
   'crm.colLeadQualification': 'Calificación de leads',
   'crm.colProposal': 'Propuesta',
@@ -1010,7 +1021,12 @@ export const es = {
   'automation.scopeOrg': 'Por organización',
   'automation.scopeGlobal': 'Global (todas las organizaciones)',
   'automation.panelFallbackTitle': 'Automatización',
+  // «Sincronizar ahora» se SIGUE hasta que el worker acaba el job (antes se quedaba en «encolada» para siempre).
   'automation.syncQueued': 'Sincronización encolada',
+  'automation.syncRunning': 'Sincronizando…',
+  'automation.syncDone': 'Sincronización terminada',
+  'automation.syncFailed': 'La sincronización falló',
+  'automation.syncTimeout': 'Sigue en cola: el worker no la ha procesado. Mira Automatización › Estado del sistema.',
   'automation.runNothingToDo': 'Nada que hacer: {reason}',
   'automation.runDeleted': 'Hecho ✓ · {n} borrado(s)',
   'automation.runArchived': 'Hecho ✓ · {n} archivada(s)',

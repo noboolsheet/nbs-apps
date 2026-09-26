@@ -50,7 +50,9 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     throw e;
   }
   const { project, phases, tasks, deliverables } = detail;
-  const currentPhase = phases.find((p) => p.id === project.currentPhaseId);
+  // Fase(s) EN CURSO = las que están en ACTIVE. Sustituye a `project.currentPhaseId`, retirado el 2026-09-27: el
+  // estado de la fase es la única fuente, y pueden solaparse dos (diseño y desarrollo a la vez) sin mentir.
+  const activePhases = phases.filter((p) => p.status === 'ACTIVE');
   const db = getDb();
   const [documents, decisions, projectResources, linkedAssets, assetCatalog] = await Promise.all([
     listDocuments(db, ctx.org, { projectId: project.id }),
@@ -92,23 +94,13 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       header: t('entity.project_phase'),
       value: (ph) => ph.name,
       cell: (ph) => (
-        <RecordLink
-          entity="project_phase"
-          id={ph.id}
-          className={`underline-offset-2 hover:underline ${ph.id === project.currentPhaseId ? 'font-semibold' : ''}`}
-        >
+        <RecordLink entity="project_phase" id={ph.id} className="underline-offset-2 hover:underline">
           {ph.name}
         </RecordLink>
       ),
     },
-    { header: t('field.status'), className: 'w-36', cell: (ph) => <StatusBadge status={ph.status} /> },
-    {
-      header: t('projects.phaseCurrent'),
-      className: 'w-56',
-      cell: (ph) => (
-        <PhaseActions projectId={project.id} phaseId={ph.id} isCurrent={ph.id === project.currentPhaseId} frozen={closed} />
-      ),
-    },
+    { header: t('field.status'), value: (ph) => ph.status, className: 'w-36', cell: (ph) => <StatusBadge status={ph.status} /> },
+    { header: t('common.actions'), className: 'w-24', cell: (ph) => <PhaseActions phaseId={ph.id} frozen={closed} /> },
   ];
 
   return (
@@ -144,7 +136,28 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                   },
                   { label: t('field.kind'), value: enumLabel(project.type) },
                   { label: t('projects.colRelated'), value: project.clientName ?? project.contactName ?? null },
-                  { label: t('projects.currentPhase'), value: currentPhase?.name ?? null },
+                  // La salud es derivada, así que el MOTIVO también: «En riesgo» a secas no dice qué mirar.
+                  // Sólo se pinta la fila si el proyecto no está saludable (si lo está, no hay nada que explicar).
+                  ...(project.healthReason
+                    ? [
+                        {
+                          label: t('health.reasonLabel'),
+                          value: (
+                            <span className="inline-flex flex-wrap items-center gap-2">
+                              <HealthBadge health={project.health} />
+                              <span className="text-fg">
+                                {project.healthReason === 'TARGET_DATE_PASSED'
+                                  ? t('health.reasonTargetDatePassed', { fecha: formatDate(project.healthTargetDate) })
+                                  : project.healthReason === 'STATUS_BLOCKED'
+                                    ? t('health.reasonStatusBlocked')
+                                    : t('health.reasonStatusWaiting')}
+                              </span>
+                            </span>
+                          ),
+                        },
+                      ]
+                    : []),
+                  { label: t('projects.activePhases'), value: activePhases.map((p) => p.name).join(' · ') || null },
                   { label: t('projects.phases'), value: String(phases.length) },
                   { label: t('projects.tasks'), value: `${project.taskDone}/${project.taskTotal}` },
                   { label: t('projects.targetDate'), value: formatDate(project.targetDate) },

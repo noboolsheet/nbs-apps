@@ -52,6 +52,21 @@ describe('estado de automatizaciones', () => {
     });
   });
 
+  it('la de «ganada → proyecto» nace DESACTIVADA y sólo corre si se activa a mano', async () => {
+    await inRollback(async (tx) => {
+      const ctx = await makeOrg(tx);
+      // Owner 2026-09-27: crear un proyecto es una decisión, así que esta automatización está suspendida y CT
+      // propone crearlo en vez de hacerlo solo. `defaultPaused` invierte el default; sin este test, un cambio en
+      // esa lógica volvería a crear proyectos solos y nadie se enteraría hasta encontrarse uno.
+      expect(await isAutomationEnabled(tx, ctx.organizationId, 'event.opportunity_won')).toBe(false);
+      const [row] = (await listAutomations(tx, ctx)).filter((a) => a.key === 'event.opportunity_won');
+      expect(row!.status).toBe('PAUSED');
+
+      await setAutomationStatus(tx, ctx, 'event.opportunity_won', 'ACTIVE');
+      expect(await isAutomationEnabled(tx, ctx.organizationId, 'event.opportunity_won')).toBe(true);
+    });
+  });
+
   it('pausar la desactiva y persiste el override; reactivar la vuelve a activar', async () => {
     await inRollback(async (tx) => {
       const ctx = await makeOrg(tx);

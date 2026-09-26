@@ -12,12 +12,13 @@ import {
   projectAssets,
 } from '@ct/db/schema';
 import {
-  deriveProjectHealth,
+  deriveProjectHealthDetail,
   computeProgress,
   ACTIVE_TASK_STATUSES,
   CLOSED_PROJECT_STATUSES,
   CLOSED_OPPORTUNITY_STAGES,
   type ProjectHealth,
+  type ProjectHealthReason,
   type ProjectStatus,
 } from '@ct/domain';
 
@@ -43,6 +44,10 @@ export interface ProjectWithDerived extends ProjectRow {
   taskDone: number;
   progress: number;
   health: ProjectHealth;
+  /** POR QUÉ la salud no es «Saludable» (null si lo es). Lo pinta la ficha: «En riesgo» sin motivo no informaba. */
+  healthReason: ProjectHealthReason | null;
+  /** Fecha objetivo pasada, cuando el motivo es `TARGET_DATE_PASSED`. */
+  healthTargetDate: string | null;
   clientName: string | null;
   contactName: string | null;
 }
@@ -80,12 +85,15 @@ function enrich(
 ): ProjectWithDerived {
   const total = counts?.total ?? 0;
   const done = counts?.done ?? 0;
+  const healthDetail = deriveProjectHealthDetail({ status: p.status as ProjectStatus, targetDate: p.targetDate }, now);
   return {
     ...p,
     taskTotal: total,
     taskDone: done,
     progress: computeProgress(done, total),
-    health: deriveProjectHealth({ status: p.status as ProjectStatus, targetDate: p.targetDate }, now),
+    health: healthDetail.health,
+    healthReason: healthDetail.reason,
+    healthTargetDate: healthDetail.targetDate,
     clientName,
     contactName,
   };
@@ -120,6 +128,19 @@ export async function listProjects(
       p.contactId ? (contactById.get(p.contactId) ?? null) : null,
     ),
   );
+}
+
+/**
+ * Proyecto creado a partir de una oportunidad, si existe. Lo usa la ficha de la oportunidad para decidir entre
+ * ofrecer «Crear proyecto» o enlazar al que ya hay — desde que la automatización del ganado está suspendida (el
+ * owner quiere confirmarlo cada vez), ese estado intermedio «ganada y todavía sin proyecto» es normal y visible.
+ */
+export async function getProjectByOpportunity(db: Database, ctx: OrgContext, opportunityId: string) {
+  const [row] = await db
+    .select({ id: projects.id, name: projects.name })
+    .from(projects)
+    .where(and(eq(projects.opportunityId, opportunityId), orgEq(projects.organizationId, ctx)));
+  return row ?? null;
 }
 
 export async function getProjectDetail(db: Database, ctx: OrgContext, id: string) {

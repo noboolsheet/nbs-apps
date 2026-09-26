@@ -561,6 +561,14 @@ function FieldControl({
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
         onBlur={(e) => onCommit?.(e.target.value)}
+        // En un textarea Enter es un salto de línea, así que guardar es ⌘/Ctrl+Enter. Sin esto había que salir del
+        // campo con el ratón para que se guardara.
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+            e.preventDefault();
+            e.currentTarget.blur(); // el blur es la única vía de guardado: así no se guarda dos veces
+          }
+        }}
       />
     );
   }
@@ -644,6 +652,14 @@ function FieldControl({
       disabled={disabled}
       onChange={(e) => onChange(e.target.value)}
       onBlur={(e) => onCommit?.(e.target.value)}
+      // Enter guarda y suelta el foco (petición del owner): antes había que hacer clic fuera del campo, y en un
+      // formulario de varios campos eso no es evidente. El guardado sigue pasando por el blur, una sola vía.
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          e.currentTarget.blur();
+        }
+      }}
     />
   );
 }

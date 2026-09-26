@@ -41,13 +41,19 @@ export async function isAutomationEnabled(
   const spec = getAutomationSpec(key);
   if (spec && !spec.toggleable) return true; // núcleo: no se puede desactivar
   const overrides = await getAutomationOverrides(db, organizationId);
-  return overrides[key] !== 'PAUSED';
+  const override = overrides[key];
+  // `defaultPaused` invierte el default para las que nacen desactivadas (crear un proyecto al ganar una
+  // oportunidad): sin un ACTIVE explícito, no corren.
+  if (spec?.defaultPaused) return override === 'ACTIVE';
+  return override !== 'PAUSED';
 }
 
 /** Estado efectivo de cara a la UI: 'CORE' (núcleo, solo lectura) o 'ACTIVE'/'PAUSED'. */
 function effectiveStatus(spec: AutomationSpec, overrides: Record<string, AutomationStatus>): string {
   if (!spec.toggleable) return 'CORE';
-  return overrides[spec.key] === 'PAUSED' ? 'PAUSED' : 'ACTIVE';
+  const override = overrides[spec.key];
+  if (spec.defaultPaused) return override === 'ACTIVE' ? 'ACTIVE' : 'PAUSED';
+  return override === 'PAUSED' ? 'PAUSED' : 'ACTIVE';
 }
 
 export interface AutomationRow {

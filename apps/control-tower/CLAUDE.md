@@ -118,7 +118,9 @@ panel. **Iniciativa terminada y validada por el owner con datos reales** — est
 **Cobertura:** todas las familias. Ficha completa: project, task, strategic_area, service, opportunity. Panel-only:
 goal, capability, knowledge_item, decision, asset, learning, portfolio_item, resource, deliverable, project_phase y
 **subtarea** (el panel oculta "Abrir ficha completa" si hay `parentTaskId` → corta la recursión). Jerarquía elegida por
-el owner: Proyecto → Tarea (ficha con su lista de subtareas) → Subtarea (solo panel).
+el owner: Proyecto → Tarea (ficha con su lista de subtareas) → Subtarea (solo panel). **Fases (2026-09-27):** nacen
+`PLANNED` y la fase en curso es la que esté `ACTIVE` — se retiró `projects.current_phase_id` de la UI y de los comandos
+(la columna sigue en la tabla, sin escribirse).
 **Creación contextual** en secciones: Proyecto (tareas/entregables/decisiones/activos/fases), Cliente (contactos/
 proyectos/activos), Área estratégica (objetivos), Tarea (subtareas), Oportunidad (tareas de preventa).
 **`opportunity` es un caso aparte (ADR-008):** NO se crea desde CT (sin `createPath` ni creación contextual) y su
@@ -265,7 +267,10 @@ SYSTEM/sync → no hay bucles) y sólo para entidades del set `NOTION_MIRRORED` 
 
 **Automatizaciones por evento (Fase 6, sin constructor visual — ERRATA-009):** handlers de código sobre el **Outbox
 transaccional** (`emitOutbox` en la misma tx que el cambio). Ejemplo implementado: `opportunity.won` → crear proyecto
-(`createProjectFromWonOpportunity`, idempotente). Registrados en `outboxRegistry` del worker.
+(`createProjectFromWonOpportunity`, idempotente). Registrados en `outboxRegistry` del worker. **⚑ Esa automatización
+está SUSPENDIDA (owner 2026-09-27):** su spec lleva `defaultPaused: true`, así que nace desactivada y el handler no
+crea nada; CT lo **propone** (aviso en Inicio + botón en la ficha de la oportunidad → `POST /api/v1/opportunities/
+[id]/project`). Si se añade otra automatización que cree cosas solas, plantéate el mismo `defaultPaused`.
 
 ## Reglas duras de seguridad (NO negociables)
 

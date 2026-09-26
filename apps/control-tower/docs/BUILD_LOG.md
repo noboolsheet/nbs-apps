@@ -5,6 +5,66 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-09-27 — Siete cambios pedidos por el owner ✅
+
+Tanda de ajustes de uso, todos pedidos en la misma sesión. Van juntos porque son pequeños y se verifican igual.
+
+**1. Se puede entrar a las decisiones desde Inicio.** «Decisiones recientes» pintaba el título como texto plano.
+Ahora es un `RecordLink`, que abre su panel (`decision` es panel-only: su ficha **es** el panel).
+*Lo que sigue sin ser accesible desde el dashboard, para que el owner decida:* las cuatro cajas de **Estado del
+sistema** (DB, integraciones, procesos, salida) no enlazan a Automatización › Estado del sistema, y la
+**Actividad reciente** nombra el registro («Actualizó proyecto "Web Acme"») pero no deja abrirlo aunque el audit
+guarda su id. Los **eventos de hoy** enlazan a Google Calendar, que es donde viven; ahí no hay nada que abrir en CT.
+
+**2. «Sincronizar ahora» ya no se queda congelado.** El POST sólo **encola**; el trabajo lo hace el worker en su
+tick, así que la pantalla se quedaba con «Sincronización encolada» y el resultado —activa o error— sólo aparecía si
+recargabas a mano. Ahora se **sigue el job** (`GET /api/v1/jobs/[id]`, nuevo) con un indicador girando
+(`components/ui/spinner.tsx`, `animate-spin`), y al terminar **refresca la vista sola** y dice si fue bien o mal. Con
+tope de 2 min: si el worker está caído nadie tocará ese job nunca, y entonces se dice qué mirar en vez de girar para
+siempre.
+
+**3. Las tareas de Inicio dicen a qué proyecto pertenecen.** «Vencidas» y «Trabajo de hoy» sólo mostraban el título:
+con varios proyectos activos no se sabía de cuál era cada tarea. El nombre se resuelve con los proyectos que el
+dashboard **ya carga** (ninguna consulta nueva) y enlaza al proyecto. Una tarea personal o de preventa no tiene
+proyecto: ahí no se pinta nada, en vez de un «—» que no aporta.
+
+**4. Un proyecto que no está saludable dice POR QUÉ.** La salud es derivada, así que el motivo también:
+`deriveProjectHealthDetail` (dominio) devuelve `reason` + la fecha implicada, y el Resumen de la ficha añade la fila
+**Motivo** sólo cuando no está saludable — *bloqueado*, *en espera de un tercero*, o *su fecha objetivo (X) ya pasó y
+sigue abierto*. Antes la insignia decía «En riesgo» y no había forma de saber de qué. Un proyecto ya cerrado con
+fecha pasada **no** está en riesgo (si no, el aviso de Inicio se llenaría de proyectos terminados).
+
+**5. La automatización de «ganada → proyecto» queda SUSPENDIDA y se pregunta cada vez.** Crear un proyecto es una
+decisión, no un trámite. Su spec lleva `defaultPaused: true` (mecanismo nuevo: invierte el default de
+`isAutomationEnabled`, así que nace desactivada y se puede reactivar desde Automatización). En su lugar CT lo
+**propone** por dos vías: aviso en Inicio «Oportunidad ganada sin proyecto: X» y, en la ficha de la oportunidad, la
+fila **Proyecto** con el botón «Crear su proyecto» —que **pide confirmación**— o el enlace al que ya hay. El endpoint
+nuevo (`POST /api/v1/opportunities/[id]/project`) reusa el **mismo comando idempotente** que usaba la automatización,
+así que dos clics no crean dos proyectos.
+
+**6. Las fases nacen Planificadas y se retira el «marcar fase actual».** El estado por defecto pasa a `PLANNED`
+(schema Zod + panel): una fase se crea al planificar, no al empezarla. Y **fuera `projects.current_phase_id`** de la
+UI y de los comandos (`setCurrentPhase`, su endpoint y su schema, borrados): la fase en curso es la que esté
+**ACTIVE**, así que marcar una aparte era un segundo sitio donde decir lo mismo y **podían contradecirse** (la
+«actual» completada, o una activa que no era la actual). El Resumen muestra **Fases en curso**, que admite varias a la
+vez. La columna sigue en la tabla sin escribirse: quitarla es una migración destructiva y no aporta nada hoy.
+
+**7. Enter guarda y sale del campo.** En el **panel lateral** los textos sólo se guardaban al salir del campo (blur),
+que en un formulario de varios campos no es evidente: ahora Enter guarda y suelta el foco. En la **edición inline**
+(Ajustes y fichas) Enter ya funcionaba; lo que faltaba era el textarea, donde Enter es un salto de línea → guarda con
+**⌘/Ctrl+Enter**. En los dos sitios el guardado sigue pasando por el blur, una sola vía, para no guardar dos veces.
+
+**De paso:** dos literales en duro que quedaban de F-30 (el «Tareas (n)» de la ficha de oportunidad) al diccionario.
+
+**Tests nuevos:** `packages/domain/src/project.test.ts` (6 casos de la salud y su motivo, incluido que el atajo
+`deriveProjectHealth` no se separe del detalle) y un caso de integración que ata que la automatización del ganado
+**nace desactivada** — sin él, un cambio en esa lógica volvería a crear proyectos solos y nadie se enteraría hasta
+encontrarse uno.
+
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (145) · `pnpm build` · `pnpm test:integration` (187) ·
+e2e por journeys (69/69). El test de integración de fases se reescribió: comprobaba `setCurrentPhase`, que ya no
+existe.
+
 ## 2026-09-26 — Verificación en vivo: 186 tests de integración y 69 checks e2e en verde ✅
 
 El owner levantó Docker, así que se pudo correr lo que en las entregas del día quedó **escrito pero sin ejecutar**
@@ -404,7 +464,13 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-09-26): TODO verificado en vivo.** Con Docker levantado: **186/186 integración** (incluidos notas,
+> **⚑ ÚLTIMO (2026-09-27): siete ajustes de uso.** Decisiones accesibles desde Inicio · «Sincronizar ahora» con
+> indicador girando y refresco solo · las tareas de Inicio dicen su proyecto · un proyecto no saludable dice **por
+> qué** · la automatización de «ganada → proyecto» queda **suspendida** y CT la propone (aviso + botón que pregunta) ·
+> las fases nacen **Planificadas** y se retira el «marcar fase actual» (la fase en curso es la ACTIVE) · **Enter**
+> guarda y sale del campo. Detalle en la entrada del día.
+>
+> **⚑ ANTES (2026-09-26): TODO verificado en vivo.** Con Docker levantado: **186/186 integración** (incluidos notas,
 > reorden y los de Twenty reescritos) y **69/69 e2e**, con un journey nuevo (**J16**) que cubre por HTTP las notas y el
 > reorden. Los dos únicos fallos estaban en mis tests, no en el código (ver la entrada del día). Queda pendiente de ti
 > **F-31** en vibox y pasar `cleanup-duplicates.ts` allí.

@@ -324,26 +324,6 @@ export async function deleteProjectPhase(db: Database, ctx: OrgContext, phaseId:
   });
 }
 
-/** Fija (o limpia, con `phaseId=null`) la fase actual del proyecto. Si se indica, la fase debe pertenecer al proyecto. */
-export async function setCurrentPhase(db: Database, ctx: OrgContext, projectId: string, phaseId: string | null) {
-  requireCan(ctx.role, 'write');
-  await loadProject(db, ctx, projectId);
-  if (phaseId) {
-    const [phase] = await db
-      .select({ id: projectPhases.id })
-      .from(projectPhases)
-      .where(and(eq(projectPhases.id, phaseId), eq(projectPhases.projectId, projectId)));
-    if (!phase) throw notFound('project_phase');
-  }
-  const [row] = await db
-    .update(projects)
-    .set({ currentPhaseId: phaseId, updatedAt: new Date() })
-    .where(and(eq(projects.id, projectId), orgEq(projects.organizationId, ctx)))
-    .returning();
-  await recordAudit(db, ctx, { action: 'UPDATE', entityType: 'project', entityId: projectId, metadata: { currentPhaseId: phaseId } });
-  return row!;
-}
-
 export async function createTask(db: Database, ctx: OrgContext, input: unknown) {
   requireCan(ctx.role, 'write');
   const data = createTaskSchema.parse(input);

@@ -175,7 +175,9 @@ function InlineField({ field, endpoint, editable }: { field: EditField; endpoint
     if (e.key === 'Escape') {
       e.preventDefault();
       cancel();
-    } else if (e.key === 'Enter' && field.type !== 'textarea') {
+    } else if (e.key === 'Enter' && (field.type !== 'textarea' || e.metaKey || e.ctrlKey)) {
+      // Enter guarda y sale del modo edición. En un textarea Enter es un salto de línea, así que allí hace falta
+      // ⌘/Ctrl+Enter — si no, un campo largo sólo se podía guardar con el ratón.
       e.preventDefault();
       (e.currentTarget as HTMLElement).blur(); // el blur guarda (una sola vía)
     }

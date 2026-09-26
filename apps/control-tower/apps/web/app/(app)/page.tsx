@@ -7,6 +7,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { HealthBadge } from '@/components/ui/health-badge';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { EmptyState } from '@/components/ui/empty-state';
+import { RecordLink } from '@/components/ui/record-link';
 import { TaskCompleteButton, TaskDueDateControl } from '@/components/projects/forms';
 import { enumLabel } from '@/lib/labels';
 import { t } from '@/lib/i18n';
@@ -102,7 +103,11 @@ export default async function HomePage() {
               <ul className="flex flex-col gap-2">
                 {d.recentDecisions.map((dec) => (
                   <li key={dec.id} className="flex items-center justify-between gap-3 rounded-lg border border-line px-3 py-2 text-sm">
-                    <span>{dec.title}</span>
+                    {/* `decision` es panel-only en el registro: su ficha ES el panel lateral, así que se entra con
+                        `RecordLink` (abre el drawer sobre Home) en vez de navegar a una página que no existe. */}
+                    <RecordLink entity="decision" id={dec.id} className="min-w-0 truncate hover:underline">
+                      {dec.title}
+                    </RecordLink>
                     <StatusBadge status={dec.status} />
                   </li>
                 ))}
@@ -147,6 +152,7 @@ export default async function HomePage() {
                     <span className="min-w-0">
                       <Link className="hover:underline" href={`/tasks/${task.id}`}>{task.title}</Link>
                       <span className="ml-2 text-xs text-danger">{task.dueDate}</span>
+                      <TaskProject task={task} />
                     </span>
                     <span className="inline-flex items-center gap-2">
                       <TaskCompleteButton id={task.id} />
@@ -167,10 +173,11 @@ export default async function HomePage() {
               <ul className="flex flex-col gap-2">
                 {d.todaysWork.map((task) => (
                   <li key={task.id} className="flex items-center justify-between gap-3 rounded-lg border border-line px-3 py-2 text-sm">
-                    <span>
+                    <span className="min-w-0">
                       <Link className="hover:underline" href={`/tasks/${task.id}`}>{task.title}</Link>
+                      <TaskProject task={task} />
                     </span>
-                    <span className="text-xs text-fg-muted">{task.dueDate}</span>
+                    <span className="shrink-0 text-xs text-fg-muted">{task.dueDate}</span>
                   </li>
                 ))}
               </ul>
@@ -227,5 +234,25 @@ export default async function HomePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Proyecto al que pertenece una tarea de Home, junto a su título. Sin esto, con varios proyectos activos las listas
+ * de «Vencidas» y «Trabajo de hoy» no decían de cuál era cada tarea (petición del owner). Una tarea personal o de
+ * preventa no tiene proyecto: ahí no se pinta nada, en vez de un «—» que no aporta.
+ */
+function TaskProject({ task }: { task: { projectId: string | null; projectName: string | null } }) {
+  if (!task.projectId || !task.projectName) return null;
+  return (
+    <>
+      {' '}
+      <Link
+        href={`/projects/${task.projectId}`}
+        className="text-xs text-fg-muted underline-offset-2 hover:underline"
+      >
+        {task.projectName}
+      </Link>
+    </>
   );
 }

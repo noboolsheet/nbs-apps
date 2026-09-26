@@ -30,6 +30,11 @@ export interface AutomationSpec {
   scope: 'org' | 'global';
   /** Se puede activar/desactivar (las del núcleo, no). */
   toggleable: boolean;
+  /**
+   * Nace **desactivada**: hay que activarla a mano. Para automatizaciones que crean cosas solas y el owner prefiere
+   * decidir cada vez (la de «oportunidad ganada → proyecto»). Sin esto, el default es activada.
+   */
+  defaultPaused?: boolean;
   /** Se puede "Ejecutar ahora" (sync → encola job; sweep → corre inline). */
   runnable: boolean;
   /** Proveedor de integración (solo `sync.*`), para mapear a job/integración. */
@@ -128,14 +133,16 @@ export const AUTOMATION_CATALOG: readonly AutomationSpec[] = [
     title: 'Crear proyecto al ganar oportunidad',
     kind: 'event',
     description:
-      'Cuando una oportunidad pasa a GANADA, crea automáticamente su proyecto (hereda el cliente y queda enlazado). Idempotente: no duplica si el proyecto ya existe.',
+      'Cuando una oportunidad pasa a GANADA, crea automáticamente su proyecto (hereda el cliente y queda enlazado). Idempotente: no duplica si el proyecto ya existe. **SUSPENDIDA por decisión del owner (2026-09-27):** nace desactivada porque crear un proyecto es una decisión, no un trámite; al ganar una oportunidad, Control Tower lo PROPONE (aviso en Inicio y botón en la ficha) y esperas a que lo confirmes. Actívala si prefieres que se cree sola.',
     frequencyLabel: 'Por evento',
     triggerLabel: 'Al pasar una oportunidad al estado GANADA',
     scope: 'org',
     toggleable: true,
+    // Nace desactivada a propósito: ver la descripción.
+    defaultPaused: true,
     runnable: false,
     requirements: ['—'],
-    pauseEffect: 'Al ganar una oportunidad ya no se creará su proyecto automáticamente (podrás crearlo a mano).',
+    pauseEffect: 'Desactivada (lo normal): al ganar una oportunidad, CT te propone crear el proyecto y lo crea cuando lo confirmas.',
   },
 
   // ── Sincronizaciones (diarias + manual) ─────────────────────────────────────────────────────────────

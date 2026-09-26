@@ -6,7 +6,7 @@ import { patchJson, deleteJson } from '@/lib/client';
 import { StatusSelect } from '@/components/ui/status-select';
 import { fieldCls } from '@/components/ui/input';
 import { useFormAction } from '@/lib/use-form-action';
-import { btnLink, btnLinkDanger, btnSecondary, buttonCls } from '@/components/ui/button';
+import { btnLinkDanger, btnSecondary } from '@/components/ui/button';
 import { t } from '@/lib/i18n';
 
 const inputCls = fieldCls;
@@ -110,52 +110,18 @@ export function DeliverableStatusControl({ id, current }: { id: string; current:
 }
 
 /**
- * Acciones de una FASE de proyecto en la lista de la ficha: marcar/quitar como fase actual del proyecto
- * (PATCH `/projects/[id]/current-phase`) y borrar (DELETE `/project-phases/[id]`). En proyecto cerrado (frozen)
- * queda de solo lectura (solo muestra "Actual" si lo es).
+ * Acciones de una fase dentro de la ficha del proyecto: sólo **borrar**.
+ *
+ * Antes había también «Marcar actual» / «Quitar», que escribían `projects.current_phase_id`. Se retiró (owner,
+ * 2026-09-27): la fase o fases en curso son las que están en estado **Activa**, así que marcar una aparte era un
+ * segundo sitio donde decir lo mismo — y podían contradecirse (la «actual» completada, o una activa que no era la
+ * actual). El estado de la fase es ahora la única fuente.
  */
-export function PhaseActions({
-  projectId,
-  phaseId,
-  isCurrent,
-  frozen,
-}: {
-  projectId: string;
-  phaseId: string;
-  isCurrent: boolean;
-  frozen?: boolean;
-}) {
+export function PhaseActions({ phaseId, frozen }: { phaseId: string; frozen?: boolean }) {
   const { error, busy, run } = useFormAction();
-  const currentBadge = (
-    <span className="inline-flex items-center rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success-soft-fg">
-      {t('projects.phaseCurrent')}
-    </span>
-  );
-  if (frozen) return isCurrent ? currentBadge : <span className="text-xs text-fg-subtle">—</span>;
+  if (frozen) return <span className="text-xs text-fg-subtle">—</span>;
   return (
     <span className="inline-flex flex-wrap items-center gap-2">
-      {isCurrent ? (
-        <>
-          {currentBadge}
-          <button
-            type="button"
-            className={btnLink}
-            disabled={busy}
-            onClick={() => void run(() => patchJson(`/api/v1/projects/${projectId}/current-phase`, { phaseId: null }))}
-          >
-            {t('common.unset')}
-          </button>
-        </>
-      ) : (
-        <button
-          type="button"
-          className={buttonCls('secondary', 'sm')}
-          disabled={busy}
-          onClick={() => void run(() => patchJson(`/api/v1/projects/${projectId}/current-phase`, { phaseId }))}
-        >
-          {t('projects.markCurrentPhase')}
-        </button>
-      )}
       <button
         type="button"
         className={btnLinkDanger}
