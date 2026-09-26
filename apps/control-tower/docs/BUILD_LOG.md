@@ -56,12 +56,27 @@ que en un formulario de varios campos no es evidente: ahora Enter guarda y suelt
 
 **De paso:** dos literales en duro que quedaban de F-30 (el «Tareas (n)» de la ficha de oportunidad) al diccionario.
 
+**Añadido después, al valorar el resto del dashboard (owner: «sí, haz los dos enlaces»):**
+- **Las cuatro cajas de «Estado del sistema»** eran texto muerto y ahora enlazan a donde se mira cada cosa: la de
+  integraciones a Automatización › Integraciones, las otras tres a Estado del sistema.
+- **La «Actividad reciente» se puede abrir.** El nombre del registro es un enlace, con tres reglas que importan:
+  un **DELETE no enlaza** (el registro ya no existe y el enlace estaría roto por definición), una **nota lleva al
+  registro del que habla** —no a la nota, que no tiene ficha— usando el `metadata.targetType/targetId` que ya
+  guardaba la auditoría, y lo que no se puede abrir (integración, organización, usuario, canal del Inbox) se queda
+  como texto. El destino lo decide la capa de aplicación (`linkTo`, ya con el nombre resuelto) y la web sólo lo
+  traduce a ruta con `auditEntityTarget`: panel para lo que está en el registro, página para los documentos.
+- **Un test ata el invariante:** todo lo que el feed puede **nombrar** (las entidades archivables, que son las que
+  `resolveEntityNames` resuelve) tiene que poder **abrirse**. Si mañana entra una entidad nueva en `ARCHIVABLE` sin
+  panel ni página, el feed volvería a ser texto muerto para ella sin que nadie lo notara.
+- **Los eventos de hoy se quedan como están:** enlazan a Google Calendar, que es donde viven; en CT no hay nada que
+  abrir.
+
 **Tests nuevos:** `packages/domain/src/project.test.ts` (6 casos de la salud y su motivo, incluido que el atajo
 `deriveProjectHealth` no se separe del detalle) y un caso de integración que ata que la automatización del ganado
 **nace desactivada** — sin él, un cambio en esa lógica volvería a crear proyectos solos y nadie se enteraría hasta
 encontrarse uno.
 
-Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (145) · `pnpm build` · `pnpm test:integration` (187) ·
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (147) · `pnpm build` · `pnpm test:integration` (187) ·
 e2e por journeys (69/69). El test de integración de fases se reescribió: comprobaba `setCurrentPhase`, que ya no
 existe.
 
@@ -468,7 +483,9 @@ Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-b
 > indicador girando y refresco solo · las tareas de Inicio dicen su proyecto · un proyecto no saludable dice **por
 > qué** · la automatización de «ganada → proyecto» queda **suspendida** y CT la propone (aviso + botón que pregunta) ·
 > las fases nacen **Planificadas** y se retira el «marcar fase actual» (la fase en curso es la ACTIVE) · **Enter**
-> guarda y sale del campo. Detalle en la entrada del día.
+> guarda y sale del campo. **Y los dos enlaces que quedaban del dashboard:** las cajas de «Estado del sistema» y los
+> nombres de «Actividad reciente» (con un DELETE que no enlaza y una nota que lleva al registro del que habla).
+> Detalle en la entrada del día.
 >
 > **⚑ ANTES (2026-09-26): TODO verificado en vivo.** Con Docker levantado: **186/186 integración** (incluidos notas,
 > reorden y los de Twenty reescritos) y **69/69 e2e**, con un journey nuevo (**J16**) que cubre por HTTP las notas y el

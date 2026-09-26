@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { NOTE_TARGETS } from '@ct/application';
-import { RECORDS } from './record-registry';
+import { ARCHIVABLE, NOTE_TARGETS } from '@ct/application';
+import { RECORDS, auditEntityTarget } from './record-registry';
 
 /**
  * E-15 — la tabla `notes` es polimórfica y `NOTE_TARGETS` (capa de aplicación) es su allowlist. Si una entidad
@@ -23,5 +23,19 @@ describe('registro del panel ↔ notas', () => {
       .filter(([key, spec]) => key !== spec.entity)
       .map(([key]) => key);
     expect(mismatched).toEqual([]);
+  });
+
+  it('todo lo que la Actividad reciente puede NOMBRAR, puede abrirse', () => {
+    // El feed de Inicio resuelve nombres sólo para las entidades archivables (`resolveEntityNames`), y desde el
+    // 2026-09-27 ese nombre es un enlace. Si una entidad se puede nombrar pero no abrir, el feed vuelve a ser texto
+    // muerto para ella sin que nadie lo note.
+    const unopenable = Object.keys(ARCHIVABLE).filter((type) => auditEntityTarget(type) === null);
+    expect(unopenable).toEqual([]);
+  });
+
+  it('lo que NO se puede abrir devuelve null (y no un enlace roto)', () => {
+    for (const type of ['integration', 'organization', 'user', 'inbox_channel', 'automation', 'note']) {
+      expect(auditEntityTarget(type), type).toBeNull();
+    }
   });
 });

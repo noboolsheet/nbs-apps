@@ -8,6 +8,7 @@ import { HealthBadge } from '@/components/ui/health-badge';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { EmptyState } from '@/components/ui/empty-state';
 import { RecordLink } from '@/components/ui/record-link';
+import { auditEntityTarget } from '@/lib/record-registry';
 import { TaskCompleteButton, TaskDueDateControl } from '@/components/projects/forms';
 import { enumLabel } from '@/lib/labels';
 import { t } from '@/lib/i18n';
@@ -118,22 +119,24 @@ export default async function HomePage() {
           {/* System Health */}
           <section className="flex flex-col gap-3">
             <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">{t('home.systemHealth')}</h2>
+            {/* Las cuatro cajas llevan a donde se mira/arregla cada cosa: eran texto muerto, y cuando la salida
+                pendiente crece lo que quieres es llegar allí de un clic, no buscarlo en el menú. */}
             <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="rounded border border-line px-3 py-2">
+              <Link href="/automation/health" className={healthBox}>
                 DB {d.systemHealth.db ? <StatusBadge status="ACTIVE" /> : <StatusBadge status="ERROR" />}
                 {d.systemHealth.dbLatencyMs != null && (
                   <span className="text-xs text-fg-muted"> · {d.systemHealth.dbLatencyMs}ms</span>
                 )}
-              </div>
-              <div className="rounded border border-line px-3 py-2">
+              </Link>
+              <Link href="/automation/integrations" className={healthBox}>
                 {t('home.integrations')}: {d.systemHealth.integrations}
-              </div>
-              <div className="rounded border border-line px-3 py-2">
+              </Link>
+              <Link href="/automation/health" className={healthBox}>
                 {t('home.jobsPending')}: {d.systemHealth.jobsPending}
-              </div>
-              <div className="rounded border border-line px-3 py-2">
+              </Link>
+              <Link href="/automation/health" className={healthBox}>
                 {t('home.outboxPending')}: {d.systemHealth.outboxPending}
-              </div>
+              </Link>
             </div>
           </section>
         </div>
@@ -219,8 +222,9 @@ export default async function HomePage() {
                   <li key={i} className="flex items-start justify-between gap-3 border-b border-line-subtle py-1">
                     <span className="min-w-0">
                       <span className="font-medium">{enumLabel(a.action)}</span> {enumLabel(a.entityType)}
-                      {/* El nombre es lo que convierte «Actualizó proyecto» en información útil. */}
-                      {a.entityName && <span className="text-fg">{` «${a.entityName}»`}</span>}
+                      {/* El nombre es lo que convierte «Actualizó proyecto» en información útil, y ahora además
+                          se puede ABRIR (una nota lleva al registro del que habla; un DELETE no lleva a nada). */}
+                      <ActivityTarget entry={a} />
                       {a.detail && <span className="text-fg-muted">{` → ${enumLabel(a.detail)}`}</span>}
                     </span>
                     <span className="text-xs text-fg-subtle">
@@ -253,6 +257,46 @@ function TaskProject({ task }: { task: { projectId: string | null; projectName: 
       >
         {task.projectName}
       </Link>
+    </>
+  );
+}
+
+/** Caja de «Estado del sistema»: ahora es un enlace, con el mismo aspecto que tenía como `div`. */
+const healthBox = 'rounded border border-line px-3 py-2 hover:bg-surface-muted';
+
+/**
+ * Nombre del registro de una entrada de «Actividad reciente», **abrible** cuando se puede.
+ *
+ * `linkTo` lo decide la capa de aplicación (ya con el nombre resuelto): un DELETE no lleva a ningún sitio —el
+ * registro ya no existe— y una NOTA lleva al registro del que habla, no a la nota, que no tiene ficha. Aquí sólo
+ * se traduce a ruta: panel (`RecordLink`) para lo que está en el registro, página para lo que no (documentos), y
+ * texto plano para lo que no se puede abrir (integración, organización, usuario…).
+ */
+function ActivityTarget({
+  entry,
+}: {
+  entry: {
+    entityName: string | null;
+    linkTo: { entityType: string; entityId: string; label: string } | null;
+  };
+}) {
+  const link = entry.linkTo;
+  if (!link) return entry.entityName ? <span className="text-fg">{` «${entry.entityName}»`}</span> : null;
+  const target = auditEntityTarget(link.entityType);
+  if (!target) return <span className="text-fg">{` «${link.label}»`}</span>;
+  const inner = `«${link.label}»`;
+  return (
+    <>
+      {' '}
+      {'rec' in target ? (
+        <RecordLink entity={target.rec} id={link.entityId} className="text-fg underline-offset-2 hover:underline">
+          {inner}
+        </RecordLink>
+      ) : (
+        <Link href={target.href(link.entityId)} className="text-fg underline-offset-2 hover:underline">
+          {inner}
+        </Link>
+      )}
     </>
   );
 }

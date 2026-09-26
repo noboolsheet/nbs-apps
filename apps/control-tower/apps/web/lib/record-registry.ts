@@ -118,6 +118,32 @@ const ASSET_REL = { source: '/api/v1/assets', labelFields: ['name'] };
 const CONTACT_OF_CLIENT_REL = { ...CONTACT_REL, dependsOn: { field: 'clientId', rowKey: 'clientId' } };
 const DECISION_REL = { source: '/api/v1/decisions', labelFields: ['title'] };
 
+/**
+ * `entityType` de **auditoría** → clave del registro del panel, cuando no coinciden. Hoy sólo `learning_item`
+ * (el panel lo llama `learning`). Es el mismo puente que `RecordSpec.auditEntity`, al revés.
+ */
+const AUDIT_ENTITY_ALIAS: Record<string, string> = { learning_item: 'learning' };
+
+/**
+ * Entidades sin panel pero **con página propia**: el feed de actividad puede llevar a ellas aunque no estén en el
+ * registro. `document` es la única (decisión: queda como referencia de solo lectura, sin panel).
+ */
+const AUDIT_ENTITY_PAGE: Record<string, (id: string) => string> = {
+  document: (id) => `/knowledge/documents/${id}`,
+};
+
+/**
+ * ¿A dónde se abre un registro del que sólo sabemos su `entityType` de auditoría y su id? Lo usa la **Actividad
+ * reciente** de Inicio, que antes nombraba el registro («Actualizó proyecto "Web Acme"») sin dejar abrirlo.
+ * Devuelve `null` para lo que no se puede abrir (integración, organización, usuario, canal del Inbox…).
+ */
+export function auditEntityTarget(entityType: string): { rec: string } | { href: (id: string) => string } | null {
+  const key = AUDIT_ENTITY_ALIAS[entityType] ?? entityType;
+  if (RECORDS[key]) return { rec: key };
+  const page = AUDIT_ENTITY_PAGE[entityType];
+  return page ? { href: page } : null;
+}
+
 export const RECORDS: Record<string, RecordSpec> = {
   /**
    * ADR-009 (owner 2026-09-26): **todo lo que llega de Twenty es propiedad de Twenty**. Los campos que rellena su

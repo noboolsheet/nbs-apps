@@ -185,21 +185,52 @@ export async function getHomeDashboard(db: Database, ctx: OrgContext) {
 
   // Actividad reciente con NOMBRE de la entidad («Actualizó el proyecto "Web Acme"») y, si el audit guardó un
   // estado/etapa, también el detalle: sin eso la lista decía sólo "Actualizó proyecto" y no informaba de nada.
-  const names = await resolveEntityNames(
-    db,
-    ctx,
-    recentAudit.map((a) => ({ entityType: a.entityType, entityId: a.entityId ?? '' })),
-  );
+  // Referencia a la que apunta una entrada del feed. Para una NOTA, el registro interesante no es la nota (que no
+  // tiene ficha) sino **el registro del que habla**, que la auditoría guarda en `metadata.targetType/targetId`.
+  const targetOf = (meta: Record<string, unknown>) =>
+    typeof meta.targetType === 'string' && typeof meta.targetId === 'string'
+      ? { entityType: meta.targetType, entityId: meta.targetId }
+      : null;
+
+  const metaOf = (a: (typeof recentAudit)[number]) => (a.metadata ?? {}) as Record<string, unknown>;
+
+  // Un solo `resolveEntityNames` para las entidades del audit Y para los destinos de las notas: sólo resuelve las
+  // que son archivables, que son justo las que tienen ficha o panel (las demás no se podrían abrir de todas formas).
+  const names = await resolveEntityNames(db, ctx, [
+    ...recentAudit.map((a) => ({ entityType: a.entityType, entityId: a.entityId ?? '' })),
+    ...recentAudit.flatMap((a) => {
+      const t = targetOf(metaOf(a));
+      return t ? [t] : [];
+    }),
+  ]);
+
   const recentActivity = recentAudit.map((a) => {
-    const meta = (a.metadata ?? {}) as Record<string, unknown>;
+    const meta = metaOf(a);
     const detail = [meta.status, meta.stage, meta.visibility]
       .filter((v): v is string => typeof v === 'string')
       .at(0);
+    const target = targetOf(meta);
+    const entityName = a.entityId ? (names.get(`${a.entityType}:${a.entityId}`) ?? null) : null;
+    const targetName = target ? (names.get(`${target.entityType}:${target.entityId}`) ?? null) : null;
+    // A DÓNDE lleva la entrada, si a algún sitio. Se decide aquí (con los nombres ya resueltos) y la web lo
+    // traduce a ruta; la capa de aplicación no conoce rutas ni el registro del panel.
+    //  · Un DELETE no enlaza a nada: el registro ya no existe y el enlace estaría roto por definición.
+    //  · Una nota enlaza al registro del que habla, no a la nota.
+    const linkTo =
+      a.action === 'DELETE'
+        ? null
+        : target && targetName
+          ? { ...target, label: targetName }
+          : a.entityId && entityName
+            ? { entityType: a.entityType, entityId: a.entityId, label: entityName }
+            : null;
     return {
       action: a.action,
       entityType: a.entityType,
-      entityName: a.entityId ? (names.get(`${a.entityType}:${a.entityId}`) ?? null) : null,
+      entityName,
       detail: detail ?? null,
+      /** Registro al que lleva esta entrada (ya con su nombre), o `null` si no hay nada que abrir. */
+      linkTo,
       actorType: a.actorType,
       at: a.createdAt,
     };
