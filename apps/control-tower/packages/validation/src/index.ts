@@ -12,3 +12,4 @@ export * from './automations';
 export { z } from 'zod';
 export * from './payments';
 export * from './review';
+export * from './notes';

@@ -88,6 +88,11 @@ export interface PanelField {
 
 export interface RecordSpec {
   entity: string; // clave del ?rec=<entity>:<id>
+  /**
+   * Nombre CANÓNICO del registro en auditoría, historial (`change_events`) y notas, cuando no coincide con
+   * `entity` (que es la clave de la URL del panel). Hoy sólo `learning` → `learning_item`.
+   */
+  auditEntity?: string;
   label: string; // "Cliente", "Contacto"…
   listPath: string; // ruta de la lista (para volver)
   detailPath?: (id: string) => string; // "Abrir ficha completa" — solo entidades con secciones internas
@@ -402,6 +407,10 @@ export const RECORDS: Record<string, RecordSpec> = {
   },
   learning: {
     entity: 'learning',
+    // El nombre canónico en auditoría/historial/notas es `learning_item` (así lo escriben los comandos); el
+    // `entity` de aquí es la clave de la URL del panel (`?rec=learning:<id>`). Sin este puente, el bloque
+    // «Historial» de un aprendizaje salía SIEMPRE vacío (preguntaba por `learning`) — visto al hacer E-15.
+    auditEntity: 'learning_item',
     label: t('entity.learning'),
     listPath: '/knowledge/learning',
     createPath: '/api/v1/learning',

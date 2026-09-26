@@ -244,6 +244,7 @@ export const es = {
   'enum.knowledge_inbox': 'bandeja de conocimiento',
   'enum.knowledge_item': 'conocimiento',
   'enum.learning_item': 'aprendizaje',
+  'enum.note': 'nota',
   'enum.opportunity': 'oportunidad',
   'enum.organization': 'organización',
   'enum.project': 'proyecto',
@@ -959,6 +960,17 @@ export const es = {
   // ─── Pagos: reserva de impuestos ────────────────────────────────────────────────────────────────────
   'payments.taxReserve': 'Reservar ({pct}%)',
   'payments.taxReserveHint': 'Estimación: el {pct}% de lo que te deben, para apartarlo y no gastarlo. No es un cálculo fiscal.',
+  // ─── Notas por registro (E-15) ──────────────────────────────────────────────────────────────────────
+  'notes.title': 'Notas',
+  'notes.empty': 'Ninguna nota todavía.',
+  'notes.placeholder': 'Lo que habláis, lo que decides o lo que hay que recordar de este registro…',
+  'notes.add': 'Añadir nota',
+  'notes.adding': 'Añadiendo…',
+  'notes.edit': 'Editar',
+  'notes.edited': 'editada',
+  'notes.unknownAuthor': 'Alguien',
+  'notes.confirmDelete': '¿Borrar esta nota? Es definitivo.',
+
   // ─── Literales que seguían en duro en las vistas (F-30, cerrado el 2026-09-26) ──────────────────
   // Insignia de procedencia
   'source.native': 'Dato nativo de Control Tower',

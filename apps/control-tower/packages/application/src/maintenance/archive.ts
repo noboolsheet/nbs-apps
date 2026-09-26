@@ -1,7 +1,7 @@
 import { and, eq, lt, inArray, isNull, isNotNull, desc } from 'drizzle-orm';
 import type { AnyPgColumn, PgTable } from 'drizzle-orm/pg-core';
 import { z } from '@ct/validation';
-import type { Database } from '@ct/db';
+import type { Database, DbOrTx } from '@ct/db';
 import {
   clients,
   contacts,
@@ -30,6 +30,7 @@ import {
 } from '@ct/db/schema';
 import { requireCan, orgEq, type OrgContext } from '../auth/index';
 import { recordAudit } from '../audit/index';
+import { deleteNotesFor } from '../notes/index';
 import { mapDbError, notFound } from '../errors';
 import { logger } from '@ct/shared';
 
@@ -182,18 +183,21 @@ async function deleteDependents(db: Database, ctx: OrgContext, entityType: strin
 }
 
 /**
- * Rastros externos de un registro que se acaba de borrar DEFINITIVAMENTE: su puntero de sync y su outbox
- * pendiente. Mismo motivo que en `deleteTasks`, y no es cosmético:
+ * Todo lo que hay que llevarse de un registro que se acaba de borrar DEFINITIVAMENTE. **Punto único**: lo
+ * llaman los tres caminos de borrado duro (esta purga, `deleteTasks` y la purga de tareas completadas), porque
+ * acordarse tres veces es exactamente cómo se cuela el siguiente olvido.
  *
  *  - `external_identities` huérfana ⇒ el sync resuelve la identidad, hace `UPDATE … WHERE id = <muerto>`,
  *    toca 0 filas, cuenta "actualizado" y el registro **no vuelve a aparecer nunca** aunque siga existiendo en
- *    GitHub/Twenty/Notion. Silencioso y permanente.
+ *    GitHub/Twenty/Notion. Silencioso y permanente (M40).
  *  - `outbox_events` pendiente ⇒ el worker intentaría empujar a Notion/Twenty algo que ya no existe.
+ *  - `notes` (E-15) ⇒ la tabla es polimórfica, no hay FK que las arrastre: sin esto la nota queda huérfana
+ *    para siempre y sin ninguna pantalla desde la que verla ni borrarla.
  *
- * Hasta M40 la purga por retención no limpiaba ninguna de las dos (sólo lo hacía el borrado de tareas).
+ * Lo que NO se borra a propósito: `audit_logs` y `change_events`, que son el registro histórico inmutable.
  */
-async function deleteExternalTraces(
-  db: Database,
+export async function deleteRecordTraces(
+  db: DbOrTx,
   ctx: OrgContext,
   entityType: string,
   id: string,
@@ -210,6 +214,7 @@ async function deleteExternalTraces(
   await db
     .delete(outboxEvents)
     .where(and(eq(outboxEvents.aggregateType, entityType), eq(outboxEvents.aggregateId, id)));
+  await deleteNotesFor(db, ctx, entityType, [id]);
 }
 
 /**
@@ -256,7 +261,7 @@ export async function purgeArchivedRecords(
           await deleteDependents(db, ctx, entityType, String(r.id));
           await db.delete(meta.table).where(and(eq(c.id, r.id), orgEq(c.organizationId, ctx)));
           // DESPUÉS del borrado (si la FK lo bloquea, la fila sigue viva y su puntero tiene que seguir ahí).
-          await deleteExternalTraces(db, ctx, entityType, String(r.id));
+          await deleteRecordTraces(db, ctx, entityType, String(r.id));
           await recordAudit(db, ctx, {
             action: 'DELETE',
             entityType,

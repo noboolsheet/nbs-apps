@@ -5,6 +5,54 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-09-26 — E-15 · Notas por registro ✅
+
+**El hueco.** No había dónde apuntar *«hablado con el cliente, mueve la entrega a marzo»*. Existía el historial
+(`change_events`: qué campo cambió, cuándo y quién), pero eso responde a «qué pasó», no a «qué hablamos»; el único
+sitio era el `description` de la propia entidad, que se sobrescribe. De todos los huecos de producto de la sesión 27,
+era el único que era una **ausencia real**.
+
+**Decisiones del owner antes de escribir código:** lista **plana** (sin hilos ni respuestas: una sola usuaria) ·
+**no se espeja a Notion** (es trabajo interno; el cuerpo de la página de Notion ya lo escribe ella) · vale para
+**todas las entidades con panel**, no una por una.
+
+**Qué entra.**
+- **Migración `0025_m41_notes.sql`** — tabla `notes`: `organization_id`, `entity_type`/`entity_id`, `body`,
+  `created_by_user_id` (nullable: si se borra un usuario la nota sobrevive sin autor), fechas, índice por
+  `(entity_type, entity_id)` y CHECK que rechaza el cuerpo vacío. **Polimórfica como `change_events`**.
+- **`packages/application/src/notes/`** — `listNotes` (resuelve el autor en la misma consulta), `createNote`,
+  `updateNote`, `deleteNote` y `deleteNotesFor`. `NOTE_TARGETS` es la **allowlist** de entidades que admiten notas,
+  con el mismo papel que `ARCHIVABLE`: sin ella un `entityType` mal escrito crearía notas **invisibles**, sin error.
+  Sólo el autor (o un ADMIN+) edita o borra la suya. `note` **no** está en `NOTION_MIRRORED`, así que `recordAudit`
+  no encola ningún push.
+- **Una nota no es archivable a propósito**: no es un registro de la aplicación, no entra en `ARCHIVABLE` ni en
+  `PURGE_ORDER`, y «Archivados» no se llena de notas.
+- **El borrado era el riesgo de verdad.** Al ser polimórfica no hay FK que arrastre las notas, y hay **tres**
+  caminos de borrado duro. En vez de repetir la limpieza tres veces, `deleteExternalTraces` pasa a ser
+  **`deleteRecordTraces`** —`external_identities` + `outbox_events` + **`notes`**— y lo llaman los tres: purga de
+  archivados, `deleteTasks` y purga de tareas completadas.
+- **Hallazgo de paso (bug real):** la **purga de tareas completadas no limpiaba nada**. Exactamente la trampa que
+  M40 arregló en la purga de archivados: la identidad de sync quedaba huérfana y el registro no volvía nunca desde
+  su origen, en silencio. Arreglado con el mismo helper, que es justo el motivo de unificarlo.
+- **Segundo hallazgo:** el registro del panel llama `learning` a lo que la auditoría llama `learning_item`, así que
+  el bloque **«Historial» de un aprendizaje salía SIEMPRE vacío** (F-4 preguntaba por un tipo que nadie escribe).
+  Resuelto con `auditEntity` en el `RecordSpec`, que usan historial y notas; un test nuevo ata registro ↔
+  `NOTE_TARGETS` para que no vuelva a divergir.
+- **UI** — `components/ui/record-notes.tsx`, montado en el panel **encima del historial** y **desplegado**: una nota
+  que hay que descubrir pulsando no cumple su función (el historial sigue colapsado, que se consulta de vez en
+  cuando). Textarea para escribir, lista con autor y fecha (marca «editada» si cambió), editar y borrar en línea las
+  propias, saltos de línea respetados. Textos nuevos bajo `notes.*`, con la convención de F-30.
+- **Endpoints** `GET`/`POST /api/v1/notes` y `PATCH`/`DELETE /api/v1/notes/[id]`, con `parseId`; la auditoría guarda
+  a qué registro pertenece la nota (`metadata.targetType`/`targetId`) para que el feed de actividad pueda llegar allí.
+
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (136, dos nuevos) · `pnpm build`. **Pendiente de
+verificar:** `tests/integration/notes.test.ts` (4 casos, dos de ellos son los de notas huérfanas al borrar) — en esta
+sesión no había Postgres levantado, así que está escrito pero **sin correr**.
+
+**En la misma sesión: B-2 ❌ descartado** («no hace falta hacer un kanban para las tareas», owner). La lista agrupada
+por vencimiento ya responde a «¿qué hago ahora?»; un tablero por estado sería una segunda forma de ver lo mismo. No es
+deuda, es una opción del wireframe que no se quiere.
+
 ## 2026-09-26 — F-30 · El diccionario de i18n deja de estar nombrado en castellano ✅
 
 **El problema (F-30, abierto desde la sesión 27).** E-10 dejó el i18n bien por dentro (`t()` tipado con
@@ -213,7 +261,13 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-09-26): F-30 cerrado.** El diccionario de i18n deja de estar nombrado en castellano: 261 claves
+> **⚑ ÚLTIMO (2026-09-26): E-15 hecho — hay notas por registro.** Bloque «Notas» en el panel lateral (tabla
+> polimórfica `notes`, migración `0025_m41`), sin espejo a Notion. De paso: el borrado duro limpia notas y punteros
+> de sync en un **único** sitio (`deleteRecordTraces`), la purga de tareas completadas **no limpiaba nada** (mismo
+> bug que M40) y el «Historial» de un aprendizaje salía vacío por un nombre de entidad divergente. **Siguiente:
+> B-2 se elimina, E-16 espera decisión y E-12 al final. Y queda pendiente cerrar las escrituras a Twenty.**
+>
+> **⚑ ANTES: F-30 cerrado.** El diccionario de i18n deja de estar nombrado en castellano: 261 claves
 > renombradas a `<area>.<cosa><Rol>`, `ui.*` disuelto, lo compartido en `common.*`/`meta.*`/`filter.*`, los literales
 > sueltos dentro y un test que impide que vuelva a pasar. **Siguiente: E-15** (notas por registro).
 >
@@ -321,8 +375,8 @@ Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-b
 > 2. **Menores de UI/UX** — **F-26 (pantallas de error/404) es lo más barato y visible de todo lo abierto**;
 >    después micro-confirmación al guardar, `EmptyState` que enseñe el siguiente paso, login sin primitivas,
 >    jerarquía de encabezados (P2 del informe de UI/UX).
-> 3. **Diferidos con dueño claro** — drag-reorder de FILAS de lista (E-12), Kanban de tareas (B-2), carga diferida por
->    pestaña, `<Card>` donde queda borde a mano.
+> 3. **Diferidos con dueño claro** — drag-reorder de FILAS de lista (E-12), ~~Kanban de tareas (B-2)~~ (❌ descartado
+>    por el owner el 2026-09-26), carga diferida por pestaña, `<Card>` donde queda borde a mano.
 > 4. **Multi-usuario** (A-7 unique de `external_identities`, E-11 workspaces) — sólo si entran colaboradores.
 > 5. **Verificación en vivo pendiente**: F-18 (pull de tareas de Twenty; el owner debe crear una tarea de ejemplo allí)
 >    y la revisión visual en el navegador de lo de esta sesión (foco de teclado, drag & drop, textos traducidos).

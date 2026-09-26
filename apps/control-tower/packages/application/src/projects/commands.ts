@@ -11,8 +11,6 @@ import {
   services,
   assets,
   projectAssets,
-  externalIdentities,
-  outboxEvents,
 } from '@ct/db/schema';
 import {
   slugify,
@@ -42,6 +40,7 @@ import { requireCan, orgEq, type OrgContext } from '../auth/index';
 import { emitOutbox } from '../outbox/index';
 import { recordAudit, recordChangeEvent, recordFieldChanges } from '../audit/index';
 import { assertNotEditingOwnedFields } from '../integrations/identity';
+import { deleteRecordTraces } from '../maintenance/archive';
 import {
   mapDbError,
   notFound,
@@ -522,11 +521,12 @@ export async function deleteTasks(db: Database, ctx: OrgContext, ids: string[]):
         .where(and(orgEq(tasks.organizationId, ctx), inArray(tasks.parentTaskId, targetIds)));
       const childIds = children.map((r) => r.id).filter((cid) => !targetIds.includes(cid));
       const allIds = [...targetIds, ...childIds];
-      // Limpiar punteros externos y outbox pendiente de todas las tareas a borrar.
-      await tx
-        .delete(externalIdentities)
-        .where(and(orgEq(externalIdentities.organizationId, ctx), eq(externalIdentities.internalType, 'task'), inArray(externalIdentities.internalId, allIds)));
-      await tx.delete(outboxEvents).where(and(eq(outboxEvents.aggregateType, 'task'), inArray(outboxEvents.aggregateId, allIds)));
+      // Punteros de sync, outbox pendiente y notas de todas las tareas a borrar. `deleteRecordTraces` es el
+      // punto único que conocen los tres caminos de borrado duro: si mañana hay un rastro más que limpiar, se
+      // añade ahí y no hay que acordarse de este sitio.
+      for (const tid of allIds) {
+        await deleteRecordTraces(tx, ctx, 'task', tid);
+      }
       // Hijas primero, luego las seleccionadas.
       if (childIds.length > 0) {
         await tx.delete(tasks).where(and(orgEq(tasks.organizationId, ctx), inArray(tasks.id, childIds)));
@@ -647,6 +647,10 @@ export async function purgeCompletedTasks(
     }
     try {
       await db.delete(tasks).where(and(eq(tasks.id, t.id), orgEq(tasks.organizationId, ctx)));
+      // DESPUÉS del borrado, como en la purga de archivados: si la FK lo bloquea, la fila sigue viva y su
+      // puntero tiene que seguir ahí. Este barrido NO limpiaba nada (la misma trampa que M40 arregló en la
+      // purga de archivados): dejaba la identidad de sync huérfana y las notas colgando.
+      await deleteRecordTraces(db, ctx, 'task', t.id);
       await recordAudit(db, ctx, {
         action: 'DELETE',
         entityType: 'task',

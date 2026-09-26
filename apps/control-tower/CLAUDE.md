@@ -109,7 +109,9 @@ panel. **Iniciativa terminada y validada por el owner con datos reales** — est
   `detailPath?` + `contextCreate?`). Para añadir/editar una entidad en el panel, se toca **aquí**.
 - `components/ui/record-panel.tsx` — el drawer global (montado en `app-shell.tsx`), controlado por `?rec=<entidad>:<id|new>`
   (+ `&in=<ctxKey>:<parentId>` para creación contextual). Autoguarda por campo (con dirty-check); estado por sub-endpoint
-  (`/status`, `/visibility`) si no está en el `update*` schema. Bloque "Contexto" (Fuente/Creado/Actualizado) en edición.
+  (`/status`, `/visibility`) si no está en el `update*` schema. Bloque "Contexto" (Fuente/Creado/Actualizado) en edición, **Notas** (E-15: texto libre por registro, tabla
+  polimórfica `notes`, sin espejo a Notion) e **Historial**. Ambos usan `spec.auditEntity ?? spec.entity`: el nombre
+  canónico de auditoría, que en `learning` NO es el `entity` del panel.
 - `components/ui/{new-record-button,context-new-button,record-link}.tsx` — botones/enlaces que abren el panel
   preservando la query (p. ej. `?status=`). `lib/source-meta.ts` — `meta.source` de los GET.
 
@@ -279,6 +281,11 @@ transaccional** (`emitOutbox` en la misma tx que el cambio). Ejemplo implementad
   que darle su sitio en `PURGE_ORDER` (hijo→padre, según las FKs reales) y, si tiene hijas NO archivables con FK hacia
   ella, borrarlas en `deleteDependents`. Si no, se archiva y **no se purga nunca**, sin error. Lo vigila
   `archive.test.ts` (`purgeOrderMissingEntities()` debe devolver `[]`).
+- **Hija polimórfica nueva** (tabla con `entity_type`/`entity_id` en vez de FK, como `notes` o `change_events`) ⇒ no
+  hay FK que la arrastre: **añade su limpieza a `deleteRecordTraces`** (`maintenance/archive.ts`), el único sitio que
+  conocen los tres caminos de borrado duro (purga de archivados · `deleteTasks` · purga de tareas completadas). Y dale
+  su **allowlist** de entidades válidas (`NOTE_TARGETS` para las notas, atada por test al registro del panel): sin
+  ella, un `entity_type` mal escrito crea filas que no se ven desde ninguna pantalla, sin error.
 - **Borrado definitivo de una entidad sincronizada** ⇒ hay que llevarse también sus rastros externos:
   `external_identities` y `outbox_events` (`deleteExternalTraces` en `archive.ts`, y el equivalente inline en
   `deleteTasks`). Si no, queda un puntero huérfano y **el registro no vuelve nunca** desde su origen, sin error.

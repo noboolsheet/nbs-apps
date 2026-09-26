@@ -55,6 +55,7 @@ async function makeOrg(): Promise<OrgContext> {
 /** Borra todo rastro de la organización del test (incluidas las tablas hijas no archivables). */
 async function dropOrg(ctx: OrgContext) {
   const org = ctx.organizationId;
+  await db.execute(sql`delete from notes where organization_id = ${org}`);
   await db.execute(sql`delete from change_events where organization_id = ${org}`);
   await db.execute(sql`delete from audit_logs where organization_id = ${org}`);
   await db.execute(sql`delete from outbox_events where organization_id = ${org}`);

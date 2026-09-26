@@ -15,6 +15,7 @@ import { SearchableSelect } from './searchable-select';
 import { SourceBadge } from './source-badge';
 import { ExternalSourceLink } from './external-source-link';
 import { RecordHistory } from './record-history';
+import { RecordNotes } from './record-notes';
 import { t } from '@/lib/i18n';
 import { formatDateTime } from '@/lib/i18n/format';
 
@@ -488,10 +489,13 @@ export function RecordPanel() {
                   {raw?.updatedAt != null && <ContextRow label={t('meta.updatedAt')}>{fmtDate(raw.updatedAt)}</ContextRow>}
                 </div>
               )}
+              {/* E-15: notas del registro («qué hablamos»). Va ANTES del historial: se escribe y se lee a
+                  menudo, mientras que el historial se consulta de vez en cuando. */}
+              {!isNew && id && <RecordNotes entity={spec.auditEntity ?? spec.entity} id={id} />}
               {/* F-4: historial campo a campo del registro (se carga al desplegarlo). */}
               {!isNew && id && (
                 <RecordHistory
-                  entity={spec.entity}
+                  entity={spec.auditEntity ?? spec.entity}
                   id={id}
                   labels={Object.fromEntries(spec.fields.map((f) => [f.name, f.label]))}
                 />

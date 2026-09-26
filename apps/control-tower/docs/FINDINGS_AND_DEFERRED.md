@@ -23,7 +23,7 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
 >   Pi** (kernel sin cgroup de memoria). Desde la migración a **vibox (Fedora)** el 2026-09-24 el arreglo de la Pi
 >   (`cgroup_enable=memory` en `/boot/firmware/cmdline.txt`) **ya no aplica**: falta confirmar en vibox que
 >   `docker stats` mide de verdad y que los `mem_limit` del compose son los correctos para esa máquina.
-> - **Trabajo pendiente acotado:** B-2 (Kanban de tareas) · drag-reorder de FILAS (E-12) · varias carpetas/DBs por
+> - **Trabajo pendiente acotado:** drag-reorder de FILAS (E-12) · varias carpetas/DBs por
 >   proveedor (E-4) · ver ejecuciones de los **barridos** y editar cadencias desde el panel (E-8) · edición de perfil e
 >   invitaciones (E-9/E-11) · `Initiatives`/sub-goals (E-3) · tareas por asignado (E-2).
 > - **Menores de UI/UX** (`AUDIT_UIUX_2026-08-30.md`): micro-confirmación al guardar · aviso si falla el GET del panel ·
@@ -68,9 +68,10 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
 > - ✅ **F-30 HECHO (2026-09-26)** — 261 claves de i18n pasan a nombres semánticos en su namespace correcto
 >   (`ui.*` desaparece; lo compartido va a `common.*`/`meta.*`/`filter.*`), los literales sueltos entran al
 >   diccionario y un test nuevo falla si alguien vuelve a nombrar una clave con la frase española.
-> - **Huecos de producto:** **E-15** notas/comentarios por registro (el único que es una ausencia real) ·
->   **E-16** adjuntos (necesita decisión: choca con «sólo referencias») · **E-17** exportar datos de negocio e
->   informes de evolución.
+> - **Huecos de producto:** ✅ **E-15 HECHO (2026-09-26)** — notas por registro, en el panel lateral, sin espejo a
+>   Notion; de paso, el borrado duro ya limpia las notas y los punteros de sync en un único sitio
+>   (`deleteRecordTraces`) · **E-16** adjuntos (necesita decisión: choca con «sólo referencias») · **E-17**
+>   exportar datos de negocio e informes de evolución.
 > - **NO son deuda, comprobado:** el diseño **responsive** es decisión de alcance del owner (sólo escritorio,
 >   2026-08-30) y el atajo **⌘K ya existe**.
 
@@ -166,7 +167,7 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
   cambia siempre en el desplegable de la tarjeta y el tablero vuelve a ser un componente de **servidor**. El hallazgo
   queda cerrado como descartado, no como pendiente: no hay nada que rehacer aquí.
 
-### B-2 · Task board (To Do/In Progress/Blocked/Done) como lista, no Kanban 🟢 SIGUE ABIERTO (verificado el 2026-09-26: el único tablero de columnas es el de oportunidades)
+### B-2 · Task board (To Do/In Progress/Blocked/Done) como lista, no Kanban ❌ DESCARTADO (2026-09-26, decisión del owner)
 - **Hallado en:** M06.
 - **Wireframe:** opción Kanban de tareas.
 - **Hoy:** tareas en tabla con control de estado y **agrupadas por vencimiento** (Vencidas/Hoy/Esta semana/Próximas/
@@ -175,6 +176,11 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
   lleva arrastrar y soltar** (retirado en B-1). Aquí sí tendría sentido: cada columna sería **un solo** `TASK_STATUS`,
   que es justo lo que le faltaba al de oportunidades para que el gesto fuera inequívoco. Endpoint
   `PATCH /tasks/[id]/status`.
+- **❌ DESCARTADO (2026-09-26, owner): «no hace falta hacer un kanban para las tareas».** La lista agrupada por
+  vencimiento (Vencidas/Hoy/Esta semana/Próximas/Bloqueadas/Sin fecha) ya responde a «¿qué hago ahora?», que es para
+  lo que se usa la vista; un tablero por estado añadiría una segunda forma de ver lo mismo. **No es deuda: es una
+  opción del wireframe que no se quiere.** Si alguna vez se retoma, lo escrito arriba sigue valiendo como punto de
+  partida.
 
 ### B-3 · Client Detail: tab "Projects" sin listado inverso 🟢 hecho (Fase 5)
 - ✅ `listProjects(db, ctx, { clientId })` + render en la tab Projects del cliente (con estado y progreso, enlace al proyecto).
@@ -1126,7 +1132,7 @@ hay que volver a medir antes de dar por bueno el síntoma.
 - **Regla operativa que sale de aquí:** migrar CT entre servidores es `pg_dump` + restore **completo**,
   `external_identities` incluida. Repoblar desde los orígenes duplica por diseño. En `DEPLOYMENT.md`.
 
-### E-15 · Notas y comentarios por registro 🟡 futuro (hueco de producto) — **sigue abierto** (verificado contra el código el 2026-09-26: no existe tabla de notas ni comentarios)
+### E-15 · Notas y comentarios por registro ✅ RESUELTO (2026-09-26)
 - **Hallado en:** sesión 27.
 - **Qué falta:** no hay tabla de comentarios ni sitio donde escribir texto libre asociado a un registro. Hay
   **historial de auditoría** (qué campo cambió, cuándo y quién, F-4) pero eso responde a «qué pasó», no a «qué
@@ -1137,6 +1143,41 @@ hay que volver a medir antes de dar por bueno el síntoma.
 - **Qué haría falta:** una tabla `notes` (organización + `entity_type`/`entity_id` + autor + cuerpo + fechas,
   como `change_events`), su endpoint y un bloque en el panel lateral junto a «Historial». Ojo con la retención:
   entidad nueva ⇒ sitio en `PURGE_ORDER` (ver convenciones de `CLAUDE.md`).
+
+**✅ RESUELTO (2026-09-26).** Cómo, y las decisiones que se tomaron por el camino:
+
+- **Tabla `notes`** (migración `0025_m41_notes.sql`): `organization_id` + `entity_type`/`entity_id` + `body` +
+  `created_by_user_id` + fechas, **polimórfica como `change_events`** (sin FK al registro), con índice por
+  `(entity_type, entity_id)` y un CHECK que rechaza el cuerpo vacío. El autor es **nullable**: si algún día se
+  borra un usuario, la nota sobrevive sin autor en vez de bloquear el borrado.
+- **Decisiones del owner:** lista **plana** (sin hilos ni respuestas; una sola usuaria) · **NO se espeja a
+  Notion** (`note` fuera de `NOTION_MIRRORED`: es trabajo interno y el cuerpo de la página de Notion ya lo
+  escribe ella) · vale para **todas las entidades con panel**, no una por una.
+- **`NOTE_TARGETS`** (`packages/application/src/notes/index.ts`) es la allowlist, con el mismo papel que
+  `ARCHIVABLE` en el archivado: sin ella, un `entityType` mal escrito crearía notas que **no se ven desde
+  ninguna pantalla** y sin error. Un test nuevo (`apps/web/lib/record-registry.test.ts`) ata las dos listas.
+- **Una nota NO es archivable a propósito** (no entra en `ARCHIVABLE` ni en `PURGE_ORDER`): no es un registro de
+  la aplicación. Se borra, y sólo su autor (o un ADMIN+) puede editarla o borrarla.
+- **El borrado, que era el riesgo real:** al ser polimórfica no hay FK que arrastre las notas, así que los
+  **tres** caminos de borrado duro tenían que limpiarlas. En vez de repetir la limpieza en tres sitios,
+  `deleteExternalTraces` pasa a ser **`deleteRecordTraces`** (exportado desde `maintenance/archive.ts`) y ahora
+  se lleva `external_identities` + `outbox_events` + **`notes`**; lo llaman la purga de archivados, `deleteTasks`
+  y la purga de tareas completadas. **Hallazgo de paso:** la purga de tareas completadas **no limpiaba nada** —
+  la misma trampa que M40 arregló en la purga de archivados: dejaba la identidad de sync huérfana y, con ella, un
+  registro que no volvía nunca desde su origen. Arreglado con el mismo helper.
+- **UI:** bloque «Notas» en el panel lateral (`components/ui/record-notes.tsx`), **encima** del historial y
+  **desplegado**, no colapsado: una nota que hay que descubrir pulsando no cumple su función. Se escribe en un
+  textarea, se listan la más reciente arriba con autor y fecha (marca «editada» si cambió), y las propias se
+  editan o se borran en línea. El texto conserva los saltos de línea.
+- **Bug encontrado al hacerlo:** el registro del panel llama `learning` a lo que la auditoría llama
+  `learning_item`, así que el bloque **«Historial» de un aprendizaje salía siempre vacío** (F-4 preguntaba por un
+  tipo que nadie escribe). Resuelto con `auditEntity` en el `RecordSpec` —el nombre canónico— que usan ahora
+  historial y notas; el test nuevo impide que vuelva a divergir.
+- **Endpoints:** `GET`/`POST /api/v1/notes` (`?entity=&id=`) y `PATCH`/`DELETE /api/v1/notes/[id]`, con
+  `parseId` y la auditoría guardando a qué registro pertenece la nota (`metadata.targetType`/`targetId`).
+- Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (136, dos nuevos) · `pnpm build`. **Sin verificar
+  todavía:** `tests/integration/notes.test.ts` (4 casos, incluidos los dos de notas huérfanas) — en esta sesión
+  no había Postgres levantado.
 
 ### E-16 · Adjuntos 🟢 futuro (probablemente NO, decisión pendiente) — enunciado recortado el 2026-09-26
 - **Hallado en:** sesión 27.

@@ -219,6 +219,10 @@ Notion. (Si más adelante quieres verlas en Notion, sería CT→Notion read-only
 > **Implementado, pero en desuso:** el owner decidió el **2026-09-26** que **no se crearán tareas en Twenty**, así que
 > en la práctica todas las tareas son de CT. No afecta al contrato de Notion (las tareas no se reflejan allí).
 
+> **Notas por registro (E-15, 2026-09-26): NO se espejan.** `note` no está en `NOTION_MIRRORED`. Son trabajo interno
+> («hablado con el cliente, mueve la entrega a marzo») y el **cuerpo de la página** de Notion ya es de quien escribe:
+> espejarlas duplicaría el sitio donde se apunta lo mismo. Decisión del owner.
+
 ### 4.9 Clients — **Twenty es la verdad**; Notion solo "client knowledge"
 No crear una DB `Clients` que compita con Twenty. En Notion: páginas de conocimiento/documentación por cliente
 (Notion→CT como Knowledge Items/Documents ref). Si se quiere una relación `Client` en otras DBs de Notion, la DB de

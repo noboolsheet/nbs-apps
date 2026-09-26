@@ -19,4 +19,5 @@ export * from './learning/index';
 export * from './automations/index';
 export * from './maintenance/index';
 export * from './audit/index';
+export * from './notes/index';
 export * from './errors';
