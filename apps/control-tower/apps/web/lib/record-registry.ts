@@ -104,7 +104,15 @@ export interface RecordSpec {
   readOnly?: boolean; // entidad de solo-referencia (Documents/Calendar…)
   // Creación contextual desde la sección de un padre (?rec=<e>:new&in=<ctxKey>:<parentId>):
   // fija (y oculta) la relación al padre. `createPath` opcional para rutas anidadas (task/deliverable).
-  contextCreate?: Record<string, { presetField: string; createPath?: (parentId: string) => string }>;
+  /**
+   * Creación dentro de un padre. `presetField` se fija y se **oculta** (lo da el contexto). `hideFields` oculta
+   * además lo que el backend DERIVA de ese padre: pedirlo sería invitar a rellenar un valor que se va a ignorar
+   * —o peor, a contradecirlo— (p. ej. el cliente de un recurso, que se copia del cliente del proyecto).
+   */
+  contextCreate?: Record<
+    string,
+    { presetField: string; createPath?: (parentId: string) => string; hideFields?: readonly string[] }
+  >;
 }
 
 const CLIENT_REL = { source: '/api/v1/clients', labelFields: ['name'] };
@@ -235,7 +243,9 @@ export const RECORDS: Record<string, RecordSpec> = {
       { name: 'description', label: t('field.description'), type: 'textarea' },
       { name: 'clientId', label: t('entity.client'), type: 'relation', relation: CLIENT_REL, hidden: (v) => v.personal === 'true' },
       { name: 'contactId', label: t('entity.contact'), type: 'relation', relation: CONTACT_OF_CLIENT_REL, hidden: (v) => v.personal === 'true' },
-      { name: 'opportunityId', label: t('entity.opportunity'), type: 'relation', relation: OPPORTUNITY_REL, hidden: (v) => v.personal === 'true' },
+      // La oportunidad NO se edita aquí (owner 2026-09-27): un proyecto existe porque su oportunidad se ganó y se
+      // cerró, así que reasignarla desde el panel no tiene sentido. El enlace entre ambos se ve en la ficha de la
+      // oportunidad («Proyecto») y lo fija quien crea el proyecto desde ella.
       { name: 'serviceId', label: t('entity.service'), type: 'relation', relation: SERVICE_REL, hidden: (v) => v.personal === 'true' },
       { name: 'priority', label: t('field.priority'), type: 'select', options: PRIORITY },
       { name: 'startDate', label: t('field.startDate'), type: 'date' },
@@ -528,7 +538,13 @@ export const RECORDS: Record<string, RecordSpec> = {
     listPath: '/resources',
     createPath: '/api/v1/resources',
     itemPath: (id) => `/api/v1/resources/${id}`,
-    contextCreate: { project: { presetField: 'projectId' }, client: { presetField: 'clientId' } },
+    contextCreate: {
+      // ADR-004: al crear con proyecto, el backend copia el cliente DEL PROYECTO (denormalización). Por eso el
+      // campo «Cliente» no se pide aquí: era el único que quedaba visible y vacío al crear desde un proyecto, y
+      // rellenarlo con otro cliente no habría servido de nada.
+      project: { presetField: 'projectId', hideFields: ['clientId'] },
+      client: { presetField: 'clientId' },
+    },
     fields: [
       { name: 'name', label: t('field.name'), type: 'text', required: true },
       { name: 'type', label: t('field.kind'), type: 'text', required: true },
@@ -537,7 +553,6 @@ export const RECORDS: Record<string, RecordSpec> = {
       { name: 'clientId', label: t('entity.client'), type: 'relation', relation: CLIENT_REL },
       { name: 'projectId', label: t('entity.project'), type: 'relation', relation: PROJECT_REL },
       { name: 'provider', label: t('field.provider'), type: 'text' },
-      { name: 'environment', label: t('field.environment'), type: 'text' },
       { name: 'url', label: t('field.url'), type: 'text' },
       { name: 'credentialLocation', label: t('field.credentialLocation'), type: 'text' },
       { name: 'notes', label: t('field.notes'), type: 'textarea' },

@@ -36,7 +36,7 @@ Tabla **`resources`** (migración aditiva 0005):
 | `project_id` | UUID FK → projects | NULL — si el activo pertenece a un proyecto |
 | `url` | TEXT | NULL — dónde vive / se accede |
 | `provider` | VARCHAR | NULL — proveedor/hosting (p. ej. "Vercel", "Raspberry Pi propia", "Google") |
-| `environment` | VARCHAR | NULL — p. ej. prod/staging |
+| `environment` | VARCHAR | NULL — p. ej. prod/staging. **RETIRADO de la API y de la interfaz el 2026-09-27** (owner): era texto libre que nadie rellenaba y el «dónde vive» ya lo dicen `provider`, `hosting` y `url`. La columna y sus datos se quedan (modelo aditivo); no se pide ni se edita |
 | `hosting` | VARCHAR CHECK | `OWN` (tu infra) / `CLIENT` (infra del cliente) / `THIRD_PARTY` (SaaS) |
 | `credential_location` | TEXT | NULL — **puntero** al secreto (p. ej. "1Password → Clientes"). **NUNCA el secreto.** |
 | `notes` | TEXT | NULL |

@@ -26,7 +26,8 @@ export default async function DocumentsPage() {
         </Link>
       ),
     },
-    { header: t('field.kind'), cell: (r) => r.documentType ?? r.mimeType ?? '—' },
+    // La columna «Tipo» se retiró (owner 2026-09-27): repetía lo que ya dice el nombre del fichero (su extensión) y
+    // el badge de procedencia, y ocupaba ancho útil. El dato sigue en la ficha del documento.
     { header: t('field.sourceType'), cell: (r) => <SourceBadge source={r.externalProvider} url={r.externalUrl} linkLabel={t('knowledge.openInDrive')} /> },
   ];
 

@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import { RESOURCE_STATUS, RESOURCE_HOSTING } from '@ct/domain';
 
+/**
+ * ⚑ `environment` (prod/staging) se retiró de la API y de la interfaz el 2026-09-27 por decisión del owner: era
+ * texto libre que nadie rellenaba, y el «dónde vive» de un recurso ya lo dicen `provider`, `hosting` y `url`. La
+ * COLUMNA sigue en la tabla con sus datos (el modelo es aditivo); simplemente no se pide ni se edita.
+ */
 /** Fase 8 (E-5) — activos por cliente/proyecto. `type` es etiqueta LIBRE (extensible). */
 
 const name = z.string().trim().min(1).max(200);
@@ -17,7 +22,6 @@ export const createResourceSchema = z
     projectId: z.string().uuid().optional(),
     url: z.string().trim().url().max(500).optional(),
     provider: z.string().trim().max(120).optional(),
-    environment: z.string().trim().max(60).optional(),
     credentialLocation: z.string().trim().max(300).optional(),
     notes: optionalText,
   })
@@ -35,7 +39,6 @@ export const updateResourceSchema = z.object({
   projectId: z.string().uuid().nullish(),
   url: z.string().trim().url().max(500).nullish(),
   provider: z.string().trim().max(120).nullish(),
-  environment: z.string().trim().max(60).nullish(),
   credentialLocation: z.string().trim().max(300).nullish(),
   notes: optionalText.nullish(),
 });

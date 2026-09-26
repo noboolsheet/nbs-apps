@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { ARCHIVABLE, NOTE_TARGETS } from '@ct/application';
 import { RECORDS, auditEntityTarget } from './record-registry';
 
@@ -37,5 +39,50 @@ describe('registro del panel ↔ notas', () => {
     for (const type of ['integration', 'organization', 'user', 'inbox_channel', 'automation', 'note']) {
       expect(auditEntityTarget(type), type).toBeNull();
     }
+  });
+
+  it('cada `ContextNewButton` del código existe en el `contextCreate` de su entidad', () => {
+    // Esto es lo que hace que un objeto creado DENTRO de un padre herede el padre: si el `ctxKey` del botón no
+    // está en el `contextCreate` de la entidad, el panel no fija nada, el campo del padre aparece **vacío para
+    // rellenar a mano** y —peor— el POST sale sin la relación. Compila igual y sólo se nota usándolo.
+    const root = join(__dirname, '..');
+    const files: string[] = [];
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        if (name === 'node_modules' || name === '.next') continue;
+        const p = join(dir, name);
+        if (statSync(p).isDirectory()) walk(p);
+        else if (p.endsWith('.tsx')) files.push(p);
+      }
+    };
+    walk(join(root, 'app'));
+    walk(join(root, 'components'));
+
+    const broken: string[] = [];
+    let found = 0;
+    for (const file of files) {
+      const src = readFileSync(file, 'utf8');
+      for (const m of src.matchAll(/<ContextNewButton\s+entity="([a-z_]+)"\s+ctxKey="([a-z_]+)"/g)) {
+        found++;
+        const [, entity, ctxKey] = m;
+        if (!RECORDS[entity!]?.contextCreate?.[ctxKey!]) broken.push(`${entity}@${ctxKey}`);
+      }
+    }
+    // Si esto cae a 0, el patrón del botón cambió de forma y el test dejó de mirar nada: arréglalo aquí también.
+    expect(found).toBeGreaterThan(10);
+    expect(broken).toEqual([]);
+  });
+
+  it('lo que `hideFields` oculta existe en los campos de la entidad', () => {
+    // Un nombre mal escrito en `hideFields` no oculta nada y no da error: el campo derivado seguiría pidiéndose.
+    const wrong: string[] = [];
+    for (const [key, spec] of Object.entries(RECORDS)) {
+      for (const [ctx, cfg] of Object.entries(spec.contextCreate ?? {})) {
+        for (const name of cfg.hideFields ?? []) {
+          if (!spec.fields.some((f) => f.name === name)) wrong.push(`${key}@${ctx}:${name}`);
+        }
+      }
+    }
+    expect(wrong).toEqual([]);
   });
 });

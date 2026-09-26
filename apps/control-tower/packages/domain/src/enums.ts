@@ -65,6 +65,9 @@ export const KNOWLEDGE_TYPE = [
   'PATTERN',
   'RESEARCH',
   'REFERENCE',
+  // Añadido el 2026-09-27 (owner): un prompt es conocimiento reutilizable con su propio ciclo —se prueba, se
+  // afina y se vuelve a usar—, y mezclarlo con «Nota» o «Plantilla» lo hacía imposible de filtrar.
+  'PROMPT',
 ] as const; // §21
 export const KNOWLEDGE_ITEM_STATUS = ['INBOX', 'DRAFT', 'REVIEW', 'APPROVED', 'ARCHIVED'] as const; // §21
 export const KNOWLEDGE_INBOX_STATUS = ['NEW', 'PROCESSING', 'PROCESSED', 'DISCARDED'] as const; // §22

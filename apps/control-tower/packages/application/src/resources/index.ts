@@ -52,7 +52,7 @@ export async function createResource(db: Database, ctx: OrgContext, input: unkno
           hosting: data.hosting,
           url: data.url,
           provider: data.provider,
-          environment: data.environment,
+          // `environment` retirado de la API el 2026-09-27 (owner): la columna sigue existiendo con sus datos.
           credentialLocation: data.credentialLocation,
           notes: data.notes,
         })

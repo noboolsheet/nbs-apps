@@ -31,6 +31,7 @@ import { DecisionStatusControl, CreateDocumentForm } from '@/components/knowledg
 import { ContextNewButton } from '@/components/ui/context-new-button';
 import { RecordLink } from '@/components/ui/record-link';
 import { SourceBadge } from '@/components/ui/source-badge';
+import { ExternalSourceLink } from '@/components/ui/external-source-link';
 import { enumLabel } from '@/lib/labels';
 import { t } from '@/lib/i18n';
 import { formatDate } from '@/lib/i18n/format';
@@ -88,6 +89,18 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       ),
     },
     { header: t('field.status'), cell: (d) => <DeliverableStatusControl id={d.id} current={d.status} /> },
+    // El enlace del entregable (lo entregado: el documento, el repo, el despliegue). Sólo se pinta si lo tiene:
+    // una columna llena de «—» no informa de nada.
+    {
+      header: t('deliverables.externalLinkLabel'),
+      className: 'w-28',
+      cell: (d) =>
+        d.externalUrl ? (
+          <ExternalSourceLink url={d.externalUrl} label={t('common.open')} />
+        ) : (
+          <span className="text-fg-subtle">—</span>
+        ),
+    },
   ];
   const phaseCols: Column<(typeof phases)[number]>[] = [
     {

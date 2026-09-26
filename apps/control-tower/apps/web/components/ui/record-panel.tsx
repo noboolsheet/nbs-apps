@@ -44,6 +44,8 @@ function fmtDate(v: unknown): string {
 }
 
 type Source = { provider: string; url: string | null };
+/** Espejo del registro en un sistema externo (su página de Notion, típicamente), con URL para abrirlo. */
+type Mirror = { provider: string; url: string };
 
 export function RecordPanel() {
   const router = useRouter();
@@ -72,6 +74,7 @@ export function RecordPanel() {
   const [values, setValues] = useState<Values>({});
   const [raw, setRaw] = useState<Record<string, unknown> | null>(null);
   const [source, setSource] = useState<Source | null>(null);
+  const [mirrors, setMirrors] = useState<Mirror[]>([]);
   const [lockedMeta, setLockedMeta] = useState<{ locked: boolean; reason?: string }>({ locked: false });
   const [relOptions, setRelOptions] = useState<Record<string, { value: string; label: string; dep: string | null }[]>>({});
   const [suggestOptions, setSuggestOptions] = useState<Record<string, string[]>>({});
@@ -156,6 +159,7 @@ export function RecordPanel() {
       setValues(init);
       setRaw(null);
       setSource(null);
+      setMirrors([]);
       setLockedMeta({ locked: false });
       return;
     }
@@ -171,6 +175,7 @@ export function RecordPanel() {
         setValues(v);
         setRaw(record ?? null);
         setSource((json.meta?.source as Source | undefined) ?? null);
+        setMirrors((json.meta?.mirrors as Mirror[] | undefined) ?? []);
         setLockedMeta({ locked: json.meta?.readOnly === true, reason: json.meta?.readOnlyReason as string | undefined });
       })
       .finally(() => {
@@ -313,6 +318,7 @@ export function RecordPanel() {
     const payload: Record<string, unknown> = {};
     for (const f of spec!.fields) {
       if (ctxCfg && f.name === ctxCfg.presetField) continue; // lo fija el contexto (padre)
+      if (ctxCfg?.hideFields?.includes(f.name)) continue; // lo DERIVA el backend del padre (ver `hideFields`)
       if (f.derivedFrom || f.context) continue; // heredado/solo lectura → no se guarda en este registro
       if (isHidden(f)) continue; // oculto por otro campo (p. ej. proyecto personal) → no se envía
       const raw = values[f.name] ?? '';
@@ -373,7 +379,14 @@ export function RecordPanel() {
                 </div>
               )}
               {spec.fields
-                .filter((f) => !(ctxCfg && f.name === ctxCfg.presetField) && !isHidden(f) && !f.context)
+                .filter(
+                  (f) =>
+                    !(ctxCfg && f.name === ctxCfg.presetField) &&
+                    // Campos que el backend deriva del padre: ni se piden ni se envían (ver `hideFields`).
+                    !(ctxCfg?.hideFields?.includes(f.name) ?? false) &&
+                    !isHidden(f) &&
+                    !f.context,
+                )
                 .map((f) => {
                 // Bloqueo por procedencia: si el registro vino de un proveedor que posee este campo, es de solo lectura.
                 const ownedByProvider = !isNew && !!source && !!f.ownedBy?.includes(source.provider);
@@ -458,6 +471,19 @@ export function RecordPanel() {
                   />
                 </p>
               )}
+
+              {/* Espejos del registro (su página de Notion): enlace directo, ANTES del bloque de contexto, que es
+                  donde se buscaba. No es lo mismo que la procedencia: el proyecto es nativo de CT y a la vez está
+                  espejado, así que su «origen» no lleva a Notion. */}
+              {!isNew &&
+                mirrors.map((m) => (
+                  <p key={m.provider} className="mt-2 text-xs">
+                    <ExternalSourceLink
+                      url={m.url}
+                      label={t('panel.openInProvider', { provider: PROVIDER_LABEL[m.provider] ?? m.provider })}
+                    />
+                  </p>
+                ))}
 
               {!isNew && (raw || source) && (
                 <div className="mt-2 flex flex-col gap-2 border-t border-line pt-3">

@@ -5,6 +5,51 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-09-27 — Otra tanda de siete ajustes ✅
+
+**1. La búsqueda global lleva al registro, no a su lista.** Era el fallo de verdad de la tanda: **diez de los quince
+tipos** ignoraban el `id` del resultado y devolvían la ruta de la LISTA (`href: () => '/crm/contacts'`). Buscabas un
+contacto, pulsabas y aterrizabas en «Contactos» a buscarlo otra vez a mano. Ahora cada tipo va a su página propia y,
+los dos que no la tienen (Por revisar, Pagos), abren su **panel** sobre su lista con `?rec=<entidad>:<id>`. Un enlace
+así no parece roto —te lleva a *algún* sitio—, así que lo sostiene un test nuevo: `searchHref(tipo, id)` tiene que
+contener el id para los quince.
+
+**2. Fuera «Entorno» de los recursos.** Era texto libre (prod/staging) del modelo original (ADR-004) que nadie
+rellenaba, y el «dónde vive» de un recurso ya lo dicen `provider`, `hosting` y `url`. Retirado del panel, de la ficha y
+de los esquemas de la API; **la columna y sus datos se quedan** (el modelo es aditivo). Anotado como addendum en
+ADR-004.
+
+**3. El panel del proyecto: sin oportunidad y con enlace a su Notion.** El campo «Oportunidad» sale del panel —un
+proyecto existe porque su oportunidad se ganó y se cerró, así que reasignarla ahí no significa nada— y en su lugar
+aparece, **justo encima del bloque «Contexto»**, el enlace directo a su página de Notion. Para eso hacía falta un
+concepto que no existía: `meta.mirrors` (`listIdentitiesForRecord` + `mirrorMeta`), los sistemas donde ese mismo
+registro **también** vive. No es lo mismo que la procedencia: el proyecto es **nativo de CT** y a la vez está
+espejado, así que su `source` (NATIVE) nunca iba a llevar a Notion. Sirve para cualquier panel que se le añada.
+
+**4. «Prompt» es un tipo de conocimiento** (`KNOWLEDGE_TYPE`), con migración `0027_m43`: el CHECK se amplía en las
+**dos** tablas que lo llevan (`knowledge_items` y `knowledge_inbox`) — olvidar la bandeja habría hecho fallar una
+captura clasificada como prompt con un error de constraint. Un prompt es conocimiento reutilizable con su propio
+ciclo (se prueba, se afina, se reutiliza) y sin tipo propio no se podía filtrar.
+
+**5. Fuera la columna «Tipo» de la lista de documentos:** repetía lo que ya dicen el nombre del fichero y el badge de
+procedencia. El dato sigue en la ficha.
+
+**6. Los entregables de un proyecto muestran su enlace** (lo entregado: documento, repo, despliegue), y sólo cuando lo
+tienen: una columna llena de «—» no informa.
+
+**7. Herencia del padre al crear dentro de un proyecto — auditado entero.** Lo primero fue **medirlo**: los **13**
+`ContextNewButton` de la app están bien cableados, y una prueba por HTTP confirmó que un recurso creado con `projectId`
+hereda el proyecto **y** el cliente (que el backend denormaliza del proyecto, ADR-004). Lo que quedaba visible y vacío
+al crear un recurso desde un proyecto era el campo **«Cliente»**, que el backend ya deriva: pedirlo invitaba a
+rellenar un valor que se ignora, o a contradecir al proyecto. Añadido `hideFields` al `contextCreate` para ocultar
+también lo derivado. Y **dos tests** que atan el mecanismo: cada `ContextNewButton` del código existe en el
+`contextCreate` de su entidad (si no, el padre no se fija, el campo sale vacío para rellenar a mano **y el POST sale
+sin la relación**) y todo nombre de `hideFields` existe de verdad en los campos de la entidad.
+
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (149) · `pnpm build` · `pnpm test:integration` (188) ·
+e2e (69/69), con la migración `0027_m43` aplicada en local. Un test de búsqueda pinchaba el comportamiento viejo
+(esperaba el enlace a la lista): actualizado.
+
 ## 2026-09-27 — Siete cambios pedidos por el owner ✅
 
 Tanda de ajustes de uso, todos pedidos en la misma sesión. Van juntos porque son pequeños y se verifican igual.
@@ -479,7 +524,14 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-09-27): siete ajustes de uso.** Decisiones accesibles desde Inicio · «Sincronizar ahora» con
+> **⚑ ÚLTIMO (2026-09-27, segunda tanda): siete ajustes más.** La **búsqueda global ya lleva al registro** (diez de
+> quince tipos llevaban a la lista) · fuera «Entorno» de los recursos · el panel del proyecto pierde «Oportunidad» y
+> gana **enlace a su Notion** (`meta.mirrors`, nuevo) · **«Prompt»** como tipo de conocimiento (migración `0027_m43`) ·
+> fuera la columna «Tipo» de documentos · los entregables muestran su enlace · y la herencia del padre al crear dentro
+> de un proyecto, **auditada entera**: estaba bien en los 13 botones, lo que sobraba era pedir el cliente que el
+> backend deriva.
+>
+> **⚑ ANTES (2026-09-27): siete ajustes de uso.** Decisiones accesibles desde Inicio · «Sincronizar ahora» con
 > indicador girando y refresco solo · las tareas de Inicio dicen su proyecto · un proyecto no saludable dice **por
 > qué** · la automatización de «ganada → proyecto» queda **suspendida** y CT la propone (aviso + botón que pregunta) ·
 > las fases nacen **Planificadas** y se retira el «marcar fase actual» (la fase en curso es la ACTIVE) · **Enter**

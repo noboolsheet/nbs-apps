@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@ct/db';
-import { getProjectDetail, updateProject } from '@ct/application';
+import { getProjectDetail, listIdentitiesForRecord, updateProject } from '@ct/application';
 import { withContext, readJson, parseId } from '@/lib/api';
+import { mirrorMeta } from '@/lib/source-meta';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,8 +10,13 @@ export function GET(_req: Request, { params }: { params: Promise<{ id: string }>
   return withContext(async ({ org }) => {
     const { id } = await params;
     parseId(id);
-    const data = await getProjectDetail(getDb(), org, id);
-    return NextResponse.json({ data });
+    const [data, identities] = await Promise.all([
+      getProjectDetail(getDb(), org, id),
+      listIdentitiesForRecord(getDb(), org, 'project', id),
+    ]);
+    // `meta.mirrors` = dónde vive este mismo proyecto fuera de CT (su página de Notion). Lo pinta el panel como
+    // enlace directo, encima del bloque «Contexto».
+    return NextResponse.json({ data, meta: mirrorMeta(identities) });
   });
 }
 

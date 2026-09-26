@@ -190,6 +190,13 @@
       "when": 1790500000000,
       "tag": "0026_m42_sort_order",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1790600000000,
+      "tag": "0027_m43_knowledge_type_prompt",
+      "breakpoints": true
     }
   ]
 }

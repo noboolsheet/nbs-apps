@@ -56,6 +56,14 @@ interface SearchTarget {
   /** Columna de archivado: lo archivado se oculta de sus listas, así que tampoco debe salir aquí. */
   archivedCol: AnyPgColumn;
   title: SQL;
+  /**
+   * A dónde lleva el resultado: **al registro**, no a su lista. Si se busca algo es para entrar en él.
+   *
+   * Hasta el 2026-09-27 diez de los quince tipos ignoraban el `id` y devolvían la ruta de la LISTA: buscabas un
+   * contacto, pulsabas, y aterrizabas en «Contactos» a buscarlo otra vez a mano. Si la entidad tiene página propia
+   * se usa esa; si no la tiene (Por revisar, Pagos), se abre su **panel** sobre su lista con `?rec=<entidad>:<id>`,
+   * que es el mecanismo del drawer global.
+   */
   href: (id: string) => string;
 }
 
@@ -72,28 +80,37 @@ const TARGETS: SearchTarget[] = [
     vectorCol: contacts.searchVector,
     archivedCol: contacts.archivedAt,
     title: sql`trim(coalesce(${contacts.firstName}, '') || ' ' || coalesce(${contacts.lastName}, ''))`,
-    href: () => `/crm/contacts`,
+    href: (id) => `/crm/contacts/${id}`,
   },
-  { type: 'opportunity', label: 'Opportunities', table: opportunities, orgCol: opportunities.organizationId, idCol: opportunities.id, vectorCol: opportunities.searchVector, archivedCol: opportunities.archivedAt, title: sql`${opportunities.name}`, href: () => `/crm/opportunities` },
+  { type: 'opportunity', label: 'Opportunities', table: opportunities, orgCol: opportunities.organizationId, idCol: opportunities.id, vectorCol: opportunities.searchVector, archivedCol: opportunities.archivedAt, title: sql`${opportunities.name}`, href: (id) => `/crm/opportunities/${id}` },
   { type: 'project', label: 'Projects', table: projects, orgCol: projects.organizationId, idCol: projects.id, vectorCol: projects.searchVector, archivedCol: projects.archivedAt, title: sql`${projects.name}`, href: (id) => `/projects/${id}` },
-  { type: 'task', label: 'Tasks', table: tasks, orgCol: tasks.organizationId, idCol: tasks.id, vectorCol: tasks.searchVector, archivedCol: tasks.archivedAt, title: sql`${tasks.title}`, href: () => `/projects` },
-  { type: 'decision', label: 'Decisions', table: decisions, orgCol: decisions.organizationId, idCol: decisions.id, vectorCol: decisions.searchVector, archivedCol: decisions.archivedAt, title: sql`${decisions.title}`, href: () => `/knowledge/decisions` },
-  { type: 'knowledge', label: 'Knowledge', table: knowledgeItems, orgCol: knowledgeItems.organizationId, idCol: knowledgeItems.id, vectorCol: knowledgeItems.searchVector, archivedCol: knowledgeItems.archivedAt, title: sql`${knowledgeItems.title}`, href: () => `/knowledge/library` },
-  { type: 'asset', label: 'Assets', table: assets, orgCol: assets.organizationId, idCol: assets.id, vectorCol: assets.searchVector, archivedCol: assets.archivedAt, title: sql`${assets.name}`, href: () => `/knowledge/assets` },
+  { type: 'task', label: 'Tasks', table: tasks, orgCol: tasks.organizationId, idCol: tasks.id, vectorCol: tasks.searchVector, archivedCol: tasks.archivedAt, title: sql`${tasks.title}`, href: (id) => `/tasks/${id}` },
+  { type: 'decision', label: 'Decisions', table: decisions, orgCol: decisions.organizationId, idCol: decisions.id, vectorCol: decisions.searchVector, archivedCol: decisions.archivedAt, title: sql`${decisions.title}`, href: (id) => `/knowledge/decisions/${id}` },
+  { type: 'knowledge', label: 'Knowledge', table: knowledgeItems, orgCol: knowledgeItems.organizationId, idCol: knowledgeItems.id, vectorCol: knowledgeItems.searchVector, archivedCol: knowledgeItems.archivedAt, title: sql`${knowledgeItems.title}`, href: (id) => `/knowledge/library/${id}` },
+  { type: 'asset', label: 'Assets', table: assets, orgCol: assets.organizationId, idCol: assets.id, vectorCol: assets.searchVector, archivedCol: assets.archivedAt, title: sql`${assets.name}`, href: (id) => `/knowledge/assets/${id}` },
   { type: 'service', label: 'Services', table: services, orgCol: services.organizationId, idCol: services.id, vectorCol: services.searchVector, archivedCol: services.archivedAt, title: sql`${services.name}`, href: (id) => `/business/services/${id}` },
-  { type: 'capability', label: 'Capabilities', table: capabilities, orgCol: capabilities.organizationId, idCol: capabilities.id, vectorCol: capabilities.searchVector, archivedCol: capabilities.archivedAt, title: sql`${capabilities.name}`, href: () => `/business/capabilities` },
+  { type: 'capability', label: 'Capabilities', table: capabilities, orgCol: capabilities.organizationId, idCol: capabilities.id, vectorCol: capabilities.searchVector, archivedCol: capabilities.archivedAt, title: sql`${capabilities.name}`, href: (id) => `/business/capabilities/${id}` },
   { type: 'portfolio', label: 'Portfolio', table: portfolioItems, orgCol: portfolioItems.organizationId, idCol: portfolioItems.id, vectorCol: portfolioItems.searchVector, archivedCol: portfolioItems.archivedAt, title: sql`${portfolioItems.name}`, href: (id) => `/portfolio/${id}` },
   // Estas cuatro FALTABAN (2026-09-01): tenían su `search_vector` y su índice GIN desde el principio —el coste
   // ya estaba pagado en cada escritura— pero nadie las añadió aquí, así que la búsqueda «universal» ignoraba en
   // silencio 4 de las 15 entidades indexadas. Lo reportó el owner al no encontrar un recurso de «Por revisar».
-  { type: 'review_item', label: 'Por revisar', table: reviewItems, orgCol: reviewItems.organizationId, idCol: reviewItems.id, vectorCol: reviewItems.searchVector, archivedCol: reviewItems.archivedAt, title: sql`${reviewItems.title}`, href: () => `/knowledge/review` },
-  { type: 'learning_item', label: 'Aprendizaje', table: learningItems, orgCol: learningItems.organizationId, idCol: learningItems.id, vectorCol: learningItems.searchVector, archivedCol: learningItems.archivedAt, title: sql`${learningItems.title}`, href: () => `/knowledge/learning` },
+  { type: 'review_item', label: 'Por revisar', table: reviewItems, orgCol: reviewItems.organizationId, idCol: reviewItems.id, vectorCol: reviewItems.searchVector, archivedCol: reviewItems.archivedAt, title: sql`${reviewItems.title}`, href: (id) => `/knowledge/review?rec=review_item:${id}` },
+  { type: 'learning_item', label: 'Aprendizaje', table: learningItems, orgCol: learningItems.organizationId, idCol: learningItems.id, vectorCol: learningItems.searchVector, archivedCol: learningItems.archivedAt, title: sql`${learningItems.title}`, href: (id) => `/knowledge/learning/${id}` },
   { type: 'resource', label: 'Recursos', table: resources, orgCol: resources.organizationId, idCol: resources.id, vectorCol: resources.searchVector, archivedCol: resources.archivedAt, title: sql`${resources.name}`, href: (id) => `/resources/${id}` },
-  { type: 'payment', label: 'Pagos', table: payments, orgCol: payments.organizationId, idCol: payments.id, vectorCol: payments.searchVector, archivedCol: payments.archivedAt, title: sql`${payments.concept}`, href: () => `/payments` },
+  { type: 'payment', label: 'Pagos', table: payments, orgCol: payments.organizationId, idCol: payments.id, vectorCol: payments.searchVector, archivedCol: payments.archivedAt, title: sql`${payments.concept}`, href: (id) => `/payments?rec=payment:${id}` },
 ];
 
 /** Tipos que cubre la búsqueda. Expuesto para que un test pueda atarlo al esquema (ver `search.test.ts`). */
 export const SEARCH_TYPES: readonly string[] = TARGETS.map((t) => t.type);
+
+/**
+ * Destino de un resultado, expuesto para poder **atarlo con un test**: cada tipo tiene que llevar al registro
+ * concreto (contener su id). Diez de los quince devolvían la ruta de la lista y nadie lo veía, porque un enlace a
+ * «/crm/contacts» no parece roto: simplemente no te lleva donde querías.
+ */
+export function searchHref(type: string, id: string): string | null {
+  return TARGETS.find((t) => t.type === type)?.href(id) ?? null;
+}
 
 export async function globalSearch(
   db: Database,

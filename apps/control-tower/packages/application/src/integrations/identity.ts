@@ -92,6 +92,29 @@ export async function getIdentityForInternal(
  * registros nativos de CT (sin identidad externa) no hace nada. Se usa en los comandos `update*` como defensa en
  * profundidad (el sync no pasa por ellos, así que solo afecta a ediciones de usuario).
  */
+/**
+ * TODAS las identidades externas de un registro. `getIdentityForInternal` devuelve una arbitraria, que sirve para la
+ * insignia de procedencia pero no para enlazar: un proyecto **nativo de CT** puede tener espejo en Notion, y ese
+ * enlace («abrir su página de Notion») es justo lo que se quería en el panel.
+ */
+export async function listIdentitiesForRecord(
+  db: Database,
+  ctx: OrgContext,
+  internalType: string,
+  internalId: string,
+): Promise<{ provider: string; metadata: unknown }[]> {
+  return db
+    .select({ provider: externalIdentities.provider, metadata: externalIdentities.metadata })
+    .from(externalIdentities)
+    .where(
+      and(
+        orgEq(externalIdentities.organizationId, ctx),
+        eq(externalIdentities.internalType, internalType),
+        eq(externalIdentities.internalId, internalId),
+      ),
+    );
+}
+
 export async function assertNotEditingOwnedFields(
   db: Database,
   ctx: OrgContext,

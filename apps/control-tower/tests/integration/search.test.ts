@@ -6,6 +6,7 @@ import * as s from '@ct/db/schema';
 import {
   globalSearch,
   SEARCH_TYPES,
+  searchHref,
   createClient,
   createProject,
   createDecision,
@@ -107,6 +108,15 @@ describe('global search (FTS)', () => {
    * «universal» ignoraba en silencio 4 de las 15 entidades indexadas. Nada lo detectaba: el índice se crea solo
    * y una búsqueda sin resultados no parece un fallo. Esto ata las dos listas.
    */
+  it('cada resultado lleva al REGISTRO, no a su lista', () => {
+    // Antes del 2026-09-27, diez de los quince tipos ignoraban el id y devolvían la ruta de la lista: buscabas un
+    // contacto, pulsabas y acababas en «Contactos» buscándolo otra vez a mano. Un enlace así no parece roto, así
+    // que sólo un test lo sostiene.
+    const id = '11111111-2222-3333-4444-555555555555';
+    const sinId = SEARCH_TYPES.filter((type) => !(searchHref(type, id) ?? '').includes(id));
+    expect(sinId).toEqual([]);
+  });
+
   it('cubre TODAS las tablas que tienen search_vector', async () => {
     const conVector = Object.entries(s)
       .filter(([, v]) => is(v, PgTable) && 'searchVector' in getTableColumns(v as PgTable))
@@ -120,11 +130,13 @@ describe('global search (FTS)', () => {
   it('encuentra lo que está en «Por revisar» (lo que reportó el owner)', async () => {
     await inRollback(async (tx) => {
       const ctx = await makeOrg(tx);
-      await createReviewItem(tx, ctx, { title: 'Charla sobre Kafka y outbox' });
+      const item = await createReviewItem(tx, ctx, { title: 'Charla sobre Kafka y outbox' });
       const res = await globalSearch(tx, ctx, 'kafka');
       const grupo = res.groups.find((g) => g.type === 'review_item');
       expect(grupo?.items[0]?.title).toBe('Charla sobre Kafka y outbox');
-      expect(grupo?.items[0]?.href).toBe('/knowledge/review');
+      // Desde el 2026-09-27 el resultado lleva al REGISTRO, no a su lista: «Por revisar» no tiene página propia,
+      // así que abre su panel sobre la lista (`?rec=`). Este assert pinchaba el comportamiento viejo.
+      expect(grupo?.items[0]?.href).toBe(`/knowledge/review?rec=review_item:${item.id}`);
     });
   });
 

@@ -51,7 +51,6 @@ export default async function ResourceDetailPage({ params }: { params: Promise<{
           { name: 'status', label: t('field.status'), type: 'select', options: RESOURCE_STATUS, value: resource.status },
           { name: 'hosting', label: t('field.hosting'), type: 'select', options: RESOURCE_HOSTING, value: resource.hosting },
           { name: 'provider', label: t('field.provider'), type: 'text', value: resource.provider },
-          { name: 'environment', label: t('field.environment'), type: 'text', value: resource.environment },
           { name: 'url', label: 'URL', type: 'text', value: resource.url },
           { name: 'credentialLocation', label: t('resources.credentialPointerLabel'), type: 'text', value: resource.credentialLocation },
           { name: 'notes', label: t('field.notes'), type: 'textarea', value: resource.notes },
