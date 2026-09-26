@@ -141,7 +141,8 @@ export async function getProjectDetail(db: Database, ctx: OrgContext, id: string
       .select()
       .from(deliverables)
       .where(and(eq(deliverables.projectId, id), orgEq(deliverables.organizationId, ctx), isNull(deliverables.archivedAt)))
-      .orderBy(desc(deliverables.createdAt)),
+      // E-12: orden manual primero; lo que no se ha arrastrado nunca desempata por fecha, como antes.
+      .orderBy(asc(deliverables.sortOrder), desc(deliverables.createdAt)),
   ]);
 
   const done = projectTasks.filter((t) => t.status === 'DONE').length;
@@ -283,7 +284,8 @@ export function listSubtasks(db: Database, ctx: OrgContext, parentTaskId: string
     .select()
     .from(tasks)
     .where(and(orgEq(tasks.organizationId, ctx), isNull(tasks.archivedAt), eq(tasks.parentTaskId, parentTaskId)))
-    .orderBy(asc(tasks.createdAt));
+    // E-12: orden manual primero; las que nunca se han arrastrado (sort_order 0) desempatan por antigüedad.
+    .orderBy(asc(tasks.sortOrder), asc(tasks.createdAt));
 }
 
 export function listProjectTasks(db: Database, ctx: OrgContext, projectId: string) {

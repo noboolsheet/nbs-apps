@@ -36,6 +36,7 @@ export function RecordTable<T>({
   remove,
   fixedLayout,
   truncatedAt,
+  reorder,
 }: {
   columns: Column<T>[];
   rows: T[];
@@ -49,6 +50,8 @@ export function RecordTable<T>({
   restore?: { entityType: string };
   remove?: { entityType: string };
   fixedLayout?: boolean;
+  /** E-12 — orden manual de las filas (asa para arrastrar + ↑/↓). Sólo en las listas de `REORDERABLE`. */
+  reorder?: { entityType: string };
 }) {
   if (rows.length === 0) {
     return empty ? <EmptyState title={empty.title} hint={empty.hint} action={empty.action} /> : null;
@@ -71,6 +74,7 @@ export function RecordTable<T>({
       fixedLayout={fixedLayout}
       filterable={anyValue}
       truncatedAt={truncatedAt}
+      reorder={reorder}
     />
   );
 }

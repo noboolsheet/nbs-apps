@@ -226,6 +226,7 @@ export const es = {
   'enum.DELETE': 'Eliminó',
   'enum.ARCHIVE': 'Archivó',
   'enum.RESTORE': 'Restauró',
+  'enum.REORDER': 'Reordenó',
   'enum.CONNECT': 'Conectó',
   'enum.DISCONNECT': 'Desconectó',
   'enum.CAPTURE': 'Capturó',
@@ -960,6 +961,12 @@ export const es = {
   // ─── Pagos: reserva de impuestos ────────────────────────────────────────────────────────────────────
   'payments.taxReserve': 'Reservar ({pct}%)',
   'payments.taxReserveHint': 'Estimación: el {pct}% de lo que te deben, para apartarlo y no gastarlo. No es un cálculo fiscal.',
+  // ─── Orden manual de filas (E-12) ───────────────────────────────────────────────────────────────────
+  'table.reorder': 'Orden',
+  'table.reorderHandleHint': 'Arrastrar para reordenar (o ↑/↓)',
+  'table.reorderBlocked': 'Quita el orden por columna y el filtro para reordenar a mano',
+  'table.reorderBlockedTruncated': 'La lista está recortada por el tope: no se puede reordenar a mano sin verla entera',
+
   // ─── Notas por registro (E-15) ──────────────────────────────────────────────────────────────────────
   'notes.title': 'Notas',
   'notes.empty': 'Ninguna nota todavía.',

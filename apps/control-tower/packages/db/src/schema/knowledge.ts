@@ -246,6 +246,11 @@ export const portfolioItems = pgTable(
     status: varchar('status').notNull(),
     projectId: uuid('project_id').references(() => projects.id),
     assetId: uuid('asset_id').references(() => assets.id),
+    /**
+     * Orden manual de la lista (E-12). `0` = sin ordenar a mano; la lista ordena por este valor y desempata por
+     * su criterio de siempre, así que un registro nuevo (0) aparece arriba hasta que se arrastre.
+     */
+    sortOrder: integer('sort_order').notNull().default(0),
     visibility: varchar('visibility').notNull(),
     externalUrl: text('external_url'),
     createdAt: createdAt(),

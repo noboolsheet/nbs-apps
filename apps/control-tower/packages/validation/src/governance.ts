@@ -97,3 +97,14 @@ export const updateCapabilitySchema = z.object({
   notes: optionalText.nullish(),
 });
 export type UpdateCapabilityInput = z.infer<typeof updateCapabilitySchema>;
+
+/**
+ * E-12 — reordenar una lista: se manda la lista COMPLETA en su orden nuevo, no un movimiento. Así el resultado no
+ * depende del estado de la pantalla de quien arrastró (dos pestañas abiertas no se pisan a medias).
+ * `entityType` se valida contra `REORDERABLE` en la capa de aplicación, que es donde vive la allowlist.
+ */
+export const reorderSchema = z.object({
+  entityType: z.string().trim().min(1).max(60),
+  ids: z.array(z.string().uuid()).min(2).max(500),
+});
+export type ReorderInput = z.infer<typeof reorderSchema>;

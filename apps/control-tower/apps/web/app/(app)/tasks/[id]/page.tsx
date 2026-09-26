@@ -159,6 +159,9 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
             getKey={(st) => st.id}
             selectable
             remove={{ entityType: 'task' }}
+            // La clave es `subtask`, no `task`: el orden manual es de las subtareas dentro de su padre (las tareas
+            // de proyecto y la vista global se ordenan por vencimiento).
+            reorder={{ entityType: 'subtask' }}
           />
         )}
       </section>

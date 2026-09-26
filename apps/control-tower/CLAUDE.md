@@ -282,6 +282,12 @@ transaccional** (`emitOutbox` en la misma tx que el cambio). Ejemplo implementad
   que darle su sitio en `PURGE_ORDER` (hijo→padre, según las FKs reales) y, si tiene hijas NO archivables con FK hacia
   ella, borrarlas en `deleteDependents`. Si no, se archiva y **no se purga nunca**, sin error. Lo vigila
   `archive.test.ts` (`purgeOrderMissingEntities()` debe devolver `[]`).
+- **Lista reordenable nueva** (E-12) ⇒ tres cosas o no funciona: columna `sort_order` en su tabla (migración
+  aditiva), entrada en **`REORDERABLE`** (`packages/application/src/ordering/`) declarando su `parent` si es una lista
+  hija **y** cómo se acota por organización (`org`, o `parentScope` si la tabla no tiene `organization_id`, como
+  `project_phases`), y el `orderBy(asc(<tabla>.sortOrder), …)` en la consulta que la pinta. En la vista, `reorder={{
+  entityType }}` en el `RecordTable`. Lo vigilan dos tests: uno ata la allowlist a las columnas reales y otro busca en
+  el código todos los `reorder=` y comprueba que existan en la allowlist.
 - **Hija polimórfica nueva** (tabla con `entity_type`/`entity_id` en vez de FK, como `notes` o `change_events`) ⇒ no
   hay FK que la arrastre: **añade su limpieza a `deleteRecordTraces`** (`maintenance/archive.ts`), el único sitio que
   conocen los tres caminos de borrado duro (purga de archivados · `deleteTasks` · purga de tareas completadas). Y dale

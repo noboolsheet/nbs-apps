@@ -104,6 +104,11 @@ export const tasks = pgTable(
     personal: boolean('personal').notNull().default(false),
     dueDate: date('due_date'),
     completedAt: timestamp('completed_at', { withTimezone: true }),
+    /**
+     * Orden manual (E-12). Sólo lo usan las **subtareas** dentro de su tarea padre: las tareas de proyecto y la
+     * vista global se ordenan por vencimiento, que es lo que responde a «¿qué hago ahora?».
+     */
+    sortOrder: integer('sort_order').notNull().default(0),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
     archivedAt: archivedAt(),
@@ -134,6 +139,11 @@ export const deliverables = pgTable(
     status: varchar('status').notNull(),
     dueDate: date('due_date'),
     completedAt: timestamp('completed_at', { withTimezone: true }),
+    /**
+     * Orden manual de la lista (E-12). `0` = sin ordenar a mano; la lista ordena por este valor y desempata por
+     * su criterio de siempre, así que un registro nuevo (0) aparece arriba hasta que se arrastre.
+     */
+    sortOrder: integer('sort_order').notNull().default(0),
     externalUrl: text('external_url'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

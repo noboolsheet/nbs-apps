@@ -169,6 +169,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                     columns={phaseCols}
                     rows={phases}
                     getKey={(ph) => ph.id}
+                    reorder={{ entityType: 'project_phase' }}
                   />
                 )}
               </div>
@@ -213,6 +214,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                     getKey={(d) => d.id}
                     selectable
                     archive={{ entityType: 'deliverable' }}
+                    reorder={{ entityType: 'deliverable' }}
                   />
                 )}
               </div>

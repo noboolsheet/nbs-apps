@@ -5,6 +5,49 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-09-26 — E-12 · Orden manual de filas en las seis listas que lo piden ✅
+
+Último de los cinco ítems. El owner eligió dónde: **áreas estratégicas · portafolio · fases de un proyecto ·
+entregables de un proyecto · subtareas de una tarea · objetivos de un área**. Todas tienen algo en común: su orden lo
+decide una persona, no un criterio.
+
+**Qué entra.**
+- **Migración `0026_m42_sort_order.sql`** — `sort_order` en `portfolio_items`, `goals`, `deliverables` y `tasks` (ya
+  estaba en `strategic_areas` y `project_phases`), `NOT NULL DEFAULT 0`, **con relleno inicial** por `row_number()`
+  respetando el orden que hoy se ve en pantalla. Si se hubiera dejado todo a 0, arrastrar la primera fila habría
+  dejado el resto en un orden arbitrario. En `tasks` la columna es sólo para las **subtareas**: las tareas de proyecto
+  y la vista global se ordenan por vencimiento, que es lo que responde a «¿qué hago ahora?».
+- **Un endpoint, no seis:** `POST /api/v1/reorder` con `{ entityType, ids }` y una allowlist **`REORDERABLE`**
+  (`packages/application/src/ordering/`) con el mismo papel que `ARCHIVABLE`. Se manda **la lista completa en su orden
+  nuevo**, no el movimiento: dos pestañas abiertas no pueden dejar un orden a medias.
+- **Lo que el comando impide:** ids repetidos, ids inexistentes o de otra organización, y **mezclar hijos de padres
+  distintos** (un payload con entregables de dos proyectos revolvería los dos órdenes). Si algo no cuadra, **no
+  escribe nada**.
+- **⚑ El agujero que casi se cuela:** `project_phases` **no tiene `organization_id`** (doc 5 §17, se acota por su
+  proyecto). La primera versión daba por hecho que todas las tablas la tenían, así que para esa entidad el filtro de
+  organización habría sido un `undefined` silencioso — o sea, **ninguna barrera**. Ahora el meta declara `org` o, si
+  no la hay, `parentScope`, y el aislamiento se comprueba contra el proyecto padre. Hay test.
+- **UI:** asa ⠿ por fila en `DataTable`, así que las seis listas la heredan vía `RecordTable`. Arrastrar es de ratón,
+  así que el asa es **un botón que responde a ↑/↓**: sin eso, reordenar sería una función inexistente para quien no
+  usa ratón. El movimiento es **optimista** y vuelve al orden del servidor si la escritura falla.
+- **El asa se desactiva —y dice por qué— en tres casos:** orden por columna, filtro rápido puesto, o lista recortada
+  por el tope. En los tres, la posición en pantalla no es la posición real y se guardaría un orden que renumera sólo
+  lo visible.
+- **Auditoría:** una entrada `REORDER` por gesto, no una por fila, y **sin `entityId`** a propósito: lo que cambió es
+  la lista, y pasar el id del padre haría que el push a Notion (que se dispara con `entityId`) apuntara a la entidad
+  equivocada.
+- **Dos tests de estructura** además del de integración: uno ata `REORDERABLE` a las columnas reales (y a que toda
+  entidad sin `organization_id` declare por dónde se acota), y otro **busca en el código todos los `reorder=`** y
+  comprueba que existan en la allowlist — un `sub_task` mal escrito compila y sólo falla al arrastrar.
+- De paso, la sección de objetivos de un área pasó de `<ul>` a `RecordTable` (hereda filtro, orden y estado vacío) y
+  su literal «Objetivos» se fue al diccionario.
+
+**Fuera a propósito:** las tareas de proyecto y la vista global (van por vencimiento), la lista global de objetivos
+(`sort_order` es una posición *dentro de un área*: usarla ahí interleavaría áreas) y el resto de listas.
+
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (139, cuatro nuevos) · `pnpm build`. **Sin correr:**
+`tests/integration/reorder.test.ts` (5 casos) — sigue sin haber Postgres en la sesión.
+
 ## 2026-09-26 — F-36 · Repaso de componentes comunes: cinco copias de un hook y dos listas sueltas ✅
 
 Encargo del owner antes de entrar en E-12: *«comprueba una cosa: todos los componentes comunes… ¿existen uno a uno
@@ -338,7 +381,12 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-09-26): F-36 — repaso de componentes comunes.** Están reutilizados (el panel es uno solo, las
+> **⚑ ÚLTIMO (2026-09-26): E-12 hecho — las filas se reordenan arrastrando.** Seis listas (áreas, portafolio, fases,
+> entregables, subtareas, objetivos de un área), un solo endpoint `/api/v1/reorder` con allowlist `REORDERABLE`,
+> migración `0026_m42`, asa ⠿ con alternativa de teclado y desactivada cuando lo que se ve no es el orden real. Con
+> esto **los cinco ítems del repaso están cerrados**: F-30 ✅ · E-15 ✅ · B-2 ❌ · E-16 ❌ · E-12 ✅.
+>
+> **⚑ ANTES: F-36 — repaso de componentes comunes.** Están reutilizados (el panel es uno solo, las
 > tablas son capas), pero había **cinco copias del hook de formulario** (ahora `lib/use-form-action.ts`), **dos listas
 > con `<table>` a mano** que se habían quedado sin lo de F-28 (ya usan `RecordTable`), faltaba la variante
 > **botón-enlace** y cuatro campos no usaban `fieldCls`. **Siguiente: E-12** (drag-reorder de filas).

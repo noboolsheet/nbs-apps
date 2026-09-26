@@ -50,6 +50,7 @@ export default async function PortfolioPage() {
         empty={{ title: t('portfolio.empty'), hint: t('common.createFirstHint') }}
         selectable
         archive={{ entityType: 'portfolio_item' }}
+        reorder={{ entityType: 'portfolio_item' }}
       />
     </ListPage>
   );

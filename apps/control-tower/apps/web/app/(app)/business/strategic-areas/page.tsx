@@ -47,6 +47,7 @@ export default async function StrategicAreasPage() {
         empty={{ title: t('business.areasEmpty'), hint: t('common.createFirstHintFem') }}
         selectable
         archive={{ entityType: 'strategic_area' }}
+        reorder={{ entityType: 'strategic_area' }}
       />
     </ListPage>
   );

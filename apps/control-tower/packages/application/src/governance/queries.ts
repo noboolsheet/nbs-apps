@@ -22,6 +22,25 @@ export function listGoals(db: Database, ctx: OrgContext) {
     .orderBy(desc(goals.createdAt));
 }
 
+/**
+ * Objetivos de UN área estratégica, en su **orden manual** (E-12). La lista global (`listGoals`) sigue ordenada por
+ * fecha a propósito: `sort_order` es una posición *dentro del área*, así que usarlo en una lista que mezcla áreas
+ * las interleaviaría por índice y el orden global no querría decir nada.
+ */
+export function listGoalsByArea(db: Database, ctx: OrgContext, strategicAreaId: string) {
+  return db
+    .select()
+    .from(goals)
+    .where(
+      and(
+        orgEq(goals.organizationId, ctx),
+        isNull(goals.archivedAt),
+        eq(goals.strategicAreaId, strategicAreaId),
+      ),
+    )
+    .orderBy(asc(goals.sortOrder), desc(goals.createdAt));
+}
+
 export function listCapabilities(db: Database, ctx: OrgContext) {
   return db
     .select()

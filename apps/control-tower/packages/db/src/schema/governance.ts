@@ -47,6 +47,11 @@ export const goals = pgTable(
     description: text('description'),
     status: varchar('status').notNull(),
     priority: varchar('priority').notNull(),
+    /**
+     * Orden manual de la lista (E-12). `0` = sin ordenar a mano; la lista ordena por este valor y desempata por
+     * su criterio de siempre, así que un registro nuevo (0) aparece arriba hasta que se arrastre.
+     */
+    sortOrder: integer('sort_order').notNull().default(0),
     targetDate: timestamp('target_date', { withTimezone: true }),
     completedAt: timestamp('completed_at', { withTimezone: true }),
     createdAt: createdAt(),

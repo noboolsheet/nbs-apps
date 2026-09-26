@@ -25,7 +25,7 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
 >   Pi** (kernel sin cgroup de memoria). Desde la migración a **vibox (Fedora)** el 2026-09-24 el arreglo de la Pi
 >   (`cgroup_enable=memory` en `/boot/firmware/cmdline.txt`) **ya no aplica**: falta confirmar en vibox que
 >   `docker stats` mide de verdad y que los `mem_limit` del compose son los correctos para esa máquina.
-> - **Trabajo pendiente acotado:** drag-reorder de FILAS (E-12) · varias carpetas/DBs por
+> - **Trabajo pendiente acotado:** varias carpetas/DBs por
 >   proveedor (E-4) · ver ejecuciones de los **barridos** y editar cadencias desde el panel (E-8) · edición de perfil e
 >   invitaciones (E-9/E-11) · `Initiatives`/sub-goals (E-3) · tareas por asignado (E-2).
 > - **Menores de UI/UX** (`AUDIT_UIUX_2026-08-30.md`): micro-confirmación al guardar · aviso si falla el GET del panel ·
@@ -434,15 +434,38 @@ Prioridades que surgieron al usar la app por primera vez. No son bugs: son el si
   de seguridad multiusuario (ver `SECURITY_CHECKLIST.md` Parte II). Cambio de arquitectura grande; abordar cuando se
   quiera colaborar en equipo.
 
-### E-12 · Filas de lista: reordenar (diferido) · ver archivados (✅ hecho)
+### E-12 · Filas de lista: reordenar ✅ HECHO (2026-09-26) · ver archivados ✅ hecho
 Del trabajo "fila de lista como componente" (`DataTable`, columnas alineadas + selección + **archivar**).
 - **Drag & drop en el Kanban de oportunidades** ✅ HECHO (2026-09-01, ver B-1): eventos nativos de HTML5, sin
   dependencias nuevas.
-- **Drag-reorder** (arrastrar FILAS de lista) 🟡 SIGUE DIFERIDO (verificado el 2026-09-26: no hay endpoint de reorden
-  y `sort_order` sigue existiendo sólo en `strategic_areas` y `project_phases`): necesita orden manual persistido por entidad
-  (`sortOrder`) + endpoint de reorden + UI drag-and-drop. Solo tiene sentido en listas con orden manual (áreas estratégicas, fases, portfolio, y
-  listas de hijos como subtareas/entregables/objetivos); choca con los `orderBy` por fecha/nombre del resto. Hoy solo
-  `strategic_areas` y `project_phases` tienen `sortOrder`.
+- **Drag-reorder** (arrastrar FILAS de lista) ✅ **HECHO (2026-09-26)**, en las **seis listas que el owner eligió**:
+  áreas estratégicas · portafolio · fases de un proyecto · entregables de un proyecto · subtareas de una tarea ·
+  objetivos de un área. Cómo:
+  - **Migración `0026_m42_sort_order.sql`**: `sort_order` (NOT NULL DEFAULT 0) en `portfolio_items`, `goals`,
+    `deliverables` y `tasks` (ya estaba en `strategic_areas` y `project_phases`). **Con relleno inicial** por
+    `row_number()` respetando el orden que hoy se ve en pantalla: si se hubiera dejado todo a 0, la primera fila
+    arrastrada habría dejado el resto en un orden arbitrario.
+  - **Un solo endpoint**, `POST /api/v1/reorder` con `{ entityType, ids }`, y una allowlist **`REORDERABLE`**
+    (`packages/application/src/ordering/`) con el mismo papel que `ARCHIVABLE`. Se manda **la lista completa en su
+    orden nuevo**, no el movimiento: así dos pestañas no se dejan un orden a medias.
+  - **Lo que protege el comando:** ids repetidos, ids que no existen o no son de la organización, y **mezclar hijos
+    de padres distintos** (un payload con entregables de dos proyectos revolvería los dos órdenes). Si algo no
+    cuadra **no escribe nada**. Ojo al caso que casi se colaba: `project_phases` **no tiene `organization_id`** (se
+    acota por su proyecto), así que su filtro de organización habría sido un `undefined` silencioso —ninguna
+    barrera—; ahora el aislamiento de esa entidad se comprueba contra el proyecto padre, y un test lo ata.
+  - **UI:** asa por fila en `DataTable` (⠿) → lo heredan las seis listas por `RecordTable`. Arrastrar es de ratón,
+    así que el asa es un **botón que responde a ↑/↓**: sin eso, reordenar no existiría sin ratón. El movimiento se
+    aplica **optimista** y vuelve al orden del servidor si la escritura falla.
+  - **El asa se desactiva** —diciendo por qué— si hay orden por columna, filtro rápido o la lista está recortada por
+    el tope: en esos tres casos la posición en pantalla no es la posición real y se guardaría un orden que renumera
+    sólo lo visible.
+  - **Auditoría:** una entrada `REORDER` por gesto (no una por fila), sin `entityId` a propósito: lo que cambió es la
+    lista, y pasar el id del padre haría que el push a Notion apuntara a la entidad equivocada.
+  - **Fuera a propósito:** las tareas de un proyecto y la vista global de tareas (se ordenan por vencimiento, que es
+    lo que responde a «¿qué hago ahora?»), la lista global de objetivos (`sort_order` es una posición *dentro de un
+    área*: usarla ahí interleavaría áreas) y el resto de listas, cuyo orden es un criterio y no una decisión.
+  - De paso, la sección de objetivos de un área pasó de un `<ul>` a `RecordTable` (heredando filtro y estado vacío)
+    y se llevó al diccionario el literal «Objetivos» que tenía en duro.
 - **Ver archivados / restaurar** ✅ HECHO: página central **Ajustes › Archivados** (`/settings/archived`) que agrupa lo
   archivado por entidad y permite **restaurar en lote** (`restoreRecords` + `POST /api/v1/restore`, pone `archived_at =
   null`). `DataTable` admite modo `restore`. Se optó por una vista central (una query genérica `listArchived`) en vez de

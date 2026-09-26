@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getDb } from '@ct/db';
-import { getStrategicArea, listGoals } from '@ct/application';
+import { getStrategicArea, listGoalsByArea } from '@ct/application';
 import { LIFECYCLE_STATUS } from '@ct/domain';
 import { isAppError } from '@ct/shared';
 import { getCurrentContext } from '@/lib/auth-context';
@@ -10,6 +10,8 @@ import { DescriptionList } from '@/components/ui/description-list';
 import { InlineEditSection } from '@/components/ui/inline-edit';
 import { ContextNewButton } from '@/components/ui/context-new-button';
 import { RecordLink } from '@/components/ui/record-link';
+import { RecordTable } from '@/components/ui/record-table';
+import { type Column } from '@/components/ui/entity-table';
 import { t } from '@/lib/i18n';
 import { formatDateTime } from '@/lib/i18n/format';
 
@@ -27,8 +29,20 @@ export default async function StrategicAreaDetailPage({ params }: { params: Prom
     if (isAppError(e) && e.kind === 'NOT_FOUND') notFound();
     throw e;
   }
-  const allGoals = await listGoals(getDb(), ctx.org);
-  const areaGoals = allGoals.filter((g) => g.strategicAreaId === id);
+  // E-12: los objetivos de un área se ordenan a mano (`sort_order`), así que se piden ya ordenados en vez de
+  // filtrar la lista global (que va por fecha, porque ahí `sort_order` es una posición dentro de OTRA área).
+  const areaGoals = await listGoalsByArea(getDb(), ctx.org, id);
+
+  const goalCols: Column<(typeof areaGoals)[number]>[] = [
+    {
+      header: t('entity.goal'),
+      value: (g) => g.name,
+      cell: (g) => (
+        <RecordLink entity="goal" id={g.id} className="underline underline-offset-2">{g.name}</RecordLink>
+      ),
+    },
+    { header: t('field.status'), value: (g) => g.status, cell: (g) => <StatusBadge status={g.status} /> },
+  ];
 
   return (
     <div className="flex max-w-3xl flex-col gap-6">
@@ -55,22 +69,19 @@ export default async function StrategicAreaDetailPage({ params }: { params: Prom
       <section className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">
-            Objetivos ({areaGoals.length})
+            {t('business.goalsTitle')} ({areaGoals.length})
           </h2>
           <ContextNewButton entity="goal" ctxKey="strategic_area" parentId={area.id} label={t('business.newGoal')} />
         </div>
-        {areaGoals.length === 0 ? (
-          <p className="text-sm text-fg-subtle">{t('business.goalsLinkedEmpty')}</p>
-        ) : (
-          <ul className="flex flex-col divide-y divide-line-subtle">
-            {areaGoals.map((g) => (
-              <li key={g.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-                <RecordLink entity="goal" id={g.id} className="underline underline-offset-2">{g.name}</RecordLink>
-                <StatusBadge status={g.status} />
-              </li>
-            ))}
-          </ul>
-        )}
+        {/* Pasó de `<ul>` a `RecordTable` con E-12: el orden de los objetivos de un área lo decide el owner, y
+            así hereda de una vez el asa de reordenar, el filtro y el estado vacío del resto de listas. */}
+        <RecordTable
+          columns={goalCols}
+          rows={areaGoals}
+          getKey={(g) => g.id}
+          empty={{ title: t('business.goalsLinkedEmpty') }}
+          reorder={{ entityType: 'goal' }}
+        />
       </section>
 
       <section className="flex flex-col gap-2">

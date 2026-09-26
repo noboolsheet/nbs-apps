@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { postJson } from '@/lib/client';
-import { btnLink, btnPrimary } from './button';
+import { btnLink, btnPrimary, buttonCls } from './button';
 import { fieldCls } from './input';
+import { useReorder } from '@/lib/use-reorder';
 import { t, tPlural } from '@/lib/i18n';
 import { formatDate } from '@/lib/i18n/format';
 
@@ -61,6 +62,7 @@ export function DataTable({
   fixedLayout = false,
   filterable = false,
   truncatedAt,
+  reorder,
 }: {
   columns: DataTableColumn[];
   rows: DataTableRow[];
@@ -77,6 +79,11 @@ export function DataTable({
   remove?: { entityType: string };
   /** `table-fixed`: anchos de columna estables e idénticos entre varias tablas apiladas (usar anchos en `columns[].className`). */
   fixedLayout?: boolean;
+  /**
+   * E-12 — orden manual: añade un asa por fila para arrastrarla (y moverla con ↑/↓). `entityType` = clave de la
+   * allowlist `REORDERABLE`. Sólo en listas cuyo orden lo decide la persona; ver `lib/use-reorder.ts`.
+   */
+  reorder?: { entityType: string };
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -85,6 +92,7 @@ export function DataTable({
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<{ index: number; dir: 'asc' | 'desc' } | null>(null);
   const headerRef = useRef<HTMLInputElement>(null);
+  const manual = useReorder(reorder?.entityType, rows.map((r) => r.id));
 
   // Filtro + orden en CLIENTE, a propósito: no hay paginación, así que el servidor ya mandó todas las filas.
   // Hacerlo por URL obligaría a un viaje de ida y vuelta por cada clic — en la Pi eso se nota, y aquí no aporta.
@@ -110,6 +118,18 @@ export function DataTable({
     }
     return out;
   }, [rows, query, sort]);
+
+  // Arrastrar sólo tiene sentido si lo que se ve ES la lista completa y en su orden real. Con un orden por
+  // columna, con un filtro puesto o con la consulta recortada por el tope, la posición en pantalla no es la
+  // posición real: se guardaría un orden que renumera sólo lo visible y deja el resto interleavado. Se desactiva
+  // el asa y se dice por qué, en vez de guardar algo que no es lo que se ve.
+  const truncated = truncatedAt !== undefined && rows.length >= truncatedAt;
+  const reorderBlocked = !!sort || query.trim() !== '' || truncated;
+  const orderedRows = useMemo(() => {
+    if (!reorder || reorderBlocked) return visibleRows;
+    const byId = new Map(visibleRows.map((r) => [r.id, r]));
+    return manual.order.map((id) => byId.get(id)).filter((r): r is DataTableRow => !!r);
+  }, [reorder, reorderBlocked, visibleRows, manual.order]);
 
   function toggleSort(index: number) {
     setSort((prev) =>
@@ -217,6 +237,8 @@ export function DataTable({
         </div>
       )}
 
+      {manual.error && <p className="text-xs text-danger">{manual.error}</p>}
+
       {truncatedAt !== undefined && rows.length >= truncatedAt && (
         <p className="rounded-lg border border-warning-border bg-warning-soft px-3 py-2 text-xs text-warning-soft-fg">
           {t('table.truncated', { n: truncatedAt })}
@@ -227,6 +249,7 @@ export function DataTable({
         <table className={`w-full border-collapse text-sm ${fixedLayout ? 'table-fixed min-w-[880px]' : ''}`}>
           <thead>
             <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-fg-muted">
+              {reorder && <th className="w-8 px-2 py-2"><span className="sr-only">{t('table.reorder')}</span></th>}
               {selectable && (
                 <th className="w-9 px-3 py-2">
                   <input
@@ -271,15 +294,36 @@ export function DataTable({
             </tr>
           </thead>
           <tbody>
-            {visibleRows.map((row) => {
+            {orderedRows.map((row) => {
               const sel = selected.has(row.id);
               return (
                 <tr
                   key={row.id}
+                  {...(reorder && !reorderBlocked ? manual.rowProps(row.id) : {})}
                   className={`border-b border-line-subtle last:border-0 ${
                     sel ? 'bg-row-selected' : 'hover:bg-surface-muted/40'
                   } ${row.className ?? ''}`}
                 >
+                  {reorder && (
+                    <td className="w-8 px-2 py-2 align-middle">
+                      <button
+                        type="button"
+                        disabled={reorderBlocked || manual.busy}
+                        {...(reorderBlocked ? {} : manual.handleProps(row.id))}
+                        title={
+                          truncated
+                            ? t('table.reorderBlockedTruncated')
+                            : reorderBlocked
+                              ? t('table.reorderBlocked')
+                              : t('table.reorderHandleHint')
+                        }
+                        aria-label={t('table.reorderHandleHint')}
+                        className={`${buttonCls('ghost', 'sm')} px-1 ${reorderBlocked ? 'opacity-40' : 'cursor-grab'}`}
+                      >
+                        <span aria-hidden>⠿</span>
+                      </button>
+                    </td>
+                  )}
                   {selectable && (
                     <td className="w-9 px-3 py-2 align-middle">
                       <input

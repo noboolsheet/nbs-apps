@@ -140,7 +140,8 @@ export function listPortfolioItems(db: Database, ctx: OrgContext, limit?: number
     .select()
     .from(portfolioItems)
     .where(and(orgEq(portfolioItems.organizationId, ctx), isNull(portfolioItems.archivedAt)))
-    .orderBy(desc(portfolioItems.createdAt), asc(portfolioItems.name))
+    // E-12: el portafolio se ordena a mano (es una vitrina: el orden lo decide quien la enseña).
+    .orderBy(asc(portfolioItems.sortOrder), desc(portfolioItems.createdAt), asc(portfolioItems.name))
     .limit(rowCap(limit));
 }
 

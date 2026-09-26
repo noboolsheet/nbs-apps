@@ -20,4 +20,5 @@ export * from './automations/index';
 export * from './maintenance/index';
 export * from './audit/index';
 export * from './notes/index';
+export * from './ordering/index';
 export * from './errors';
