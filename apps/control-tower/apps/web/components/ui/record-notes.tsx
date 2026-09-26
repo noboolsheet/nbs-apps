@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { deleteJson, getJson, patchJson, postJson } from '@/lib/client';
 import { btnGhost, btnPrimary } from '@/components/ui/button';
+import { fieldCls } from '@/components/ui/input';
 import { t } from '@/lib/i18n';
 import { formatDateTime } from '@/lib/i18n/format';
 
@@ -97,7 +98,7 @@ export function RecordNotes({ entity, id }: { entity: string; id: string }) {
           onChange={(e) => setDraft(e.target.value)}
           placeholder={t('notes.placeholder')}
           rows={2}
-          className="w-full rounded border border-line bg-surface px-2 py-1.5 text-sm"
+          className={`${fieldCls} w-full`}
         />
         <div className="flex justify-end">
           <button type="button" className={btnPrimary} disabled={busy || draft.trim() === ''} onClick={() => void add()}>
@@ -123,7 +124,7 @@ export function RecordNotes({ entity, id }: { entity: string; id: string }) {
                   value={editDraft}
                   onChange={(e) => setEditDraft(e.target.value)}
                   rows={3}
-                  className="w-full rounded border border-line bg-surface px-2 py-1.5 text-sm"
+                  className={`${fieldCls} w-full`}
                 />
                 <div className="flex justify-end gap-1">
                   <button type="button" className={btnGhost} disabled={busy} onClick={() => setEditingId(null)}>
