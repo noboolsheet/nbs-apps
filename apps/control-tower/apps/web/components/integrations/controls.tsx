@@ -41,8 +41,8 @@ export function SyncNowButton({ id }: { id: string }) {
   const { msg, busy, run } = useAction();
   return (
     <span className="inline-flex items-center gap-2">
-      <button className={btn} disabled={busy} onClick={() => run(() => postJson(`/api/v1/integrations/${id}/sync`, {}), 'Sincronización encolada')}>
-        {t('ui.sincronizarAhora')}
+      <button className={btn} disabled={busy} onClick={() => run(() => postJson(`/api/v1/integrations/${id}/sync`, {}), t('automation.syncQueued'))}>
+        {t('automation.syncNow')}
       </button>
       {msg && <span className="text-xs text-fg-muted">{msg}</span>}
     </span>
@@ -64,14 +64,14 @@ export function IntegrationConfigForm({ id, provider, configuration }: { id: str
       ? 'Ej: { "folderId": "1AbC…" } — ID de la carpeta compartida con la service account.'
       : provider === 'NOTION'
         ? 'Ej: { "databases": { "decisions": "<id>", "projects": "<id>", … } } — ver NOTION_INFORMATION_ARCHITECTURE.md.'
-        : 'JSON de configuración (no secretos).';
+        : t('automation.configJsonLabel');
 
   async function save() {
     let parsed: unknown;
     try {
       parsed = JSON.parse(value);
     } catch {
-      setMsg('JSON inválido');
+      setMsg(t('automation.configJsonInvalid'));
       return;
     }
     setBusy(true);
@@ -87,7 +87,7 @@ export function IntegrationConfigForm({ id, provider, configuration }: { id: str
 
   return (
     <details className="w-full">
-      <summary className="cursor-pointer text-xs text-fg-muted">{t('ui.configuracion')}</summary>
+      <summary className="cursor-pointer text-xs text-fg-muted">{t('automation.configuration')}</summary>
       <div className="mt-2 flex flex-col gap-2">
         <textarea
           className="w-full rounded border border-line-strong bg-transparent px-2 py-1.5 font-mono text-xs"
@@ -116,11 +116,11 @@ export function DisconnectButton({ id, displayName }: { id: string; displayName:
         className={`${btn} text-danger hover:bg-danger-soft`}
         disabled={busy}
         onClick={() => {
-          if (!confirm(`¿Desconectar ${displayName}? Dejará de sincronizarse y volverá a "Disponibles".`)) return;
-          void run(() => deleteJson(`/api/v1/integrations/${id}`), 'Desconectada');
+          if (!confirm(t('automation.confirmDisconnect', { name: displayName }))) return;
+          void run(() => deleteJson(`/api/v1/integrations/${id}`), t('automation.disconnected'));
         }}
       >
-        {t('ui.desconectar')}
+        {t('automation.disconnect')}
       </button>
       {msg && <span className="text-xs text-fg-muted">{msg}</span>}
     </span>

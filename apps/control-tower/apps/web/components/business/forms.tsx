@@ -51,7 +51,7 @@ export function LinkCapabilityControl({
 }) {
   const [capabilityId, setCapabilityId] = useState('');
   const { error, busy, run } = useSubmit();
-  if (options.length === 0) return <p className="text-sm text-fg-muted">{t('ui.noHayMasCapacidadesParaVincular')}</p>;
+  if (options.length === 0) return <p className="text-sm text-fg-muted">{t('business.capabilityLinkAllUsed')}</p>;
   return (
     <form
       className="flex items-end gap-2"
@@ -63,10 +63,10 @@ export function LinkCapabilityControl({
       }}
     >
       <select className={inputCls} value={capabilityId} onChange={(e) => setCapabilityId(e.target.value)}>
-        <option value="">{t('ui.vincularCapacidad')}</option>
+        <option value="">{t('business.capabilityLinkPlaceholder')}</option>
         {options.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
       </select>
-      <button className={btnSecondary} disabled={busy || !capabilityId}>{t('ui.vincular')}</button>
+      <button className={btnSecondary} disabled={busy || !capabilityId}>{t('business.capabilityLinkAction')}</button>
       {error && <span className="text-xs text-danger">{error}</span>}
     </form>
   );

@@ -57,10 +57,10 @@ export function CaptureForm() {
         if (ok) setRawContent('');
       }}
     >
-      <textarea className={`${inputCls} min-h-20`} placeholder={t('ui.capturaRapidaDeConocimiento')} value={rawContent} onChange={(e) => setRawContent(e.target.value)} required />
+      <textarea className={`${inputCls} min-h-20`} placeholder={t('knowledge.quickCapturePlaceholder')} value={rawContent} onChange={(e) => setRawContent(e.target.value)} required />
       <div className="flex items-center gap-2">
-        <input className={inputCls} placeholder={t('ui.fuenteChatgptNota')} value={sourceType} onChange={(e) => setSourceType(e.target.value)} />
-        <button className={submitBtn} disabled={busy}>{t('ui.capturar')}</button>
+        <input className={inputCls} placeholder={t('knowledge.captureSourcePlaceholder')} value={sourceType} onChange={(e) => setSourceType(e.target.value)} />
+        <button className={submitBtn} disabled={busy}>{t('knowledge.captureAction')}</button>
         {error && <span className="text-xs text-danger">{error}</span>}
       </div>
     </form>
@@ -77,7 +77,7 @@ export function InboxPanelActions({ id, resolved, onDone }: { id: string; resolv
   const [confirmDelete, setConfirmDelete] = useState(false);
   return (
     <div className="mt-2 flex flex-col gap-2 border-t border-line pt-3">
-      <span className="text-xs font-medium uppercase tracking-wide text-fg-subtle">{t('ui.acciones')}</span>
+      <span className="text-xs font-medium uppercase tracking-wide text-fg-subtle">{t('common.actions')}</span>
       {!resolved && (
         <div className="flex gap-2">
           <button
@@ -89,7 +89,7 @@ export function InboxPanelActions({ id, resolved, onDone }: { id: string; resolv
               if (ok) onDone();
             }}
           >
-            {t('ui.procesarBiblioteca')}
+            {t('knowledge.promoteToLibrary')}
           </button>
           <button
             className={ghostBtn}
@@ -100,13 +100,13 @@ export function InboxPanelActions({ id, resolved, onDone }: { id: string; resolv
               if (ok) onDone();
             }}
           >
-            {t('ui.descartar')}
+            {t('knowledge.discard')}
           </button>
         </div>
       )}
       {!confirmDelete ? (
         <button className="self-start text-xs text-danger hover:underline" type="button" onClick={() => setConfirmDelete(true)}>
-          {t('ui.eliminar')}
+          {t('common.remove')}
         </button>
       ) : (
         <div className="flex items-center gap-2 text-xs">
@@ -120,7 +120,7 @@ export function InboxPanelActions({ id, resolved, onDone }: { id: string; resolv
               if (ok) onDone();
             }}
           >
-            {t('ui.siEliminar')}
+            {t('common.confirmRemove')}
           </button>
           <button className="text-fg-muted hover:underline" type="button" onClick={() => setConfirmDelete(false)}>
             {t('common.cancel')}
@@ -150,9 +150,9 @@ export function CreateDocumentForm({ projectId, clientId }: { projectId?: string
         }
       }}
     >
-      <input className={inputCls} placeholder={t('ui.nombreDelDocumento')} value={name} onChange={(e) => setName(e.target.value)} required />
-      <input className={inputCls} placeholder={t('ui.urlExternaDriveNotion')} value={externalUrl} onChange={(e) => setExternalUrl(e.target.value)} />
-      <button className={submitBtn} disabled={busy}>{t('ui.referencia')}</button>
+      <input className={inputCls} placeholder={t('documents.namePlaceholder')} value={name} onChange={(e) => setName(e.target.value)} required />
+      <input className={inputCls} placeholder={t('documents.urlPlaceholder')} value={externalUrl} onChange={(e) => setExternalUrl(e.target.value)} />
+      <button className={submitBtn} disabled={busy}>{t('documents.addReference')}</button>
       {error && <span className="text-xs text-danger">{error}</span>}
     </form>
   );
@@ -178,7 +178,7 @@ export function ReviewItemPanelActions({
 
   return (
     <div className="mt-2 flex flex-col gap-2 border-t border-line pt-3">
-      <span className="text-xs font-medium uppercase tracking-wide text-fg-subtle">{t('ui.acciones')}</span>
+      <span className="text-xs font-medium uppercase tracking-wide text-fg-subtle">{t('common.actions')}</span>
       {knowledgeItemId ? (
         <Link href={`/knowledge/library/${knowledgeItemId}`} className="text-sm text-link underline-offset-2 hover:underline">
           {t('review.alreadyInLibrary')}

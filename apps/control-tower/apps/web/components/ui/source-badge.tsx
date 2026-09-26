@@ -1,4 +1,5 @@
 import { ExternalSourceLink } from '@/components/ui/external-source-link';
+import { t } from '@/lib/i18n';
 
 /**
  * Badge de **fuente de verdad** (doc 6/7: la procedencia siempre visible). Distingue entre datos
@@ -8,7 +9,7 @@ import { ExternalSourceLink } from '@/components/ui/external-source-link';
 
 const PROVIDER_LABEL: Record<string, string> = {
   MANUAL: 'Control Tower',
-  REVIEW: 'Por revisar', // conocimiento que entró desde la cola de revisión
+  REVIEW: t('review.title'), // conocimiento que entró desde la cola de revisión
   CONTROL_TOWER: 'Control Tower',
   NATIVE: 'Control Tower',
   TWENTY: 'Twenty CRM',
@@ -57,7 +58,7 @@ export function SourceBadge({
   return (
     <span className="inline-flex items-center gap-2">
       <span
-        title={native ? 'Dato nativo de Control Tower' : `Sincronizado desde ${label}`}
+        title={native ? t('source.native') : t('source.syncedFrom', { provider: label })}
         className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
           native ? 'bg-neutral-soft text-neutral-soft-fg' : 'bg-accent-soft text-accent-soft-fg'
         }`}

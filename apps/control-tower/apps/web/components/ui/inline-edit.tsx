@@ -162,7 +162,7 @@ function InlineField({ field, endpoint, editable }: { field: EditField; endpoint
       <button
         type="button"
         onClick={startEdit}
-        title={t('ui.clicParaEditar')}
+        title={t('panel.clickToEdit')}
         className={`block whitespace-pre-wrap ${viewCls} ${isTextarea ? TEXTAREA_MIN : ''}`}
       >
         {shown === '' ? <span className="text-fg-subtle">—</span> : shown}

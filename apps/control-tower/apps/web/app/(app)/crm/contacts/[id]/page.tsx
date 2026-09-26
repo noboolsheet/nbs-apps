@@ -37,16 +37,16 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
     <div className="flex max-w-3xl flex-col gap-6">
       <nav className="text-sm text-fg-muted">
         <Link className="hover:underline" href="/crm">CRM</Link> /{' '}
-        <Link className="hover:underline" href="/crm/contacts">{t('crm.contactos')}</Link> / {fullName}
+        <Link className="hover:underline" href="/crm/contacts">{t('crm.contactsTitle')}</Link> / {fullName}
       </nav>
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{fullName}</h1>
         <StatusBadge status={contact.status} />
-        <SourceBadge source={identity?.provider ?? 'NATIVE'} url={crmUrl} linkLabel={t('crm.abrirEnElCrm')} />
+        <SourceBadge source={identity?.provider ?? 'NATIVE'} url={crmUrl} linkLabel={t('crm.openInCrm')} />
       </div>
 
       <InlineEditSection
-        title={t('crm.datosDelContacto')}
+        title={t('crm.contactData')}
         endpoint={`/api/v1/contacts/${contact.id}`}
         fields={[
           { name: 'firstName', label: t('field.name'), type: 'text', value: contact.firstName },
@@ -71,16 +71,16 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
         <DescriptionList
           items={[
             {
-              label: t('crm.verCliente'),
+              label: t('crm.viewClient'),
               value: contact.clientId ? (
                 <Link className="underline underline-offset-2" href={`/crm/clients/${contact.clientId}`}>
                   {clientName ?? contact.clientId.slice(0, 8) + '…'}
                 </Link>
               ) : null,
             },
-            { label: t('crm.fuenteDeVerdad'), value: <SourceBadge source={identity?.provider ?? 'NATIVE'} url={crmUrl} linkLabel={t('crm.abrirEnElCrm')} /> },
-            { label: t('crm.creado'), value: formatDateTime(contact.createdAt) },
-            { label: t('crm.actualizado'), value: formatDateTime(contact.updatedAt) },
+            { label: t('meta.sourceOfTruth'), value: <SourceBadge source={identity?.provider ?? 'NATIVE'} url={crmUrl} linkLabel={t('crm.openInCrm')} /> },
+            { label: t('meta.createdAt'), value: formatDateTime(contact.createdAt) },
+            { label: t('meta.updatedAt'), value: formatDateTime(contact.updatedAt) },
           ]}
         />
       </section>

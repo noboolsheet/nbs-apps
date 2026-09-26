@@ -37,20 +37,20 @@ export function LearningList({ items }: { items: LearningRow[] }) {
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap gap-2">
         <select className={selCls} value={sector} onChange={(e) => setSector(e.target.value)}>
-          <option value="">{t('ui.todosLosSectores')}</option>
+          <option value="">{t('filter.allSectors')}</option>
           {sectors.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
         <select className={selCls} value={kind} onChange={(e) => setKind(e.target.value)}>
-          <option value="">{t('ui.todosLosTipos')}</option>
+          <option value="">{t('filter.allTypes')}</option>
           {kinds.map((k) => <option key={k} value={k}>{k}</option>)}
         </select>
         <select className={selCls} value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="">{t('ui.todosLosEstados')}</option>
+          <option value="">{t('filter.allStatuses')}</option>
           {statuses.map((s) => <option key={s} value={s}>{enumLabel(s)}</option>)}
         </select>
         {(sector || kind || status) && (
           <button type="button" onClick={() => { setSector(''); setKind(''); setStatus(''); }} className="text-sm text-fg-muted underline">
-            {t('ui.limpiar')}
+            {t('filter.clear')}
           </button>
         )}
         <span className="ml-auto self-center text-xs text-fg-subtle">{rows.length} de {items.length}</span>

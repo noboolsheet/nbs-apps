@@ -39,7 +39,7 @@ export default async function KnowledgeItemDetailPage({ params }: { params: Prom
     <div className="flex max-w-3xl flex-col gap-6">
       <nav className="text-sm text-fg-muted">
         <Link className="hover:underline" href="/knowledge">{t('nav.knowledge')}</Link> /{' '}
-        <Link className="hover:underline" href="/knowledge/library">{t('knowledge.biblioteca')}</Link> / {item.title}
+        <Link className="hover:underline" href="/knowledge/library">{t('knowledge.libraryTitle')}</Link> / {item.title}
       </nav>
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{item.title}</h1>
@@ -48,7 +48,7 @@ export default async function KnowledgeItemDetailPage({ params }: { params: Prom
       </div>
 
       <InlineEditSection
-        title={t('knowledge.contenido')}
+        title={t('knowledge.contentTitle')}
         endpoint={`/api/v1/knowledge-items/${item.id}`}
         fields={[
           { name: 'title', label: t('field.title'), type: 'text', value: item.title },
@@ -61,27 +61,27 @@ export default async function KnowledgeItemDetailPage({ params }: { params: Prom
 
       <section className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-fg-muted">{t('knowledge.estado')}</span>
+          <span className="text-sm text-fg-muted">{t('common.statusLabel')}</span>
           <KnowledgeItemStatusControl id={item.id} current={item.status} />
         </div>
         <DescriptionList
           items={[
             // Fuente = procedencia; los enlaces van en sus propias filas, cada uno diciendo a dónde lleva.
-            { label: t('crm.fuenteDeVerdad'), value: <SourceBadge source={item.sourceType} /> },
+            { label: t('meta.sourceOfTruth'), value: <SourceBadge source={item.sourceType} /> },
             {
               label: t('field.sourceUrl'),
               value: relatedUrl ? (
-                <ExternalSourceLink url={relatedUrl} label={t('knowledge.abrirFuente')} />
+                <ExternalSourceLink url={relatedUrl} label={t('knowledge.openSource')} />
               ) : item.sourceUrl ? (
                 <span className="whitespace-pre-wrap break-all text-fg-muted">{item.sourceUrl}</span>
               ) : null,
             },
             {
               label: t('entity.notionPage'),
-              value: externalUrl ? <ExternalSourceLink url={externalUrl} label={t('knowledge.abrirEnNotion')} /> : null,
+              value: externalUrl ? <ExternalSourceLink url={externalUrl} label={t('knowledge.openInNotion')} /> : null,
             },
-            { label: t('knowledge.capturado'), value: formatDateTime(item.capturedAt) },
-            { label: t('knowledge.revisado'), value: item.reviewedAt ? formatDateTime(item.reviewedAt) : null },
+            { label: t('knowledge.capturedAt'), value: formatDateTime(item.capturedAt) },
+            { label: t('knowledge.reviewedAt'), value: item.reviewedAt ? formatDateTime(item.reviewedAt) : null },
             { label: t('knowledge.approvedAt'), value: item.approvedAt ? formatDateTime(item.approvedAt) : null },
           ]}
         />

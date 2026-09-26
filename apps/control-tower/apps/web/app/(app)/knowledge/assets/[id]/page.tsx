@@ -31,7 +31,7 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ id
   const identity = await getIdentityForInternal(getDb(), ctx.org, 'asset', id);
   const provider = identity?.provider ?? null;
   const owned = new Set(ownedFields('asset', provider));
-  const hint = provider ? `Lo gestiona ${PROVIDER_LABEL[provider] ?? provider}; se edita en el origen.` : undefined;
+  const hint = provider ? t('panel.ownedByProvider', { provider: PROVIDER_LABEL[provider] ?? provider }) : undefined;
 
   return (
     <div className="flex max-w-3xl flex-col gap-6">
@@ -46,7 +46,7 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ id
       </div>
 
       <InlineEditSection
-        title={t('knowledge.asset')}
+        title={t('knowledge.assetBadge')}
         endpoint={`/api/v1/assets/${asset.id}`}
         fields={[
           { name: 'name', label: t('field.name'), type: 'text', value: asset.name, readOnly: owned.has('name'), readOnlyHint: hint },
@@ -60,14 +60,14 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ id
 
       <section className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-fg-muted">{t('knowledge.estado')}</span>
+          <span className="text-sm text-fg-muted">{t('common.statusLabel')}</span>
           <AssetStatusControl id={asset.id} current={asset.status} />
         </div>
         <DescriptionList
           items={[
-            { label: t('crm.fuenteDeVerdad'), value: <SourceBadge source={provider ?? 'NATIVE'} url={identity?.metadata && (identity.metadata as { url?: string }).url ? (identity.metadata as { url?: string }).url : asset.externalUrl} linkLabel={t('knowledge.abrirExterno')} /> },
-            { label: t('field.repositoryUrl'), value: <ExternalSourceLink url={asset.repositoryUrl} label={t('knowledge.verRepo')} /> },
-            { label: t('crm.creado'), value: formatDateTime(asset.createdAt) },
+            { label: t('meta.sourceOfTruth'), value: <SourceBadge source={provider ?? 'NATIVE'} url={identity?.metadata && (identity.metadata as { url?: string }).url ? (identity.metadata as { url?: string }).url : asset.externalUrl} linkLabel={t('knowledge.openExternal')} /> },
+            { label: t('field.repositoryUrl'), value: <ExternalSourceLink url={asset.repositoryUrl} label={t('knowledge.openRepo')} /> },
+            { label: t('meta.createdAt'), value: formatDateTime(asset.createdAt) },
           ]}
         />
       </section>

@@ -43,25 +43,25 @@ export default async function DecisionDetailPage({ params }: { params: Promise<{
         endpoint={`/api/v1/decisions/${decision.id}`}
         fields={[
           { name: 'title', label: t('field.title'), type: 'text', value: decision.title },
-          { name: 'context', label: t('knowledge.contextoPorQueSurgio'), type: 'textarea', value: decision.context },
-          { name: 'decision', label: t('knowledge.queSeDecidio'), type: 'textarea', value: decision.decision },
-          { name: 'rationale', label: t('knowledge.razonPorQueEstaOpcion'), type: 'textarea', value: decision.rationale },
+          { name: 'context', label: t('knowledge.decisionContextLabel'), type: 'textarea', value: decision.context },
+          { name: 'decision', label: t('knowledge.decisionOutcomeLabel'), type: 'textarea', value: decision.decision },
+          { name: 'rationale', label: t('knowledge.decisionRationaleLabel'), type: 'textarea', value: decision.rationale },
         ]}
       />
 
       {/* Estado + metadatos (no editables inline) */}
       <section className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-fg-muted">{t('knowledge.estado')}</span>
+          <span className="text-sm text-fg-muted">{t('common.statusLabel')}</span>
           <DecisionStatusControl id={decision.id} current={decision.status} />
         </div>
         <DescriptionList
           items={[
-            { label: t('knowledge.decidida'), value: decision.decidedAt ? formatDateTime(decision.decidedAt) : null },
+            { label: t('knowledge.decidedAt'), value: decision.decidedAt ? formatDateTime(decision.decidedAt) : null },
             { label: t('entity.project'), value: decision.projectId ? <code>{decision.projectId.slice(0, 8)}…</code> : null },
             { label: t('entity.service'), value: decision.serviceId ? <code>{decision.serviceId.slice(0, 8)}…</code> : null },
-            { label: t('crm.fuenteDeVerdad'), value: t('knowledge.controlTowerDecisionNativa') },
-            { label: t('crm.creada'), value: formatDateTime(decision.createdAt) },
+            { label: t('meta.sourceOfTruth'), value: t('knowledge.decisionNativeSource') },
+            { label: t('meta.createdAtFem'), value: formatDateTime(decision.createdAt) },
           ]}
         />
       </section>

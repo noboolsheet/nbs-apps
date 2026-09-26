@@ -33,7 +33,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
     <div className="flex flex-col gap-6">
       <nav className="text-sm text-fg-muted">
         <Link className="hover:underline" href="/business">{t('nav.business')}</Link> /{' '}
-        <Link className="hover:underline" href="/business/services">{t('business.servicios')}</Link> / {service.name}
+        <Link className="hover:underline" href="/business/services">{t('business.servicesTitle')}</Link> / {service.name}
       </nav>
 
       <div className="flex items-center gap-3">
@@ -50,11 +50,11 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-medium text-fg-muted">{t('business.capacidades')}</h2>
-          <ContextNewButton entity="capability" ctxKey="service" parentId={service.id} label={t('business.nuevaCapacidad')} />
+          <h2 className="text-sm font-medium text-fg-muted">{t('business.capabilitiesTitle')}</h2>
+          <ContextNewButton entity="capability" ctxKey="service" parentId={service.id} label={t('business.newCapability')} />
         </div>
         {linked.length === 0 ? (
-          <p className="text-sm text-fg-muted">{t('business.ningunaCapacidadVinculada')}</p>
+          <p className="text-sm text-fg-muted">{t('business.capabilitiesLinkedEmpty')}</p>
         ) : (
           <ul className="flex flex-wrap gap-2">
             {linked.map((c) => (

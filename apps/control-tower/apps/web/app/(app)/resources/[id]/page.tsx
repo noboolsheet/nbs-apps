@@ -53,14 +53,14 @@ export default async function ResourceDetailPage({ params }: { params: Promise<{
           { name: 'provider', label: t('field.provider'), type: 'text', value: resource.provider },
           { name: 'environment', label: t('field.environment'), type: 'text', value: resource.environment },
           { name: 'url', label: 'URL', type: 'text', value: resource.url },
-          { name: 'credentialLocation', label: t('resources.credencialEnPunteroNoElSecreto'), type: 'text', value: resource.credentialLocation },
+          { name: 'credentialLocation', label: t('resources.credentialPointerLabel'), type: 'text', value: resource.credentialLocation },
           { name: 'notes', label: t('field.notes'), type: 'textarea', value: resource.notes },
         ]}
       />
 
       <section className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <ExternalSourceLink url={resource.url} label={t('knowledge.abrirRecurso')} />
+          <ExternalSourceLink url={resource.url} label={t('knowledge.openResource')} />
         </div>
         <DescriptionList
           items={[
@@ -76,8 +76,8 @@ export default async function ResourceDetailPage({ params }: { params: Promise<{
                 <Link className="underline underline-offset-2" href={`/projects/${project.id}`}>{project.name}</Link>
               ) : null,
             },
-            { label: t('crm.fuenteDeVerdad'), value: t('resources.controlTowerActivoNativo') },
-            { label: t('crm.creado'), value: formatDateTime(resource.createdAt) },
+            { label: t('meta.sourceOfTruth'), value: t('resources.nativeSource') },
+            { label: t('meta.createdAt'), value: formatDateTime(resource.createdAt) },
           ]}
         />
       </section>

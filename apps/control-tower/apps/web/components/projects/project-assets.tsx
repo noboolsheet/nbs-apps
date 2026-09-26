@@ -67,7 +67,7 @@ export function ProjectAssets({
     <div className="flex flex-col gap-3">
       {!frozen && (
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <span className="text-sm text-fg-muted">{t('ui.enlazarActivoDelCatalogo')}</span>
+          <span className="text-sm text-fg-muted">{t('projects.linkReusableLabel')}</span>
           <SearchableSelect
             value={pick}
             onChange={(v) => {
@@ -75,15 +75,15 @@ export function ProjectAssets({
               void link(v);
             }}
             options={options}
-            placeholder={t('ui.elegirActivo')}
+            placeholder={t('projects.pickReusable')}
           />
         </div>
       )}
       {error && <p className="text-xs text-danger">{error}</p>}
       {linked.length === 0 ? (
         <EmptyState
-          title={t('ui.sinActivosReutilizables')}
-          hint={t('ui.enlazaUnaPlantillaUnRepoOUnComponenteDel')}
+          title={t('projects.reusablesEmpty')}
+          hint={t('projects.reusablesEmptyHint')}
         />
       ) : (
         <ul className="flex flex-col gap-2">
@@ -102,13 +102,13 @@ export function ProjectAssets({
                     rel="noreferrer"
                     className="text-xs text-link underline-offset-2 hover:underline"
                   >
-                    {t('ui.abrir')}
+                    {t('common.openLink')}
                   </a>
                 )}
               </span>
               {!frozen && (
                 <Button variant="ghost" size="sm" disabled={busy} onClick={() => void unlink(a.id)}>
-                  {t('ui.desenlazar')}
+                  {t('projects.unlinkReusable')}
                 </Button>
               )}
             </li>

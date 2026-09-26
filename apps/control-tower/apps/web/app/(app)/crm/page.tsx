@@ -19,8 +19,8 @@ export default async function CrmOverviewPage() {
 
   const cards = [
     { label: t('home.metricClients'), href: '/crm/clients', value: clients.length },
-    { label: t('crm.contactos'), href: '/crm/contacts', value: contacts.length },
-    { label: t('crm.oportunidadesAbiertas'), href: '/crm/opportunities', value: open },
+    { label: t('crm.contactsTitle'), href: '/crm/contacts', value: contacts.length },
+    { label: t('crm.opportunitiesOpenTitle'), href: '/crm/opportunities', value: open },
   ];
 
   return (

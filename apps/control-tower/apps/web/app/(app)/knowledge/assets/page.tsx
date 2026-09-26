@@ -43,7 +43,7 @@ export default async function AssetsPage() {
   return (
     <ListPage
       breadcrumb={[{ label: t('nav.knowledge'), href: '/knowledge' }]}
-      title={t('knowledge.bibliotecaDeActivos')}
+      title={t('knowledge.assetsTitle')}
       count={rows.length}
       action={<NewRecordButton entity="asset" />}
     >
@@ -52,7 +52,7 @@ export default async function AssetsPage() {
         rows={rows}
         getKey={(r) => r.id}
         truncatedAt={LIST_LIMIT}
-        empty={{ title: t('knowledge.aunNoHayActivos'), hint: t('knowledge.anadeRecursosReutilizablesConElBotonNuev') }}
+        empty={{ title: t('knowledge.assetsEmpty'), hint: t('knowledge.assetsEmptyHint') }}
         selectable
         archive={{ entityType: 'asset' }}
       />

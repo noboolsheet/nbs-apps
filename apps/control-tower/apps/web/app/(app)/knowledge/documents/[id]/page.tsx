@@ -47,14 +47,14 @@ export default async function DocumentDetailPage({ params }: { params: Promise<{
         <p className="mb-2 text-fg-muted">
           Este documento es una <strong>referencia</strong>. Para ver o editar su contenido, ábrelo en su origen.
         </p>
-        <SourceBadge source={doc.externalProvider} url={doc.externalUrl} linkLabel={t('knowledge.abrirEnElOrigen')} />
+        <SourceBadge source={doc.externalProvider} url={doc.externalUrl} linkLabel={t('knowledge.openSourceLink')} />
       </div>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">{t('knowledge.detalles')}</h2>
+        <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">{t('knowledge.detailsTitle')}</h2>
         <DescriptionList
           items={[
-            { label: t('knowledge.tipoDeDocumento'), value: doc.documentType ?? null },
+            { label: t('knowledge.documentTypeLabel'), value: doc.documentType ?? null },
             { label: 'MIME', value: doc.mimeType ?? null },
             { label: t('field.provider'), value: doc.externalProvider ?? null },
             {
@@ -69,7 +69,7 @@ export default async function DocumentDetailPage({ params }: { params: Promise<{
                 <Link className="underline underline-offset-2" href={`/crm/clients/${client.id}`}>{client.name}</Link>
               ) : null,
             },
-            { label: t('crm.creado'), value: formatDateTime(doc.createdAt) },
+            { label: t('meta.createdAt'), value: formatDateTime(doc.createdAt) },
           ]}
         />
       </section>

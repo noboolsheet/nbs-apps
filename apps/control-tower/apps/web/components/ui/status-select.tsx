@@ -43,7 +43,7 @@ export function StatusSelect({
 
   return (
     <span className="inline-flex items-center gap-1">
-      <span className={`relative ${badgeBase} ${cls} ${busy ? 'opacity-50' : ''}`} title={t('ui.cambiarEstado')}>
+      <span className={`relative ${badgeBase} ${cls} ${busy ? 'opacity-50' : ''}`} title={t('common.changeStatus')}>
         <span aria-hidden className="inline-flex items-center gap-1">
           <span>{icon}</span>
           {enumLabel(current)}
@@ -53,7 +53,7 @@ export function StatusSelect({
           value={current}
           disabled={busy}
           onChange={(e) => change(e.target.value)}
-          aria-label={t('ui.cambiarEstado')}
+          aria-label={t('common.changeStatus')}
           className="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-default"
         >
           {options.map((s) => (

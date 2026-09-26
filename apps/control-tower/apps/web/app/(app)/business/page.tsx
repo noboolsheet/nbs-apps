@@ -7,12 +7,12 @@ import { t } from '@/lib/i18n';
 export const dynamic = 'force-dynamic';
 
 const CARDS = [
-  { key: 'strategicAreas', label: t('business.areasEstrategicas'), href: '/business/strategic-areas' },
-  { key: 'goals', label: t('business.objetivos'), href: '/business/goals' },
-  { key: 'capabilities', label: t('business.capacidades'), href: '/business/capabilities' },
-  { key: 'services', label: t('business.servicios'), href: '/business/services' },
+  { key: 'strategicAreas', label: t('business.areasTitle'), href: '/business/strategic-areas' },
+  { key: 'goals', label: t('business.goalsTitle'), href: '/business/goals' },
+  { key: 'capabilities', label: t('business.capabilitiesTitle'), href: '/business/capabilities' },
+  { key: 'services', label: t('business.servicesTitle'), href: '/business/services' },
   // Procesos (SOP): no son entidad propia, son `knowledge_item` de tipo PROCESS (owner 2026-09-02).
-  { key: 'processes', label: t('business.procesos'), href: '/business/processes' },
+  { key: 'processes', label: t('business.processesTitle'), href: '/business/processes' },
 ] as const;
 
 export default async function BusinessOverviewPage() {

@@ -36,7 +36,7 @@ export default async function CapabilitiesPage() {
   return (
     <ListPage
       breadcrumb={[{ label: t('nav.business'), href: '/business' }]}
-      title={t('business.capacidades')}
+      title={t('business.capabilitiesTitle')}
       count={rows.length}
       action={<NewRecordButton entity="capability" />}
     >
@@ -44,7 +44,7 @@ export default async function CapabilitiesPage() {
         columns={columns}
         rows={rows}
         getKey={(r) => r.id}
-        empty={{ title: t('business.aunNoHayCapacidades'), hint: t('crm.creaLaPrimeraConElBotonNuevo') }}
+        empty={{ title: t('business.capabilitiesEmpty'), hint: t('common.createFirstHintFem') }}
         selectable
         archive={{ entityType: 'capability' }}
       />

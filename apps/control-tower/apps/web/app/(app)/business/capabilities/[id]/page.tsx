@@ -31,7 +31,7 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
     <div className="flex max-w-3xl flex-col gap-6">
       <nav className="text-sm text-fg-muted">
         <Link className="hover:underline" href="/business">{t('nav.business')}</Link> /{' '}
-        <Link className="hover:underline" href="/business/capabilities">{t('business.capacidades')}</Link> / {capability.name}
+        <Link className="hover:underline" href="/business/capabilities">{t('business.capabilitiesTitle')}</Link> / {capability.name}
       </nav>
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{capability.name}</h1>
@@ -51,13 +51,13 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
 
       <section className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-fg-muted">{t('knowledge.estado')}</span>
+          <span className="text-sm text-fg-muted">{t('common.statusLabel')}</span>
           <StatusControl kind="capabilities" id={capability.id} current={capability.status} />
         </div>
         <DescriptionList
           items={[
-            { label: t('crm.fuenteDeVerdad'), value: t('business.controlTowerCapabilityNativa') },
-            { label: t('crm.creada'), value: formatDateTime(capability.createdAt) },
+            { label: t('meta.sourceOfTruth'), value: t('business.capabilityNativeSource') },
+            { label: t('meta.createdAtFem'), value: formatDateTime(capability.createdAt) },
           ]}
         />
       </section>

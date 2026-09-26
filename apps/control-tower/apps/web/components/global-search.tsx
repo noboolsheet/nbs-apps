@@ -116,7 +116,7 @@ export function GlobalSearch() {
         className="flex items-center gap-2 rounded border border-line-strong px-2 py-1 text-sm text-fg-muted"
       >
         <span>{t('search.trigger')}</span>
-        <kbd className="rounded bg-surface-muted px-1 text-xs">{t('ui.k')}</kbd>
+        <kbd className="rounded bg-surface-muted px-1 text-xs">{t('search.shortcut')}</kbd>
       </button>
 
       {open && (

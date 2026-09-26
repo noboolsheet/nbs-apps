@@ -62,13 +62,13 @@ export function InboxChannels({ channels, canManage }: { channels: InboxChannel[
   }
 
   if (!canManage) {
-    return <p className="text-xs text-fg-subtle">{t('ui.soloElOwnerPuedeGestionarLosCanalesDeCap')}</p>;
+    return <p className="text-xs text-fg-subtle">{t('knowledge.channelsOwnerOnly')}</p>;
   }
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-end gap-2">
-        <input className={inputCls} placeholder={t('ui.nombreDelCanalPEjN8nEmail')} value={name} onChange={(e) => setName(e.target.value)} />
+        <input className={inputCls} placeholder={t('knowledge.channelNamePlaceholder')} value={name} onChange={(e) => setName(e.target.value)} />
         <button type="button" className={btnPrimary} disabled={busy} onClick={() => void create()}>
           + Añadir canal
         </button>
@@ -76,7 +76,7 @@ export function InboxChannels({ channels, canManage }: { channels: InboxChannel[
       </div>
 
       {channels.length === 0 ? (
-        <p className="text-sm text-fg-subtle">{t('ui.aunNoHayCanalesCreaUnoParaCapturarDesdeH')}</p>
+        <p className="text-sm text-fg-subtle">{t('knowledge.channelsEmpty')}</p>
       ) : (
         <ul className="flex flex-col divide-y divide-line-subtle rounded border border-line">
           {channels.map((c) => (
@@ -84,21 +84,21 @@ export function InboxChannels({ channels, canManage }: { channels: InboxChannel[
               <div className="flex flex-wrap items-center gap-3">
                 <span className="font-medium">{c.name}</span>
                 <span className={`rounded-full px-2 py-0.5 text-xs ${c.status === 'ACTIVE' ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' : 'bg-neutral-soft text-fg-muted'}`}>
-                  {c.status === 'ACTIVE' ? 'Activo' : 'Desactivado'}
+                  {c.status === 'ACTIVE' ? t('knowledge.channelActive') : t('knowledge.channelDisabled')}
                 </span>
                 <span className="text-xs text-fg-subtle">
-                  {c.lastUsedAt ? `usado ${formatDateTime(c.lastUsedAt)}` : 'sin usar'}
+                  {c.lastUsedAt ? t('knowledge.channelLastUsed', { fecha: formatDateTime(c.lastUsedAt) }) : t('knowledge.channelNeverUsed')}
                 </span>
                 <span className="ml-auto flex gap-1">
                   <button type="button" className={btn} disabled={busy} onClick={() => void run(() => patchJson(`/api/v1/inbox-channels/${c.id}`, { status: c.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE' }))}>
-                    {c.status === 'ACTIVE' ? 'Desactivar' : 'Activar'}
+                    {c.status === 'ACTIVE' ? t('knowledge.channelDisable') : t('knowledge.channelEnable')}
                   </button>
-                  <button type="button" className={btn} disabled={busy} onClick={() => void regenerate(c.id)}>{t('ui.regenerarToken')}</button>
-                  <button type="button" className={`${btn} text-danger`} disabled={busy} onClick={() => { if (confirm(`¿Eliminar el canal "${c.name}"?`)) void run(() => deleteJson(`/api/v1/inbox-channels/${c.id}`)); }}>{t('ui.eliminar')}</button>
+                  <button type="button" className={btn} disabled={busy} onClick={() => void regenerate(c.id)}>{t('knowledge.regenerateToken')}</button>
+                  <button type="button" className={`${btn} text-danger`} disabled={busy} onClick={() => { if (confirm(t('knowledge.confirmDeleteChannel', { name: c.name }))) void run(() => deleteJson(`/api/v1/inbox-channels/${c.id}`)); }}>{t('common.remove')}</button>
                 </span>
               </div>
               <div className="flex items-center gap-2 text-xs text-fg-muted">
-                <span className="shrink-0">{t('ui.webhook')}</span>
+                <span className="shrink-0">{t('knowledge.webhookLabel')}</span>
                 <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap rounded bg-neutral-soft px-2 py-1">POST {webhookUrl(c.id)}</code>
               </div>
               {freshToken?.id === c.id && (

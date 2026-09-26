@@ -42,7 +42,7 @@ export default async function IntegrationsPage() {
       <h1 className="text-2xl font-semibold tracking-tight">{t('home.integrations')}</h1>
 
       {rows.length === 0 ? (
-        <EmptyState title={t('automation.sinIntegracionesConectadas')} />
+        <EmptyState title={t('automation.connectedEmpty')} />
       ) : (
         <ul className="flex flex-col gap-2">
           {rows.map((r) => (
@@ -54,11 +54,11 @@ export default async function IntegrationsPage() {
                   {/* F-16 (salud más fina): ACTIVA pero con registros saltados en la última sync. */}
                   {r.status === 'ACTIVE' && lastRuns.get(r.provider)?.status === 'COMPLETED_WITH_WARNINGS' && (
                     <span className="rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning-soft-fg">
-                      {t('automation.conAdvertencias')}
+                      {t('automation.withWarnings')}
                     </span>
                   )}
                   <span className="text-xs text-fg-muted">
-                    {r.lastHealthCheckAt ? `check: ${formatDateTime(r.lastHealthCheckAt)}` : 'sin check'}
+                    {r.lastHealthCheckAt ? t('automation.healthCheckAt', { fecha: formatDateTime(r.lastHealthCheckAt) }) : t('automation.healthCheckNever')}
                   </span>
                   <SyncNowButton id={r.id} />
                   <DisconnectButton id={r.id} displayName={r.displayName} />
@@ -82,7 +82,7 @@ export default async function IntegrationsPage() {
                     }}
                   />
                 ) : (
-                  <span className="text-xs text-fg-subtle">{t('automation.sinEjecucionesRegistradasTodavia')}</span>
+                  <span className="text-xs text-fg-subtle">{t('automation.noRunsYet')}</span>
                 );
               })()}
               {CONFIGURABLE.has(r.provider) && (
@@ -94,13 +94,13 @@ export default async function IntegrationsPage() {
       )}
 
       <div className="flex flex-col gap-2">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">{t('automation.disponibles')}</h2>
+        <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">{t('automation.available')}</h2>
         <div className="flex flex-wrap gap-2">
           {KNOWN.filter((k) => !connectedProviders.has(k.provider)).map((k) => (
             <ConnectProviderButton key={k.provider} provider={k.provider} displayName={k.displayName} />
           ))}
           {KNOWN.every((k) => connectedProviders.has(k.provider)) && (
-            <span className="text-sm text-fg-muted">{t('automation.todoLoDisponibleYaEstaConectado')}</span>
+            <span className="text-sm text-fg-muted">{t('automation.availableEmpty')}</span>
           )}
         </div>
       </div>

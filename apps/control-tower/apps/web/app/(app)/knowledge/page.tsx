@@ -32,9 +32,9 @@ export default async function KnowledgeOverviewPage() {
   const pending = inbox.filter((i) => i.status === 'NEW' || i.status === 'PROCESSING').length;
 
   const cards = [
-    { label: t('knowledge.bandejaPendiente'), href: '/knowledge/inbox', value: pending },
-    { label: t('knowledge.bibliotecaDeConocimiento'), href: '/knowledge/library', value: items.length },
-    { label: t('knowledge.rutaDeAprendizaje'), href: '/knowledge/learning', value: learning.length },
+    { label: t('knowledge.inboxPendingCard'), href: '/knowledge/inbox', value: pending },
+    { label: t('knowledge.libraryCardTitle'), href: '/knowledge/library', value: items.length },
+    { label: t('knowledge.learningPathTitle'), href: '/knowledge/learning', value: learning.length },
     { label: t('review.title'), href: '/knowledge/review', value: pendingReview },
     { label: t('decisions.title'), href: '/knowledge/decisions', value: decisions.length },
     { label: t('assets.title'), href: '/knowledge/assets', value: assets.length },

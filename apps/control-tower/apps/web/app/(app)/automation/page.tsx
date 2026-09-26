@@ -60,12 +60,12 @@ export default async function AutomationPage() {
 
       {/* Plegable: es una lista y, cuando no hay nada roto, no debe ocupar media pantalla. Se abre sola si hay algo. */}
       <CollapsibleSection
-        title={t('automation.erroresRecientes')}
+        title={t('automation.recentErrors')}
         count={errors.length}
         defaultOpen={errors.length > 0}
       >
         {errors.length === 0 ? (
-          <EmptyState title={t('automation.sinErroresRecientes')} />
+          <EmptyState title={t('automation.recentErrorsEmpty')} />
         ) : (
           <ul className="flex flex-col gap-1 text-sm">
             {errors.map((e) => (

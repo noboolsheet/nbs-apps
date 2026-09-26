@@ -11,7 +11,7 @@ const sans = Inter({ subsets: ['latin'], variable: '--font-sans', display: 'swap
 
 export const metadata: Metadata = {
   title: 'Control Tower',
-  description: t('ui.capaDeControlAgregacionContextoYGobierno'),
+  description: t('app.tagline'),
   icons: { icon: '/control-tower-icono.png', apple: '/control-tower-icono.png' },
 };
 

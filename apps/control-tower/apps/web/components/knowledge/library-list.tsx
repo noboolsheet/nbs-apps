@@ -42,17 +42,17 @@ export function LibraryList({ items, lockedType = false }: { items: LibraryRow[]
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap gap-2">
         <select className={selCls} value={sector} onChange={(e) => setSector(e.target.value)}>
-          <option value="">{t('ui.todosLosSectores')}</option>
+          <option value="">{t('filter.allSectors')}</option>
           {sectors.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
         {!lockedType && (
           <select className={selCls} value={type} onChange={(e) => setType(e.target.value)}>
-            <option value="">{t('ui.todosLosTipos')}</option>
+            <option value="">{t('filter.allTypes')}</option>
             {types.map((task) => <option key={task} value={task}>{enumLabel(task)}</option>)}
           </select>
         )}
         {(sector || type) && (
-          <button type="button" onClick={() => { setSector(''); setType(''); }} className="text-sm text-fg-muted underline">{t('ui.limpiar')}</button>
+          <button type="button" onClick={() => { setSector(''); setType(''); }} className="text-sm text-fg-muted underline">{t('filter.clear')}</button>
         )}
         <span className="ml-auto self-center text-xs text-fg-subtle">{rows.length} de {items.length}</span>
       </div>
@@ -98,7 +98,7 @@ export function LibraryList({ items, lockedType = false }: { items: LibraryRow[]
  */
 function RowLink({ row }: { row: LibraryRow }) {
   const url = singleExternalUrl(row.sourceUrl);
-  if (url) return <ExternalSourceLink url={url} label={t('knowledge.abrirFuente')} />;
-  if (row.notionUrl) return <ExternalSourceLink url={row.notionUrl} label={t('knowledge.abrirEnNotion')} />;
+  if (url) return <ExternalSourceLink url={url} label={t('knowledge.openSource')} />;
+  if (row.notionUrl) return <ExternalSourceLink url={row.notionUrl} label={t('knowledge.openInNotion')} />;
   return <span className="text-fg-subtle">—</span>;
 }

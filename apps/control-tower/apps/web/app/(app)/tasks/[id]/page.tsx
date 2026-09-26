@@ -40,7 +40,9 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
   ]);
   const today = dayRange.today;
   const owned = new Set(ownedFields('task', identity?.provider));
-  const ownedHint = identity ? `Lo gestiona ${PROVIDER_LABEL[identity.provider] ?? identity.provider}; se edita en el origen.` : undefined;
+  const ownedHint = identity
+    ? t('panel.ownedByProvider', { provider: PROVIDER_LABEL[identity.provider] ?? identity.provider })
+    : undefined;
   const project = task.projectId ? projects.find((p) => p.id === task.projectId) : null;
   // Tarea congelada (solo lectura) si su proyecto está CERRADO o su oportunidad está ARCHIVADA o CERRADA.
   const oppFreeze = task.opportunityId ? await getOpportunityFreeze(getDb(), ctx.org, task.opportunityId) : null;
@@ -48,10 +50,10 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
   const opportunity = task.opportunityId ? await getOpportunity(getDb(), ctx.org, task.opportunityId).catch(() => null) : null;
   const frozen = project?.status === 'CLOSED' || !!oppFreeze?.archived || !!oppFreeze?.closed;
   const frozenHint = oppFreeze?.archived
-    ? t('tasks.laOportunidadEstaArchivadaLaTareaEsDeSol')
+    ? t('tasks.readOnlyOpportunityArchived')
     : oppFreeze?.closed
-      ? t('tasks.laOportunidadEstaCerradaLaTareaEsDeSoloL')
-      : t('tasks.elProyectoEstaCerradoLaTareaEsDeSoloLect');
+      ? t('tasks.readOnlyOpportunityClosed')
+      : t('tasks.readOnlyProjectClosed');
   const subtasksDone = subtasks.filter((st) => st.status === 'DONE').length;
   const fmtDate = (d: string | null | undefined) => (d ? formatDate(d) : '—');
   const subtaskColumns: Column<(typeof subtasks)[number]>[] = [
@@ -91,7 +93,7 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
           { name: 'priority', label: t('field.priority'), type: 'select', options: PRIORITY, value: task.priority, readOnly: frozen, readOnlyHint: frozenHint },
           {
             name: 'dueDate',
-            label: t('deliverables.fechaLimite'),
+            label: t('deliverables.dueDateLabel'),
             type: 'date',
             value: task.dueDate,
             display: task.dueDate ? formatDate(task.dueDate) : null,
@@ -132,8 +134,8 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
                 }]
               : []),
             { label: t('common.completed'), value: task.completedAt ? formatDateTime(task.completedAt) : null },
-            { label: t('crm.fuenteDeVerdad'), value: t('tasks.controlTowerTareaNativa') },
-            { label: t('crm.creada'), value: formatDateTime(task.createdAt) },
+            { label: t('meta.sourceOfTruth'), value: t('tasks.nativeSource') },
+            { label: t('meta.createdAtFem'), value: formatDateTime(task.createdAt) },
           ]}
         />
       </section>
@@ -145,11 +147,11 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
         </h2>
         {!frozen && (
           <div className="flex justify-end">
-            <ContextNewButton entity="task" ctxKey="task" parentId={task.id} label={t('tasks.nuevaSubtarea')} />
+            <ContextNewButton entity="task" ctxKey="task" parentId={task.id} label={t('tasks.newSubtask')} />
           </div>
         )}
         {subtasks.length === 0 ? (
-          <EmptyState title={t('tasks.sinSubtareas')} hint={t('tasks.divideEstaTareaEnPasosConNuevaSubtarea')} />
+          <EmptyState title={t('tasks.subtasksEmpty')} hint={t('tasks.subtasksEmptyHint')} />
         ) : (
           <RecordTable
             columns={subtaskColumns}

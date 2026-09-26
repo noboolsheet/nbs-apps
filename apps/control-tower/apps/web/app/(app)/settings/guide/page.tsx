@@ -3,7 +3,7 @@ import guideMd from '@/content/user-guide.md';
 import { Markdown } from '@/components/markdown';
 import { t } from '@/lib/i18n';
 
-export const metadata = { title: t('settings.guiaDeUsoControlTower') };
+export const metadata = { title: t('settings.guideTitleLong') };
 
 /**
  * Guía de uso, legible desde la propia app (Settings › Guía). El contenido canónico vive en

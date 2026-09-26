@@ -226,8 +226,8 @@ Tres cosas que este informe no había mirado, todas registradas en la **sección
    del «This page could not be found». **Salvedad honesta:** el 404 de ficha se pinta **sin barra lateral** — Next
    no aplica el layout del grupo `(app)` a un `not-found.tsx`, y montar el shell a mano no funciona porque en ese
    boundary no hay sesión; por eso la pantalla lleva sus propias salidas.
-2. **[P2] `confirm()` nativo del navegador en las acciones destructivas** (recogido en **F-30** por el lado del
-   texto): archivar en lote (`data-table.tsx:106`), borrar fase (`projects/forms.tsx:179`), desconectar integración
+2. **[P2] `confirm()` nativo del navegador en las acciones destructivas** (el lado del **texto** ya está: F-30
+   cerrado el 2026-09-26, los mensajes salen del diccionario; queda el **control**): archivar en lote (`data-table.tsx:106`), borrar fase (`projects/forms.tsx:179`), desconectar integración
    (`integrations/controls.tsx:119`), eliminar canal (`inbox-channels.tsx:97`) y descartar envío
    (`failed-pushes.tsx:46`). Tipografía del sistema, botones en el idioma del navegador, imposible de estilar. El
    patrón accesible para sustituirlo **ya existe** en `record-panel` (dialog + focus-trap + Esc).

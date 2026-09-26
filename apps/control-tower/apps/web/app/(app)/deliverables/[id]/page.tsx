@@ -53,18 +53,18 @@ export default async function DeliverableDetailPage({ params }: { params: Promis
           { name: 'description', label: t('field.description'), type: 'textarea', value: deliverable.description },
           {
             name: 'dueDate',
-            label: t('deliverables.fechaLimite'),
+            label: t('deliverables.dueDateLabel'),
             type: 'date',
             value: deliverable.dueDate,
             display: deliverable.dueDate ? formatDate(deliverable.dueDate) : null,
           },
-          { name: 'externalUrl', label: t('deliverables.enlaceExterno'), type: 'text', value: deliverable.externalUrl },
+          { name: 'externalUrl', label: t('deliverables.externalLinkLabel'), type: 'text', value: deliverable.externalUrl },
         ]}
       />
 
       <section className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-fg-muted">{t('knowledge.estado')}</span>
+          <span className="text-sm text-fg-muted">{t('common.statusLabel')}</span>
           <DeliverableStatusControl id={deliverable.id} current={deliverable.status} />
           <ExternalSourceLink url={deliverable.externalUrl} />
         </div>
@@ -77,8 +77,8 @@ export default async function DeliverableDetailPage({ params }: { params: Promis
               ) : null,
             },
             { label: t('common.completedAt'), value: deliverable.completedAt ? formatDateTime(deliverable.completedAt) : null },
-            { label: t('crm.fuenteDeVerdad'), value: t('deliverables.controlTowerEntregableNativo') },
-            { label: t('crm.creado'), value: formatDateTime(deliverable.createdAt) },
+            { label: t('meta.sourceOfTruth'), value: t('deliverables.nativeSource') },
+            { label: t('meta.createdAt'), value: formatDateTime(deliverable.createdAt) },
           ]}
         />
       </section>

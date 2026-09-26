@@ -32,7 +32,7 @@ export default async function GoalDetailPage({ params }: { params: Promise<{ id:
     <div className="flex max-w-3xl flex-col gap-6">
       <nav className="text-sm text-fg-muted">
         <Link className="hover:underline" href="/business">{t('nav.business')}</Link> /{' '}
-        <Link className="hover:underline" href="/business/goals">{t('business.objetivos')}</Link> / {goal.name}
+        <Link className="hover:underline" href="/business/goals">{t('business.goalsTitle')}</Link> / {goal.name}
       </nav>
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{goal.name}</h1>
@@ -69,15 +69,15 @@ export default async function GoalDetailPage({ params }: { params: Promise<{ id:
         <DescriptionList
           items={[
             {
-              label: t('business.verArea'),
+              label: t('business.viewArea'),
               value: goal.strategicAreaId ? (
                 <Link className="underline underline-offset-2" href={`/business/strategic-areas/${goal.strategicAreaId}`}>
                   {area?.name ?? goal.strategicAreaId.slice(0, 8) + '…'}
                 </Link>
               ) : null,
             },
-            { label: t('crm.fuenteDeVerdad'), value: t('business.controlTowerObjetivoNativo') },
-            { label: t('crm.creado'), value: formatDateTime(goal.createdAt) },
+            { label: t('meta.sourceOfTruth'), value: t('business.goalNativeSource') },
+            { label: t('meta.createdAt'), value: formatDateTime(goal.createdAt) },
           ]}
         />
       </section>

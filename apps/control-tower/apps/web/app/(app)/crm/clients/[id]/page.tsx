@@ -81,7 +81,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         <h1 className="text-2xl font-semibold tracking-tight">{client.name}</h1>
         <StatusBadge status={client.status} />
         <ClientStatusControl id={client.id} current={client.status} />
-        <SourceBadge source={identity?.provider ?? 'NATIVE'} url={crmUrl} linkLabel={t('crm.abrirEnElCrm')} />
+        <SourceBadge source={identity?.provider ?? 'NATIVE'} url={crmUrl} linkLabel={t('crm.openInCrm')} />
       </div>
 
       <Tabs
@@ -99,10 +99,10 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                     <span className="text-fg-subtle">· id externo {identity.externalId}</span>
                     {crmUrl ? (
                       <a href={crmUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline-offset-2 hover:underline dark:text-blue-400">
-                        {t('crm.abrirEnElCrm2')}
+                        {t('crm.openInCrmLink')}
                       </a>
                     ) : (
-                      <span className="text-fg-subtle">{t('crm.configuraLaUrlDeTwentyEnLaIntegracionPar')}</span>
+                      <span className="text-fg-subtle">{t('crm.openInCrmUnconfigured')}</span>
                     )}
                   </div>
                 ) : (
@@ -116,10 +116,10 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
             content: (
               <div className="flex flex-col gap-3">
                 <div className="flex justify-end">
-                  <ContextNewButton entity="contact" ctxKey="client" parentId={client.id} label={t('crm.nuevoContacto')} />
+                  <ContextNewButton entity="contact" ctxKey="client" parentId={client.id} label={t('crm.newContact')} />
                 </div>
                 {contacts.length === 0 ? (
-                  <EmptyState title={t('crm.sinContactos')} />
+                  <EmptyState title={t('crm.contactsEmptyShort')} />
                 ) : (
                   <RecordTable
                     columns={contactCols}
@@ -138,7 +138,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
               <div className="flex flex-col gap-3">
                 {/* Sin botón de crear: las oportunidades nacen en Twenty (owner 2026-09-02). */}
                 {opportunities.length === 0 ? (
-                  <EmptyState title={t('crm.sinOportunidades')} hint={t('crm.oportunidadesVienenDeTwenty')} />
+                  <EmptyState title={t('crm.opportunitiesEmptyShort')} hint={t('crm.opportunitiesFromTwentyHint')} />
                 ) : (
                   <RecordTable
                     columns={oppCols}
@@ -156,10 +156,10 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
             content: (
               <div className="flex flex-col gap-3">
                 <div className="flex justify-end">
-                  <ContextNewButton entity="project" ctxKey="client" parentId={client.id} label={t('crm.nuevoProyecto')} />
+                  <ContextNewButton entity="project" ctxKey="client" parentId={client.id} label={t('crm.newProject')} />
                 </div>
                 {clientProjects.length === 0 ? (
-                  <EmptyState title={t('crm.sinProyectos')} hint={t('crm.creaUnoConNuevoProyectoQuedaAsignadoAEst')} />
+                  <EmptyState title={t('crm.projectsEmpty')} hint={t('crm.projectsEmptyHint')} />
                 ) : (
                   <ul className="flex flex-col gap-2">
                     {clientProjects.map((p) => (
@@ -183,7 +183,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                 <div className="flex justify-end">
                   <ContextNewButton entity="resource" ctxKey="client" parentId={client.id} label={t('resources.new')} />
                 </div>
-                <p className="text-xs text-fg-muted">{t('crm.incluyeLosActivosPersonalesDelClienteYLo')}</p>
+                <p className="text-xs text-fg-muted">{t('crm.resourcesHint')}</p>
                 <ResourceList rows={clientResources} />
               </div>
             ),
@@ -194,7 +194,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
               <div className="flex flex-col gap-3">
                 <CreateDocumentForm clientId={client.id} />
                 {documents.length === 0 ? (
-                  <EmptyState title={t('documents.empty')} hint={t('crm.guardaReferenciasExternasDriveNotion')} />
+                  <EmptyState title={t('documents.empty')} hint={t('crm.documentsEmptyHint')} />
                 ) : (
                   <ul className="flex flex-col gap-2">
                     {documents.map((doc) => (

@@ -31,13 +31,13 @@ export default async function ServicesPage() {
     },
     { header: t('field.status'), value: (r) => enumLabel(r.status), cell: (r) => <StatusBadge status={r.status} /> },
     { header: t('field.kind'), cell: (r) => r.serviceType ?? '—' },
-    { header: t('business.slug'), cell: (r) => <code className="text-xs text-fg-muted">{r.slug}</code> },
+    { header: t('business.slugLabel'), cell: (r) => <code className="text-xs text-fg-muted">{r.slug}</code> },
   ];
 
   return (
     <ListPage
       breadcrumb={[{ label: t('nav.business'), href: '/business' }]}
-      title={t('business.servicios')}
+      title={t('business.servicesTitle')}
       count={rows.length}
       action={<NewRecordButton entity="service" />}
     >
@@ -45,7 +45,7 @@ export default async function ServicesPage() {
         columns={columns}
         rows={rows}
         getKey={(r) => r.id}
-        empty={{ title: t('business.aunNoHayServicios'), hint: t('crm.creaElPrimeroConElBotonNuevo') }}
+        empty={{ title: t('business.servicesEmpty'), hint: t('common.createFirstHint') }}
         selectable
         archive={{ entityType: 'service' }}
       />

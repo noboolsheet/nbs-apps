@@ -21,8 +21,8 @@ type OppTask = Awaited<ReturnType<typeof listAllOpportunityTasks>>[number];
 /** Pestañas de la lista, en orden: Por hacer (activas) · Hechas (DONE) · Todas. */
 const TABS = [
   { key: 'pendientes', label: t('crm.tabPending'), match: (t: OppTask) => isTaskActive(t.status as TaskStatus) },
-  { key: 'hechas', label: t('crm.hechas'), match: (t: OppTask) => t.status === 'DONE' },
-  { key: 'todas', label: t('crm.todas'), match: () => true },
+  { key: 'hechas', label: t('crm.tabDone'), match: (t: OppTask) => t.status === 'DONE' },
+  { key: 'todas', label: t('crm.tabAll'), match: () => true },
 ] as const;
 
 /**
@@ -68,9 +68,9 @@ export default async function OpportunityTasksPage({ searchParams }: { searchPar
     <ListPage
       breadcrumb={[
         { label: t('nav.crm'), href: '/crm' },
-        { label: t('crm.oportunidades'), href: '/crm/opportunities' },
+        { label: t('crm.opportunitiesTitle'), href: '/crm/opportunities' },
       ]}
-      title={t('crm.tareasDeOportunidades')}
+      title={t('crm.presalesTasksTitle')}
       filters={
         <FilterTabs
           activeKey={activeTab.key}
@@ -92,11 +92,11 @@ export default async function OpportunityTasksPage({ searchParams }: { searchPar
         empty={{
           title:
             activeTab.key === 'pendientes'
-              ? t('crm.sinTareasPorHacer')
+              ? t('crm.presalesTasksPendingEmpty')
               : activeTab.key === 'hechas'
-                ? t('crm.sinTareasHechas')
-                : t('crm.sinTareasDeOportunidades'),
-          hint: t('crm.abreUnaOportunidadYCreaTareasEnSuPestana'),
+                ? t('crm.presalesTasksDoneEmpty')
+                : t('crm.presalesTasksEmpty'),
+          hint: t('crm.presalesTasksHint'),
         }}
         selectable
         remove={{ entityType: 'task' }}

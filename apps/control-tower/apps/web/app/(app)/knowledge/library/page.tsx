@@ -22,14 +22,14 @@ export default async function LibraryPage() {
   return (
     <div className="flex flex-col gap-4">
       <nav className="text-sm text-fg-muted">
-        <Link className="hover:underline" href="/knowledge">{t('nav.knowledge')}</Link> / {t('knowledge.biblioteca')}
+        <Link className="hover:underline" href="/knowledge">{t('nav.knowledge')}</Link> / {t('knowledge.libraryTitle')}
       </nav>
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{t('knowledge.bibliotecaDeConocimiento')} <span className="font-normal text-fg-subtle">({rows.length})</span></h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t('knowledge.libraryCardTitle')} <span className="font-normal text-fg-subtle">({rows.length})</span></h1>
         <NewRecordButton entity="knowledge_item" />
       </div>
       {rows.length === 0 ? (
-        <EmptyState title={t('knowledge.aunNoHayConocimiento')} hint={t('knowledge.creaUnoConNuevoOPromueveCapturasDesdeElI')} />
+        <EmptyState title={t('knowledge.libraryEmpty')} hint={t('knowledge.libraryEmptyHint')} />
       ) : (
         <LibraryList items={items} />
       )}

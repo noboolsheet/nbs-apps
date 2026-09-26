@@ -21,7 +21,7 @@ export default async function StrategicAreasPage() {
 
   const columns: Column<Area>[] = [
     {
-      header: t('business.area'),
+      header: t('business.areaLabel'),
       value: (r) => r.name,
       cell: (r) => (
         <RecordLink entity="strategic_area" id={r.id} className="font-medium underline-offset-2 hover:underline">
@@ -36,7 +36,7 @@ export default async function StrategicAreasPage() {
   return (
     <ListPage
       breadcrumb={[{ label: t('nav.business'), href: '/business' }]}
-      title={t('business.areasEstrategicas')}
+      title={t('business.areasTitle')}
       count={rows.length}
       action={<NewRecordButton entity="strategic_area" />}
     >
@@ -44,7 +44,7 @@ export default async function StrategicAreasPage() {
         columns={columns}
         rows={rows}
         getKey={(r) => r.id}
-        empty={{ title: t('business.aunNoHayAreasEstrategicas'), hint: t('crm.creaLaPrimeraConElBotonNuevo') }}
+        empty={{ title: t('business.areasEmpty'), hint: t('common.createFirstHintFem') }}
         selectable
         archive={{ entityType: 'strategic_area' }}
       />

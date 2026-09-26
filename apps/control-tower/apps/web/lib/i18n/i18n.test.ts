@@ -82,7 +82,10 @@ describe('i18n', () => {
   it('las familias de plural tienen sus dos claves (.one/.other)', () => {
     // `tPlural('base', n)` construye la clave en RUNTIME, así que un grep literal no las ve: sin este test, una
     // limpieza de "claves sin usar" se las llevaría y la UI mostraría la clave cruda.
-    const bases = ['table.confirmArchive', 'table.confirmRestore', 'table.confirmDelete', 'table.selected'];
+    const bases = [
+      'table.confirmArchive', 'table.confirmRestore', 'table.confirmDelete', 'table.selected',
+      'table.filterMatches', 'tasks.countActive', 'tasks.countCompleted',
+    ];
     for (const base of bases) {
       for (const form of ['one', 'other']) {
         expect(tOptional(`${base}.${form}`), `${base}.${form}`).toBeDefined();
@@ -90,6 +93,27 @@ describe('i18n', () => {
     }
     expect(tPlural('table.selected', 1)).toBe('1 seleccionado');
     expect(tPlural('table.selected', 3)).toBe('3 seleccionados');
+  });
+
+  it('ninguna clave se nombra con la frase española (F-30)', () => {
+    // F-30: 61 claves eran el texto español en camelCase, varias cortadas a mitad de palabra
+    // (`knowledge.anadeRecursosReutilizablesConElBotonNuev`). Quien traduce lee el VALOR; la CLAVE es lo único
+    // que le dice a qué pantalla pertenece, así que tiene que describir el sitio, no repetir la frase.
+    // Heurística deliberadamente tonta: si en el nombre aparece una palabra funcional del castellano como
+    // segmento camel, o el nombre es larguísimo, es que se generó a partir del texto.
+    const STOPWORDS = new Set([
+      'de', 'del', 'la', 'las', 'el', 'los', 'un', 'una', 'con', 'para', 'que', 'por', 'sin',
+      'aun', 'hay', 'esta', 'este', 'todo', 'todos', 'mas', 'al', 'su', 'se', 'y',
+    ]);
+    const offenders: string[] = [];
+    for (const key of Object.keys(es)) {
+      const local = key.slice(key.indexOf('.') + 1);
+      if (key.startsWith('enum.')) continue; // `enum.<CODIGO>` lo dicta el dominio, no se elige aquí
+      const segments = local.split(/(?=[A-Z])/).map((s2) => s2.toLowerCase());
+      if (segments.some((s2) => STOPWORDS.has(s2))) offenders.push(key);
+      else if (local.length > 32) offenders.push(key);
+    }
+    expect(offenders).toEqual([]);
   });
 
   it('interpola las variables y deja intacto lo que no reconoce', () => {

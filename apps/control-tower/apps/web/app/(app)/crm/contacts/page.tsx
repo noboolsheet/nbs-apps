@@ -44,7 +44,7 @@ export default async function ContactsPage() {
   return (
     <ListPage
       breadcrumb={[{ label: t('nav.crm'), href: '/crm' }]}
-      title={t('crm.contactos')}
+      title={t('crm.contactsTitle')}
       count={rows.length}
       action={<NewRecordButton entity="contact" />}
     >
@@ -53,7 +53,7 @@ export default async function ContactsPage() {
         rows={rows}
         getKey={(r) => r.id}
         truncatedAt={LIST_LIMIT}
-        empty={{ title: t('crm.aunNoHayContactos'), hint: t('crm.creaElPrimeroConElBotonNuevo') }}
+        empty={{ title: t('crm.contactsEmpty'), hint: t('common.createFirstHint') }}
         selectable
         archive={{ entityType: 'contact' }}
       />

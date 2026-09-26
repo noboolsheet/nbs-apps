@@ -34,7 +34,7 @@ export default async function StrategicAreaDetailPage({ params }: { params: Prom
     <div className="flex max-w-3xl flex-col gap-6">
       <nav className="text-sm text-fg-muted">
         <Link className="hover:underline" href="/business">{t('nav.business')}</Link> /{' '}
-        <Link className="hover:underline" href="/business/strategic-areas">{t('business.areasEstrategicas')}</Link> / {area.name}
+        <Link className="hover:underline" href="/business/strategic-areas">{t('business.areasTitle')}</Link> / {area.name}
       </nav>
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{area.name}</h1>
@@ -57,10 +57,10 @@ export default async function StrategicAreaDetailPage({ params }: { params: Prom
           <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">
             Objetivos ({areaGoals.length})
           </h2>
-          <ContextNewButton entity="goal" ctxKey="strategic_area" parentId={area.id} label={t('business.nuevoObjetivo')} />
+          <ContextNewButton entity="goal" ctxKey="strategic_area" parentId={area.id} label={t('business.newGoal')} />
         </div>
         {areaGoals.length === 0 ? (
-          <p className="text-sm text-fg-subtle">{t('business.ningunObjetivoVinculadoAEstaAreaTodavia')}</p>
+          <p className="text-sm text-fg-subtle">{t('business.goalsLinkedEmpty')}</p>
         ) : (
           <ul className="flex flex-col divide-y divide-line-subtle">
             {areaGoals.map((g) => (
@@ -76,8 +76,8 @@ export default async function StrategicAreaDetailPage({ params }: { params: Prom
       <section className="flex flex-col gap-2">
         <DescriptionList
           items={[
-            { label: t('crm.fuenteDeVerdad'), value: t('business.controlTowerAreaNativa') },
-            { label: t('crm.creada'), value: formatDateTime(area.createdAt) },
+            { label: t('meta.sourceOfTruth'), value: t('business.areaNativeSource') },
+            { label: t('meta.createdAtFem'), value: formatDateTime(area.createdAt) },
           ]}
         />
       </section>

@@ -39,7 +39,7 @@ export default async function SystemHealthPage() {
   const jobColumns: Column<JobRow>[] = [
     { header: t('field.kind'), cell: (j) => j.jobType },
     { header: t('field.status'), cell: (j) => <StatusBadge status={j.status} /> },
-    { header: t('automation.intentos'), cell: (j) => `${j.attempts}/${j.maxAttempts}` },
+    { header: t('automation.attemptsLabel'), cell: (j) => `${j.attempts}/${j.maxAttempts}` },
     { header: t('automation.lastError'), cell: (j) => <span className="line-clamp-1 text-danger">{j.lastError ?? ''}</span> },
   ];
   const jobStates = ['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED'];
@@ -53,11 +53,11 @@ export default async function SystemHealthPage() {
       <h1 className="text-2xl font-semibold tracking-tight">{t('home.systemHealth')}</h1>
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Tile label={t('automation.baseDeDatos')}>
+        <Tile label={t('automation.database')}>
           {h.db.ok ? <StatusBadge status="ACTIVE" /> : <StatusBadge status="ERROR" />}
           {h.db.latencyMs != null && <span className="ml-1 text-xs text-fg-muted">{h.db.latencyMs}ms</span>}
         </Tile>
-        <Tile label={t('automation.workerUltimaActividad')}>
+        <Tile label={t('automation.workerLastSeen')}>
           <span className="text-sm">{h.worker.lastJobActivityAt ? formatDateTime(h.worker.lastJobActivityAt) : '—'}</span>
         </Tile>
         <Tile label={t('home.integrations')}>{h.integrations.length}</Tile>
@@ -65,7 +65,7 @@ export default async function SystemHealthPage() {
       </section>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">{t('automation.procesos')}</h2>
+        <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">{t('automation.jobs')}</h2>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
           {jobStates.map((st) => (
             <Tile key={st} label={enumLabel(st)}>{h.jobs[st] ?? 0}</Tile>
@@ -75,7 +75,7 @@ export default async function SystemHealthPage() {
 
       <section className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">{t('automation.bandejaDeSalida')}</h2>
+          <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">{t('automation.outbox')}</h2>
           <a href="/api/v1/outbox/export" className={buttonCls('secondary', 'sm')} download>
             {t('automation.downloadJobsCsv')}
           </a>
@@ -109,7 +109,7 @@ export default async function SystemHealthPage() {
 
       <CollapsibleSection title={t('home.integrations')} count={h.integrations.length}>
         {h.integrations.length === 0 ? (
-          <EmptyState title={t('automation.sinIntegraciones')} />
+          <EmptyState title={t('automation.integrationsEmpty')} />
         ) : (
           <ul className="flex flex-col gap-2">
             {h.integrations.map((i) => (
@@ -122,7 +122,7 @@ export default async function SystemHealthPage() {
         )}
       </CollapsibleSection>
 
-      <CollapsibleSection title={t('automation.procesosRecientes')} count={recentJobs.length}>
+      <CollapsibleSection title={t('automation.recentJobs')} count={recentJobs.length}>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           {/* La pantalla enseña los últimos 20; el log activo completo se baja en CSV. */}
           <p className="text-xs text-fg-subtle">{t('automation.jobsHistoryHint')}</p>
@@ -131,7 +131,7 @@ export default async function SystemHealthPage() {
           </a>
         </div>
         {recentJobs.length === 0 ? (
-          <EmptyState title={t('automation.sinProcesos')} hint={t('automation.losProcesosAparecenAlEjecutarseAutomatiz')} />
+          <EmptyState title={t('automation.jobsEmpty')} hint={t('automation.jobsEmptyHint')} />
         ) : (
           <EntityTable columns={jobColumns} rows={recentJobs} getKey={(j) => j.id} />
         )}
@@ -146,7 +146,7 @@ export default async function SystemHealthPage() {
               <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-line px-3 py-2 text-sm">
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="font-medium">
-                    {a.kind === 'OUTBOX' ? t('automation.bandejaDeSalida') : t('automation.procesos')} ·{' '}
+                    {a.kind === 'OUTBOX' ? t('automation.outbox') : t('automation.jobs')} ·{' '}
                     {t('automation.logArchiveBatch', { n: a.seq })}
                   </span>
                   <span className="text-xs text-fg-muted">

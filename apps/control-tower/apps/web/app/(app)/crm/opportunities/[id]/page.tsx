@@ -51,7 +51,7 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
   const contactName = contact ? [contact.firstName, contact.lastName].filter(Boolean).join(' ') : null;
   // Archivada = congelada: no editable y sin poder añadir tareas (se restaura para volver a tocarla).
   const archived = !!opp.archivedAt;
-  const frozenHint = t('crm.oportunidadArchivadaDeSoloLecturaRestaur');
+  const frozenHint = t('crm.opportunityArchivedReadOnly');
   const fmtDate = (d: string | null | undefined) => (d ? formatDate(d) : '—');
 
   const taskCols: Column<(typeof tasks)[number]>[] = [
@@ -74,15 +74,15 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
     <div className="flex flex-col gap-6">
       <nav className="text-sm text-fg-muted">
         <Link className="hover:underline" href="/crm">CRM</Link> /{' '}
-        <Link className="hover:underline" href="/crm/opportunities">{t('crm.oportunidades')}</Link> / {opp.name}
+        <Link className="hover:underline" href="/crm/opportunities">{t('crm.opportunitiesTitle')}</Link> / {opp.name}
       </nav>
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{opp.name}</h1>
         <StatusBadge status={opp.status} />
-        <SourceBadge source={identity?.provider ?? 'NATIVE'} url={crmUrl} linkLabel={t('crm.abrirEnElCrm')} />
+        <SourceBadge source={identity?.provider ?? 'NATIVE'} url={crmUrl} linkLabel={t('crm.openInCrm')} />
         {archived && (
           <span className="rounded-full border border-warning-border bg-warning-soft px-2 py-0.5 text-xs text-warning-soft-fg">
-            {t('crm.archivadaSoloLectura')}
+            {t('crm.archivedReadOnlyBadge')}
           </span>
         )}
       </div>
@@ -104,7 +104,7 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
                     { label: t('entity.client'), value: clientName ?? null },
                     { label: t('field.primaryContactId'), value: contactName || null },
                     { label: t('field.estimatedValue'), value: opp.estimatedValue ? `${opp.estimatedValue} ${opp.currencyCode ?? ''}`.trim() : null },
-                    { label: t('crm.cierreEstimado'), value: opp.expectedCloseDate ? formatDate(opp.expectedCloseDate) : null },
+                    { label: t('crm.expectedClose'), value: opp.expectedCloseDate ? formatDate(opp.expectedCloseDate) : null },
                     { label: t('field.source'), value: opp.source },
                     { label: t('field.notes'), value: opp.notes ? <span className="whitespace-pre-wrap">{opp.notes}</span> : null },
                   ]}
@@ -112,14 +112,14 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
 
                 <section className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-fg-muted">{t('crm.etapa')}</span>
+                    <span className="text-sm text-fg-muted">{t('crm.stageLabel')}</span>
                     {archived ? <StatusBadge status={opp.stage} /> : <OpportunityStageControl id={opp.id} current={opp.stage} />}
                   </div>
-                  <p className="text-xs text-fg-subtle">{archived ? frozenHint : t('crm.soloLaEtapaSeEditaAqui')}</p>
+                  <p className="text-xs text-fg-subtle">{archived ? frozenHint : t('crm.stageOnlyEditableHint')}</p>
                   <DescriptionList
                     items={[
                       {
-                        label: t('crm.verCliente'),
+                        label: t('crm.viewClient'),
                         value: opp.clientId ? (
                           <Link className="underline underline-offset-2" href={`/crm/clients/${opp.clientId}`}>
                             {clientName ?? opp.clientId.slice(0, 8) + '…'}
@@ -127,17 +127,17 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
                         ) : null,
                       },
                       {
-                        label: t('crm.verContacto'),
+                        label: t('crm.viewContact'),
                         value: opp.primaryContactId ? (
                           <Link className="underline underline-offset-2" href={`/crm/contacts/${opp.primaryContactId}`}>
                             {contactName || opp.primaryContactId.slice(0, 8) + '…'}
                           </Link>
                         ) : null,
                       },
-                      { label: t('crm.cerrada'), value: opp.closedAt ? formatDateTime(opp.closedAt) : null },
-                      { label: t('crm.archivada'), value: opp.archivedAt ? formatDateTime(opp.archivedAt) : null },
-                      { label: t('crm.fuenteDeVerdad'), value: <SourceBadge source={identity?.provider ?? 'NATIVE'} url={crmUrl} linkLabel={t('crm.abrirEnElCrm')} /> },
-                      { label: t('crm.creada'), value: formatDateTime(opp.createdAt) },
+                      { label: t('crm.closedAt'), value: opp.closedAt ? formatDateTime(opp.closedAt) : null },
+                      { label: t('crm.archivedAt'), value: opp.archivedAt ? formatDateTime(opp.archivedAt) : null },
+                      { label: t('meta.sourceOfTruth'), value: <SourceBadge source={identity?.provider ?? 'NATIVE'} url={crmUrl} linkLabel={t('crm.openInCrm')} /> },
+                      { label: t('meta.createdAtFem'), value: formatDateTime(opp.createdAt) },
                     ]}
                   />
                 </section>
@@ -156,7 +156,7 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
                 {tasks.length === 0 ? (
                   <EmptyState
                     title={t('projects.tasksEmpty')}
-                    hint={archived ? t('crm.laOportunidadEstaArchivada') : t('crm.creaLaPrimeraConElBotonNuevaTareaUtilPar')}
+                    hint={archived ? t('crm.opportunityArchivedNotice') : t('crm.presalesTasksEmptyHint')}
                   />
                 ) : (
                   <RecordTable

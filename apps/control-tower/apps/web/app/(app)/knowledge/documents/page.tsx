@@ -19,7 +19,7 @@ export default async function DocumentsPage() {
 
   const columns: Column<Doc>[] = [
     {
-      header: t('knowledge.documento'),
+      header: t('knowledge.documentBadge'),
       cell: (r) => (
         <Link className="font-medium underline-offset-2 hover:underline" href={`/knowledge/documents/${r.id}`}>
           {r.name}
@@ -27,7 +27,7 @@ export default async function DocumentsPage() {
       ),
     },
     { header: t('field.kind'), cell: (r) => r.documentType ?? r.mimeType ?? '—' },
-    { header: t('field.sourceType'), cell: (r) => <SourceBadge source={r.externalProvider} url={r.externalUrl} linkLabel={t('knowledge.abrirEnDrive')} /> },
+    { header: t('field.sourceType'), cell: (r) => <SourceBadge source={r.externalProvider} url={r.externalUrl} linkLabel={t('knowledge.openInDrive')} /> },
   ];
 
   return (
@@ -41,7 +41,7 @@ export default async function DocumentsPage() {
         rows={rows}
         getKey={(r) => r.id}
         truncatedAt={LIST_LIMIT}
-        empty={{ title: t('knowledge.aunNoHayDocumentos'), hint: t('knowledge.sePoblaranAlSincronizarGoogleDriveODesde') }}
+        empty={{ title: t('knowledge.documentsEmpty'), hint: t('knowledge.documentsEmptyHint') }}
         selectable
         archive={{ entityType: 'document' }}
       />

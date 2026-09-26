@@ -43,9 +43,9 @@ export function TaskPanelActions({ id, dueDate }: { id: string; dueDate: string 
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   return (
     <div className="flex flex-col gap-2 border-t border-line pt-3">
-      <span className="text-xs font-medium uppercase tracking-wide text-fg-subtle">{t('ui.fecha')}</span>
+      <span className="text-xs font-medium uppercase tracking-wide text-fg-subtle">{t('common.date')}</span>
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm text-fg-muted">{t('ui.reprogramar')}</span>
+        <span className="text-sm text-fg-muted">{t('tasks.rescheduleLabel')}</span>
         <TaskDueDateControl id={id} current={dueDate} />
         <TaskDueTodayButton id={id} today={today} />
       </div>
@@ -65,9 +65,9 @@ export function TaskDueTodayButton({ id, today }: { id: string; today: string })
         className="rounded border border-line-strong px-2 py-1.5 text-sm hover:bg-surface-muted disabled:opacity-50"
         disabled={busy}
         onClick={() => void run(() => patchJson(`/api/v1/tasks/${id}`, { dueDate: today }))}
-        title={t('ui.reprogramarParaHoy')}
+        title={t('tasks.rescheduleToday')}
       >
-        {t('ui.pasarAHoy')}
+        {t('tasks.moveToToday')}
       </button>
       {error && <span className="text-xs text-danger">{error}</span>}
     </span>
@@ -86,7 +86,7 @@ export function TaskCompleteButton({ id }: { id: string }) {
         className="rounded border border-line-strong px-2 py-1.5 text-sm hover:bg-surface-muted disabled:opacity-50"
         disabled={busy}
         onClick={() => void run(() => patchJson(`/api/v1/tasks/${id}/status`, { status: 'DONE' }))}
-        title={t('ui.marcarComoCompletada')}
+        title={t('tasks.markCompleted')}
       >
         ✓ Completar
       </button>
@@ -158,7 +158,7 @@ export function PhaseActions({
             disabled={busy}
             onClick={() => void run(() => patchJson(`/api/v1/projects/${projectId}/current-phase`, { phaseId: null }))}
           >
-            {t('ui.quitar')}
+            {t('common.unset')}
           </button>
         </>
       ) : (
@@ -168,7 +168,7 @@ export function PhaseActions({
           disabled={busy}
           onClick={() => void run(() => patchJson(`/api/v1/projects/${projectId}/current-phase`, { phaseId }))}
         >
-          {t('ui.marcarActual')}
+          {t('projects.markCurrentPhase')}
         </button>
       )}
       <button
@@ -176,7 +176,7 @@ export function PhaseActions({
         className="text-xs text-danger underline disabled:opacity-50"
         disabled={busy}
         onClick={() => {
-          if (confirm('¿Borrar esta fase? Es definitivo.')) void run(() => deleteJson(`/api/v1/project-phases/${phaseId}`));
+          if (confirm(t('projects.confirmDeletePhase'))) void run(() => deleteJson(`/api/v1/project-phases/${phaseId}`));
         }}
       >
         {t('common.delete')}

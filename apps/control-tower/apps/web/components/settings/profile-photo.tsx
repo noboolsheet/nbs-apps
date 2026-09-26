@@ -30,7 +30,7 @@ export function ProfilePhoto({ user }: { user: { name: string; image?: string | 
     e.target.value = ''; // permite re-elegir el mismo fichero
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      setError('El archivo debe ser una imagen.');
+      setError(t('settings.photoMustBeImage'));
       return;
     }
     setError(null);
@@ -42,7 +42,7 @@ export function ProfilePhoto({ user }: { user: { name: string; image?: string | 
       setImage(dataUrl);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo guardar la foto.');
+      setError(err instanceof Error ? err.message : t('settings.photoSaveError'));
     } finally {
       setBusy(false);
     }
@@ -57,7 +57,7 @@ export function ProfilePhoto({ user }: { user: { name: string; image?: string | 
       setImage(null);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo quitar la foto.');
+      setError(err instanceof Error ? err.message : t('settings.photoRemoveError'));
     } finally {
       setBusy(false);
     }
@@ -72,8 +72,8 @@ export function ProfilePhoto({ user }: { user: { name: string; image?: string | 
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={busy}
-          aria-label={t('ui.cambiarFotoDePerfil')}
-          title={t('ui.cambiarFotoDePerfil')}
+          aria-label={t('settings.changePhoto')}
+          title={t('settings.changePhoto')}
           className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border border-line bg-surface text-fg shadow-sm transition-colors hover:bg-surface-muted disabled:opacity-50"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -97,11 +97,11 @@ export function ProfilePhoto({ user }: { user: { name: string; image?: string | 
           </button>
           {image && (
             <button type="button" onClick={onRemove} disabled={busy} className={`${btnGhost} text-danger`}>
-              {t('ui.quitar')}
+              {t('common.unset')}
             </button>
           )}
         </div>
-        <p className="text-xs text-fg-subtle">{t('ui.subeUnaImagenDesdeTuOrdenadorSeRecortaAU')}</p>
+        <p className="text-xs text-fg-subtle">{t('settings.changePhotoHint')}</p>
         {error && <p className="text-xs text-danger">{error}</p>}
       </div>
     </div>
@@ -120,7 +120,7 @@ async function resizeToDataUrl(file: File): Promise<string> {
   canvas.width = target;
   canvas.height = target;
   const cx = canvas.getContext('2d');
-  if (!cx) throw new Error('No se pudo procesar la imagen.');
+  if (!cx) throw new Error(t('settings.photoProcessError'));
   cx.drawImage(bitmap, sx, sy, side, side, 0, 0, target, target);
   bitmap.close();
   return canvas.toDataURL('image/jpeg', JPEG_QUALITY);

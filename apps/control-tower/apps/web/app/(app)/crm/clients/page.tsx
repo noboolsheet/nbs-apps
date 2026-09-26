@@ -18,7 +18,7 @@ type Client = Awaited<ReturnType<typeof listClients>>[number];
 // Filtros de la lista (estado sólo de CT). Active primero y por defecto (son los que interesan).
 const FILTERS = [
   { key: 'ACTIVE', label: t('filter.active'), status: 'ACTIVE' },
-  { key: 'INACTIVE', label: t('crm.inactivos'), status: 'INACTIVE' },
+  { key: 'INACTIVE', label: t('crm.tabInactive'), status: 'INACTIVE' },
   { key: 'all', label: t('projects.tabAll'), status: undefined },
 ] as const;
 
@@ -75,8 +75,8 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
         getKey={(r) => r.id}
         truncatedAt={LIST_LIMIT}
         empty={{
-          title: t('crm.sinClientesEnEstaVista'),
-          hint: active.key === 'ACTIVE' ? t('crm.creaUnoConElFormularioDeArriba') : undefined,
+          title: t('crm.clientsEmptyView'),
+          hint: active.key === 'ACTIVE' ? t('crm.clientsEmptyHint') : undefined,
         }}
         selectable
         archive={{ entityType: 'client' }}

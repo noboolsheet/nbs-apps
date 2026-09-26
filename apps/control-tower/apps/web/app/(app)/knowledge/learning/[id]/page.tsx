@@ -30,7 +30,7 @@ export default async function LearningDetailPage({ params }: { params: Promise<{
   return (
     <div className="flex max-w-3xl flex-col gap-6">
       <nav className="text-sm text-fg-muted">
-        <Link className="hover:underline" href="/knowledge/learning">{t('knowledge.rutaDeAprendizaje')}</Link> / {item.title}
+        <Link className="hover:underline" href="/knowledge/learning">{t('knowledge.learningPathTitle')}</Link> / {item.title}
       </nav>
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{item.title}</h1>
@@ -40,7 +40,7 @@ export default async function LearningDetailPage({ params }: { params: Promise<{
       </div>
 
       <InlineEditSection
-        title={t('knowledge.item')}
+        title={t('knowledge.itemBadge')}
         endpoint={`/api/v1/learning/${item.id}`}
         fields={[
           { name: 'title', label: t('field.title'), type: 'text', value: item.title },
@@ -48,17 +48,17 @@ export default async function LearningDetailPage({ params }: { params: Promise<{
           { name: 'status', label: t('field.status'), type: 'select', options: LEARNING_STATUS, value: item.status },
           { name: 'sector', label: t('field.sector'), type: 'text', value: item.sector },
           { name: 'progress', label: t('field.progress'), type: 'number', value: item.progress },
-          { name: 'url', label: t('knowledge.linkAlRecurso'), type: 'text', value: item.url },
+          { name: 'url', label: t('knowledge.resourceLinkLabel'), type: 'text', value: item.url },
           { name: 'notes', label: t('field.notes'), type: 'textarea', value: item.notes },
         ]}
       />
 
       <section className="flex flex-col gap-2">
-        <ExternalSourceLink url={item.url} label={t('knowledge.abrirRecurso')} />
+        <ExternalSourceLink url={item.url} label={t('knowledge.openResource')} />
         <DescriptionList
           items={[
-            { label: t('crm.fuenteDeVerdad'), value: t('knowledge.controlTowerLearningNativo') },
-            { label: t('crm.creado'), value: formatDateTime(item.createdAt) },
+            { label: t('meta.sourceOfTruth'), value: t('knowledge.learningNativeSource') },
+            { label: t('meta.createdAt'), value: formatDateTime(item.createdAt) },
           ]}
         />
       </section>

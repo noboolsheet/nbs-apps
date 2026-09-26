@@ -5,6 +5,47 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-09-26 — F-30 · El diccionario de i18n deja de estar nombrado en castellano ✅
+
+**El problema (F-30, abierto desde la sesión 27).** E-10 dejó el i18n bien por dentro (`t()` tipado con
+`MessageKey`, un test que ata los diccionarios) pero las claves se habían **auto-extraído del castellano**: eran la
+frase española en camelCase y cortada a lo bruto —`knowledge.anadeRecursosReutilizablesConElBotonNuev`— y con los
+namespaces cruzados: `crm.creada`, `crm.creado` y `crm.fuenteDeVerdad` se usaban en **Negocio**, y un cajón `ui.*`
+de 60 claves servía para todo. La promesa de E-10 («copia `es.ts`, traduce los valores, no toques las claves») no se
+podía cumplir: quien tradujera no sabría a qué pantalla pertenece cada una.
+
+**Qué entra.**
+- **261 claves renombradas** (de 824) a `<area>.<cosa><Rol>`, en inglés y describiendo **el sitio**, no el texto:
+  `knowledge.assetsEmptyHint`, `crm.presalesTasksEmpty`, `automation.groupSyncHint`, `tasks.readOnlyProjectClosed`.
+  Roles fijos: `Title` · `Empty`/`EmptyHint` · `Label` · `Link` · `Hint` · `Confirm*`.
+- **Lo compartido sale de la vista que lo tenía secuestrado:** el bloque de contexto de las fichas pasa a **`meta.*`**
+  (`sourceOfTruth`, `createdAt`, `createdAtFem`, `updatedAt` — el femenino es concordancia del castellano, no un
+  duplicado), las acciones y etiquetas comunes a **`common.*`** y los filtros de lista a **`filter.*`**.
+  **`ui.* desaparece entero`**, repartido por dominio (`automation.panel*`, `knowledge.channel*`, `projects.*`,
+  `resources.*`, `settings.photo*`, `panel.*`, `login.*`, `search.shortcut`).
+- **Los literales que nunca llegaron al diccionario, dentro:** `Reemplaza a`/`Reemplazada por` de la cadena de
+  decisiones, los **tres `confirm()`** (borrar fase · desconectar integración · eliminar canal), las cuatro alertas
+  de la foto de perfil, el estado y el «usado/sin usar» de los canales del Inbox, el `check:`/`sin check` de la salud
+  de integración, los mensajes de ejecución del panel de automatización, el ámbito y la clasificación de una
+  automatización, y las tres políticas de retención (`Borrar tras {n} días`). Dos fichas que repetían a mano «Lo
+  gestiona X; se edita en el origen» ahora **reusan** `panel.ownedByProvider`.
+- **Guarda nueva en `i18n.test.ts`:** falla si una clave se nombra con la frase española (palabras funcionales del
+  castellano como segmento camel, o nombres de más de 32 caracteres). Sin esto, la siguiente tanda de texto vuelve a
+  entrar igual. De paso, las familias de plural que el test no cubría (`table.filterMatches`, `tasks.countActive`,
+  `tasks.countCompleted`) y fuera `ui.abrirEnElOrigen`, que no usaba nadie.
+- Las cabeceras de sección de `es.ts` que decían «Segunda pasada de extracción» / «Residuos de la migración» /
+  «Tercera pasada» ahora dicen qué hay debajo.
+
+**Lo que queda fuera, a propósito:** los mensajes de error de la **API y del dominio** (`app/api/v1/**`, `lib/api.ts`,
+`lib/auth.ts`, los `AppError` de `packages/*`) siguen siendo literales en español. No son texto de interfaz y la mitad
+vive fuera de `apps/web`; traerlos exigiría un catálogo aparte compartido con los paquetes. Y el `confirm()` **como
+control** sigue siendo P2 de la auditoría de UI/UX, no de F-30.
+
+**Por qué el renombrado es seguro:** `t()` está tipado con `MessageKey`, así que cualquier olvido **no compila**. El
+typecheck pasó a la primera tras la sustitución masiva (63 ficheros), y el único error fue un import que faltaba.
+
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (134) · `pnpm build`.
+
 ## 2026-09-26 — Sin tareas en Twenty, y saneado lo que la mudanza a vibox dejó mintiendo ✅
 
 Sesión de mantenimiento documental: una decisión del owner que cierra anotaciones, y tres incoherencias
@@ -172,7 +213,11 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-09-26): mantenimiento documental.** Decisión del owner: **no se crean tareas en Twenty** (F-18
+> **⚑ ÚLTIMO (2026-09-26): F-30 cerrado.** El diccionario de i18n deja de estar nombrado en castellano: 261 claves
+> renombradas a `<area>.<cosa><Rol>`, `ui.*` disuelto, lo compartido en `common.*`/`meta.*`/`filter.*`, los literales
+> sueltos dentro y un test que impide que vuelva a pasar. **Siguiente: E-15** (notas por registro).
+>
+> **⚑ ANTES, el mismo día: mantenimiento documental.** Decisión del owner: **no se crean tareas en Twenty** (F-18
 > cerrado, su verificación en vivo descartada, y con ella el write-back de tareas de E-1 y la mitad de AUT-30). Y
 > saneadas tres incoherencias: el «F-33» mal puesto de M40 (es **A-7 ampliado**), la migración del plan de Twenty
 > (`0024` estaba ocupada → **`0025_m41`**) y **toda la documentación viva que seguía hablando de la Raspberry Pi**

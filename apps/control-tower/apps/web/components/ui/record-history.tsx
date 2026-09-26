@@ -49,7 +49,7 @@ export function RecordHistory({ entity, id, labels }: { entity: string; id: stri
         <div className="flex flex-col gap-2 text-xs">
           {error && <p className="text-danger">{error}</p>}
           {rows === null && !error && <p className="text-fg-muted">{t('common.loading')}</p>}
-          {rows?.length === 0 && <p className="text-fg-muted">{t('ui.sinCambiosRegistrados')}</p>}
+          {rows?.length === 0 && <p className="text-fg-muted">{t('history.empty')}</p>}
           {rows?.map((r) => (
             <div key={r.id} className="flex flex-col gap-0.5 rounded border border-line-subtle px-2 py-1.5">
               <span className="text-fg-subtle">

@@ -26,14 +26,14 @@ export default function LoginPage() {
           ? await signIn.email({ email, password })
           : await signUp.email({ email, password, name: name || email });
       if (res.error) {
-        setError(res.error.message ?? t('ui.errorDeAutenticacion'));
+        setError(res.error.message ?? t('login.authError'));
         return;
       }
       const next = new URLSearchParams(window.location.search).get('next') ?? '/';
       router.push(next);
       router.refresh();
     } catch {
-      setError(t('ui.noSePudoCompletarLaOperacion'));
+      setError(t('login.genericError'));
     } finally {
       setLoading(false);
     }
@@ -44,7 +44,7 @@ export default function LoginPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">{t('login.controlTower')}</h1>
         <p className="text-sm text-fg-muted">
-          {mode === 'signin' ? t('ui.iniciaSesion') : t('ui.creaTuCuenta')}
+          {mode === 'signin' ? t('login.signIn') : t('login.createAccount')}
         </p>
       </div>
 
@@ -70,7 +70,7 @@ export default function LoginPage() {
         <input
           className="rounded border border-line-strong px-3 py-2 text-sm"
           type="password"
-          placeholder={t('login.contrasena')}
+          placeholder={t('login.password')}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}

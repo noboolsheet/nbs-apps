@@ -34,13 +34,13 @@ export default async function OpportunitiesPage() {
   ]);
   const clientById = new Map(clients.map((c) => [c.id, c.name]));
   const providerByOpp = new Map(identities.map((i) => [i.internalId, i.provider]));
-  const clientName = (id: string | null) => (id ? (clientById.get(id) ?? '—') : t('crm.sinCliente'));
+  const clientName = (id: string | null) => (id ? (clientById.get(id) ?? '—') : t('crm.noClient'));
   const money = (v: string | null, cur: string | null) => (v ? `${v} ${cur ?? ''}`.trim() : '—');
 
   // ─── Vista ACTIVAS: el Kanban de 4 columnas ──────────────────────────────────────────────────────────
   const activas: ReactNode =
     rows.length === 0 ? (
-      <EmptyState title={t('crm.aunNoHayOportunidadesActivas')} hint={t('crm.oportunidadesVienenDeTwenty')} />
+      <EmptyState title={t('crm.opportunitiesEmpty')} hint={t('crm.opportunitiesFromTwentyHint')} />
     ) : (
       // E-12/B-1: el tablero es un componente cliente para poder ARRASTRAR las cards entre columnas; el
       // contenido de cada card se sigue renderizando en el servidor y se le pasa como `content`.
@@ -74,15 +74,15 @@ export default async function OpportunitiesPage() {
     { header: t('entity.opportunity'), className: '' },
     { header: t('entity.client'), className: 'w-48' },
     { header: t('field.status'), className: 'w-40' },
-    { header: t('crm.valor'), className: 'w-32' },
-    { header: t('crm.cerrada'), className: 'w-32' },
-    { header: t('crm.archivada'), className: 'w-32' },
+    { header: t('crm.amount'), className: 'w-32' },
+    { header: t('crm.closedAt'), className: 'w-32' },
+    { header: t('crm.archivedAt'), className: 'w-32' },
   ];
   const archivadas: ReactNode =
     archived.length === 0 ? (
       <EmptyState
-        title={t('crm.noHayOportunidadesArchivadas')}
-        hint={t('crm.lasOportunidadesCerradasSeArchivanSolas1')}
+        title={t('crm.opportunitiesArchivedEmpty')}
+        hint={t('crm.opportunitiesArchivedHint')}
       />
     ) : (
       <DataTable
@@ -108,9 +108,9 @@ export default async function OpportunitiesPage() {
   return (
     <div className="flex flex-col gap-4">
       <nav className="text-sm text-fg-muted">
-        <Link className="hover:underline" href="/crm">CRM</Link> / {t('crm.oportunidades')}
+        <Link className="hover:underline" href="/crm">CRM</Link> / {t('crm.opportunitiesTitle')}
       </nav>
-      <h1 className="text-2xl font-semibold tracking-tight">{t('crm.oportunidades')}</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{t('crm.opportunitiesTitle')}</h1>
 
       <Tabs
         tabs={[
@@ -119,7 +119,7 @@ export default async function OpportunitiesPage() {
         ]}
         actions={
           <Link href="/crm/opportunities/tasks" className="text-sm text-link underline-offset-2 hover:underline">
-            {t('crm.verTareas')}
+            {t('crm.viewTasksLink')}
           </Link>
         }
       />

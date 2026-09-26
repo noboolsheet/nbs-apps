@@ -38,10 +38,10 @@ interface AutomationDetail {
 }
 
 const KIND_LABEL: Record<AutomationDetail['kind'], string> = {
-  core: 'Núcleo del motor',
-  event: 'Por evento',
-  sync: 'Sincronización',
-  sweep: 'Barrido de mantenimiento',
+  core: t('automation.classCore'),
+  event: t('automation.classEvent'),
+  sync: t('automation.classSync'),
+  sweep: t('automation.classSweep'),
 };
 
 function fmtDate(v: string | null): string {
@@ -115,26 +115,26 @@ export function AutomationPanel() {
       return;
     }
     const d = res.data ?? {};
-    if (d.kind === 'sync') setMsg('Sincronización encolada ✓');
-    else if (d.skipped) setMsg(`Nada que hacer: ${String(d.reason ?? '')}`);
-    else if (typeof d.deleted === 'number') setMsg(`Hecho ✓ · ${d.deleted} borrado(s)`);
-    else if (typeof d.archived === 'number') setMsg(`Hecho ✓ · ${d.archived} archivada(s)`);
-    else setMsg('Ejecutado ✓');
+    if (d.kind === 'sync') setMsg(`${t('automation.syncQueued')} ✓`);
+    else if (d.skipped) setMsg(t('automation.runNothingToDo', { reason: String(d.reason ?? '') }));
+    else if (typeof d.deleted === 'number') setMsg(t('automation.runDeleted', { n: d.deleted }));
+    else if (typeof d.archived === 'number') setMsg(t('automation.runArchived', { n: d.archived }));
+    else setMsg(t('automation.runDone'));
     setReload((n) => n + 1);
     router.refresh();
   }
 
-  const title = detail ? detail.title : 'Automatización';
+  const title = detail ? detail.title : t('automation.panelFallbackTitle');
   const items: DLItem[] = detail
     ? [
         { label: t('field.status'), value: <StatusBadge status={detail.status} /> },
         { label: t('field.kind'), value: KIND_LABEL[detail.kind] },
-        { label: t('ui.queHace'), value: detail.description },
-        { label: t('ui.frecuencia'), value: detail.frequencyLabel },
-        { label: t('ui.disparador'), value: detail.triggerLabel },
-        { label: t('ui.ambito'), value: detail.scope === 'org' ? 'Por organización' : 'Global (todas las organizaciones)' },
+        { label: t('automation.panelWhat'), value: detail.description },
+        { label: t('automation.panelFrequency'), value: detail.frequencyLabel },
+        { label: t('automation.panelTrigger'), value: detail.triggerLabel },
+        { label: t('automation.panelScope'), value: detail.scope === 'org' ? t('automation.scopeOrg') : t('automation.scopeGlobal') },
         {
-          label: t('ui.requisitos'),
+          label: t('automation.panelRequirements'),
           value: (
             <ul className="list-disc pl-4">
               {detail.requirements.map((r, i) => (
@@ -143,11 +143,11 @@ export function AutomationPanel() {
             </ul>
           ),
         },
-        { label: t('ui.efectoDePausar'), value: detail.pauseEffect },
+        { label: t('automation.panelPauseEffect'), value: detail.pauseEffect },
         ...(detail.kind === 'sync'
           ? [
               {
-                label: t('ui.ultimaEjecucion'),
+                label: t('automation.panelLastRun'),
                 value: detail.lastRunAt
                   ? `${fmtDate(detail.lastRunAt)}${detail.lastRunStatus ? ` · ${enumLabel(detail.lastRunStatus)}` : ''}`
                   : 'Nunca',
@@ -158,10 +158,10 @@ export function AutomationPanel() {
         ...(detail.kind === 'sync'
           ? [
               {
-                label: t('ui.integracion'),
+                label: t('automation.panelIntegration'),
                 value: (
                   <Link href="/automation/integrations" className="text-blue-600 underline dark:text-blue-400">
-                    {t('ui.verEnIntegraciones')}
+                    {t('automation.panelIntegrationsLink')}
                   </Link>
                 ),
               } as DLItem,
@@ -191,12 +191,12 @@ export function AutomationPanel() {
                 </button>
                 {detail.runnable && (
                   <button type="button" disabled={busy} onClick={() => void runNow()} className={buttonCls('secondary')}>
-                    {t('ui.ejecutarAhora')}
+                    {t('automation.runNow')}
                   </button>
                 )}
               </div>
             ) : (
-              <p className="rounded border border-line bg-surface-muted px-3 py-2 text-xs text-fg-muted">{t('ui.parteDelNucleoDelMotorSiempreActivaNoSeP')}</p>
+              <p className="rounded border border-line bg-surface-muted px-3 py-2 text-xs text-fg-muted">{t('automation.panelCoreNotice')}</p>
             )}
             {msg && <span className="text-xs text-fg-muted">{msg}</span>}
           </div>

@@ -34,17 +34,17 @@ export default async function ProcessesPage() {
   return (
     <div className="flex flex-col gap-4">
       <nav className="text-sm text-fg-muted">
-        <Link className="hover:underline" href="/business">{t('nav.business')}</Link> / {t('business.procesos')}
+        <Link className="hover:underline" href="/business">{t('nav.business')}</Link> / {t('business.processesTitle')}
       </nav>
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">
-          {t('business.procesos')} <span className="font-normal text-fg-subtle">({rows.length})</span>
+          {t('business.processesTitle')} <span className="font-normal text-fg-subtle">({rows.length})</span>
         </h1>
         <NewRecordButton entity="knowledge_item" preset="knowledgeType:PROCESS" />
       </div>
-      <p className="text-sm text-fg-muted">{t('business.procesosHint')}</p>
+      <p className="text-sm text-fg-muted">{t('business.processesHint')}</p>
       {rows.length === 0 ? (
-        <EmptyState title={t('business.procesosEmpty')} hint={t('business.procesosEmptyHint')} />
+        <EmptyState title={t('business.processesEmpty')} hint={t('business.processesEmptyHint')} />
       ) : (
         <LibraryList items={items} lockedType />
       )}

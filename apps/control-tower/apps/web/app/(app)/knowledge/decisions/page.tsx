@@ -33,9 +33,9 @@ export default async function DecisionsPage() {
         </RecordLink>
       ),
     },
-    { header: t('knowledge.detalle'), value: (r) => r.decision, cell: (r) => <span className="line-clamp-1 text-fg-muted">{r.decision}</span> },
+    { header: t('knowledge.detailLink'), value: (r) => r.decision, cell: (r) => <span className="line-clamp-1 text-fg-muted">{r.decision}</span> },
     {
-      header: t('knowledge.cadena'),
+      header: t('knowledge.chainLink'),
       className: 'w-56',
       cell: (r) => {
         const olderId = r.supersedesDecisionId;
@@ -45,17 +45,17 @@ export default async function DecisionsPage() {
           <span className="flex flex-col gap-0.5 text-xs">
             {olderId && (
               <span className="text-fg-muted">
-                Reemplaza a{' '}
+                {t('knowledge.supersedes')}{' '}
                 <RecordLink entity="decision" id={olderId} className="underline-offset-2 hover:underline">
-                  {titleById.get(olderId) ?? 'otra decisión'}
+                  {titleById.get(olderId) ?? t('knowledge.decisionFallback')}
                 </RecordLink>
               </span>
             )}
             {newerId && (
               <span className="text-fg-muted">
-                Reemplazada por{' '}
+                {t('knowledge.supersededBy')}{' '}
                 <RecordLink entity="decision" id={newerId} className="underline-offset-2 hover:underline">
-                  {titleById.get(newerId) ?? 'otra decisión'}
+                  {titleById.get(newerId) ?? t('knowledge.decisionFallback')}
                 </RecordLink>
               </span>
             )}
@@ -78,7 +78,7 @@ export default async function DecisionsPage() {
         rows={rows}
         getKey={(r) => r.id}
         truncatedAt={LIST_LIMIT}
-        empty={{ title: t('knowledge.aunNoHayDecisiones'), hint: t('knowledge.registraLaPrimeraConElBotonNuevo') }}
+        empty={{ title: t('knowledge.decisionsEmpty'), hint: t('knowledge.decisionsEmptyHint') }}
         selectable
         archive={{ entityType: 'decision' }}
       />

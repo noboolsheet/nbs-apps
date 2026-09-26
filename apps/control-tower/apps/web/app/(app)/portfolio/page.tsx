@@ -22,7 +22,7 @@ export default async function PortfolioPage() {
 
   const columns: Column<Item>[] = [
     {
-      header: t('knowledge.item'),
+      header: t('knowledge.itemBadge'),
       value: (r) => r.name,
       cell: (r) => (
         <RecordLink entity="portfolio_item" id={r.id} className="font-medium underline-offset-2 hover:underline">
@@ -47,7 +47,7 @@ export default async function PortfolioPage() {
         rows={rows}
         getKey={(r) => r.id}
         truncatedAt={LIST_LIMIT}
-        empty={{ title: t('portfolio.aunNoHayItemsDePortfolio'), hint: t('crm.creaElPrimeroConElBotonNuevo') }}
+        empty={{ title: t('portfolio.empty'), hint: t('common.createFirstHint') }}
         selectable
         archive={{ entityType: 'portfolio_item' }}
       />

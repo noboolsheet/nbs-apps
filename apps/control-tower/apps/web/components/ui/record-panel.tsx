@@ -417,7 +417,7 @@ export function RecordPanel() {
                   {creating ? t('panel.creating') : t('common.create')}
                 </button>
               ) : (
-                <p className="text-xs text-fg-subtle">{t('ui.losCambiosSeGuardanAutomaticamente')}</p>
+                <p className="text-xs text-fg-subtle">{t('panel.autosaveNotice')}</p>
               )}
 
               {/* Botones de fecha específicos de tarea/subtarea (Reprogramar + Pasar a hoy). */}
@@ -484,8 +484,8 @@ export function RecordPanel() {
                       <SourceBadge source={source.provider} />
                     </ContextRow>
                   )}
-                  {raw?.createdAt != null && <ContextRow label={t('crm.creado')}>{fmtDate(raw.createdAt)}</ContextRow>}
-                  {raw?.updatedAt != null && <ContextRow label={t('crm.actualizado')}>{fmtDate(raw.updatedAt)}</ContextRow>}
+                  {raw?.createdAt != null && <ContextRow label={t('meta.createdAt')}>{fmtDate(raw.createdAt)}</ContextRow>}
+                  {raw?.updatedAt != null && <ContextRow label={t('meta.updatedAt')}>{fmtDate(raw.updatedAt)}</ContextRow>}
                 </div>
               )}
               {/* F-4: historial campo a campo del registro (se carga al desplegarlo). */}

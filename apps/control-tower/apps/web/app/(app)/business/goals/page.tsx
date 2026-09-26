@@ -34,7 +34,7 @@ export default async function GoalsPage() {
       ),
     },
     {
-      header: t('business.area'),
+      header: t('business.areaLabel'),
       value: (r) => (r.strategicAreaId ? (areaById.get(r.strategicAreaId) ?? null) : null),
       cell: (r) =>
         r.strategicAreaId ? (
@@ -53,7 +53,7 @@ export default async function GoalsPage() {
   return (
     <ListPage
       breadcrumb={[{ label: t('nav.business'), href: '/business' }]}
-      title={t('business.objetivos')}
+      title={t('business.goalsTitle')}
       count={rows.length}
       action={<NewRecordButton entity="goal" />}
     >
@@ -61,7 +61,7 @@ export default async function GoalsPage() {
         columns={columns}
         rows={rows}
         getKey={(r) => r.id}
-        empty={{ title: t('business.aunNoHayObjetivos'), hint: t('crm.creaElPrimeroConElBotonNuevo') }}
+        empty={{ title: t('business.goalsEmpty'), hint: t('common.createFirstHint') }}
         selectable
         archive={{ entityType: 'goal' }}
       />

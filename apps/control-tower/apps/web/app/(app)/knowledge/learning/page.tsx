@@ -17,16 +17,16 @@ export default async function LearningPage() {
   return (
     <div className="flex flex-col gap-4">
       <nav className="text-sm text-fg-muted">
-        <Link className="hover:underline" href="/knowledge">{t('nav.knowledge')}</Link> / {t('knowledge.rutaDeAprendizaje')}
+        <Link className="hover:underline" href="/knowledge">{t('nav.knowledge')}</Link> / {t('knowledge.learningPathTitle')}
       </nav>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{t('knowledge.rutaDeAprendizaje')} <span className="font-normal text-fg-subtle">({items.length})</span></h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('knowledge.learningPathTitle')} <span className="font-normal text-fg-subtle">({items.length})</span></h1>
         </div>
         <NewRecordButton entity="learning" />
       </div>
       {items.length === 0 ? (
-        <EmptyState title={t('knowledge.aunNoHayNadaEnTuLearningPath')} hint={t('knowledge.anadeUnCursoHabilidadOTemaConElBotonNuev')} />
+        <EmptyState title={t('knowledge.learningEmpty')} hint={t('knowledge.learningEmptyHint')} />
       ) : (
         <LearningList items={items} />
       )}

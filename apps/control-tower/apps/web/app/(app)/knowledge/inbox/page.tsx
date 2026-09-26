@@ -41,17 +41,17 @@ export default async function InboxPage() {
       <nav className="text-sm text-fg-muted">
         <Link className="hover:underline" href="/knowledge">{t('nav.knowledge')}</Link> / {t('knowledge.inbox')}
       </nav>
-      <h1 className="text-2xl font-semibold tracking-tight">{t('knowledge.bandejaDeConocimiento')} <span className="font-normal text-fg-subtle">({rows.length})</span></h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{t('knowledge.inboxTitle')} <span className="font-normal text-fg-subtle">({rows.length})</span></h1>
       <CaptureForm />
 
       <section className="flex flex-col gap-2 rounded-lg border border-line p-4">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">{t('knowledge.canalesDeCaptura')}</h2>
-        <p className="text-xs text-fg-muted">{t('knowledge.conectaHerramientasExternasN8nEmailExten')}</p>
+        <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">{t('knowledge.captureChannelsTitle')}</h2>
+        <p className="text-xs text-fg-muted">{t('knowledge.captureChannelsHint')}</p>
         <InboxChannels channels={channels} canManage={canManage} />
       </section>
 
       {rows.length === 0 ? (
-        <EmptyState title={t('knowledge.tuInboxEstaVacio')} hint={t('knowledge.capturaUnaIdeaConElFormularioDeArriba')} />
+        <EmptyState title={t('knowledge.inboxEmpty')} hint={t('knowledge.inboxEmptyHint')} />
       ) : (
         <EntityTable columns={columns} rows={rows} getKey={(r) => r.id} />
       )}

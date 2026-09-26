@@ -23,15 +23,15 @@ export default async function ArchivedPage() {
   return (
     <div className="flex max-w-3xl flex-col gap-6">
       <nav className="text-sm text-fg-muted">
-        <Link className="hover:underline" href="/settings">{t('nav.settings')}</Link> / {t('settings.archivados')}
+        <Link className="hover:underline" href="/settings">{t('nav.settings')}</Link> / {t('settings.archivedTitle')}
       </nav>
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{t('settings.archivados')}</h1>
-        <p className="text-sm text-fg-muted">{t('settings.elementosOcultadosDeSusListasNoBorradosS')}</p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t('settings.archivedTitle')}</h1>
+        <p className="text-sm text-fg-muted">{t('settings.archivedHint')}</p>
       </div>
 
       {groups.length === 0 ? (
-        <EmptyState title={t('settings.noHayNadaArchivado')} hint={t('settings.loQueArchivesDesdeLasListasApareceraAqui')} />
+        <EmptyState title={t('settings.archivedEmpty')} hint={t('settings.archivedEmptyHint')} />
       ) : (
         groups.map((g) => {
           const columns: { header: string; className?: string; cell: (it: (typeof g.items)[number]) => ReactNode }[] = [

@@ -10,10 +10,10 @@ import { t } from '@/lib/i18n';
 export const dynamic = 'force-dynamic';
 
 const KIND_SECTIONS: { kind: AutomationRow['kind']; title: string; hint?: string }[] = [
-  { kind: 'core', title: t('automation.nucleoDelMotor'), hint: t('automation.siempreActivasSinEllasNadaCorreriaSoloLe') },
-  { kind: 'event', title: t('automation.porEvento'), hint: t('automation.seDisparanAlOcurrirUnCambio') },
-  { kind: 'sync', title: t('automation.sincronizaciones'), hint: t('automation.traenDatosDeLosSistemasExternosDiarioMan') },
-  { kind: 'sweep', title: t('automation.barridosDeMantenimiento'), hint: t('automation.limpianArchivanPeriodicamente') },
+  { kind: 'core', title: t('automation.groupCore'), hint: t('automation.groupCoreHint') },
+  { kind: 'event', title: t('automation.groupEvent'), hint: t('automation.groupEventHint') },
+  { kind: 'sync', title: t('automation.groupSync'), hint: t('automation.groupSyncHint') },
+  { kind: 'sweep', title: t('automation.groupSweep'), hint: t('automation.groupSweepHint') },
 ];
 
 export default async function AutomationsListPage() {
@@ -30,12 +30,12 @@ export default async function AutomationsListPage() {
         / Automatizaciones
       </nav>
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{t('automation.automatizaciones')}</h1>
-        <p className="text-sm text-fg-muted">{t('automation.todoLoQueControlTowerHacePorSuCuentaPuls')}</p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t('automation.listTitle')}</h1>
+        <p className="text-sm text-fg-muted">{t('automation.listHint')}</p>
       </div>
 
       {rows.length === 0 ? (
-        <EmptyState title={t('automation.sinAutomatizaciones')} />
+        <EmptyState title={t('automation.listEmpty')} />
       ) : (
         KIND_SECTIONS.map((section) => {
           const items = rows.filter((r) => r.kind === section.kind);

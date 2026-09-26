@@ -65,8 +65,9 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
 >   y sólo fallaba al iniciar sesión, con un 500 opaco) · `parseId()` en **53 rutas**: un id mal formado ya no da
 >   `500 Error interno` sino `400` · el deploy avisa si la contraseña de Postgres sigue siendo la de por defecto.
 >   Detalle en `SECURITY_CHECKLIST.md`.
-> - **Acabado:** **F-30** (claves de i18n auto-extraídas del castellano + literales sueltos; F-29 se llevó por
->   delante los de la cabecera de Tareas y el breadcrumb de Contactos, queda el resto).
+> - ✅ **F-30 HECHO (2026-09-26)** — 261 claves de i18n pasan a nombres semánticos en su namespace correcto
+>   (`ui.*` desaparece; lo compartido va a `common.*`/`meta.*`/`filter.*`), los literales sueltos entran al
+>   diccionario y un test nuevo falla si alguien vuelve a nombrar una clave con la frase española.
 > - **Huecos de producto:** **E-15** notas/comentarios por registro (el único que es una ausencia real) ·
 >   **E-16** adjuntos (necesita decisión: choca con «sólo referencias») · **E-17** exportar datos de negocio e
 >   informes de evolución.
@@ -885,7 +886,7 @@ El detalle cronológico está en [`BUILD_LOG.md`](./BUILD_LOG.md); las decisione
   sobre las 19 rutas contrastando el número de filas renderizadas contra la BD (contactos 6+cabecera=7,
   objetivos 1+1=2, pagos 0 → estado vacío, Tareas conserva sus 4 tablas apiladas con `fixedLayout`).
 
-### F-30 · i18n: claves auto-extraídas del castellano y literales sueltos 🟢 ABIERTO (repasado contra el código el 2026-09-26)
+### F-30 · i18n: claves auto-extraídas del castellano y literales sueltos ✅ RESUELTO (2026-09-26)
 - **Hallado en:** sesión 27. Cierra el flanco que dejó **E-10** (i18n), que sí está hecho y bien: `t()` está tipado
   con `MessageKey`, así que una clave inexistente **no compila**, y un test comprueba que los diccionarios cuadran.
 - **Lo que quedó mal, en dos frentes:**
@@ -906,6 +907,37 @@ El detalle cronológico está en [`BUILD_LOG.md`](./BUILD_LOG.md); las decisione
 - **Qué haría falta:** renombrar esas 61 claves a algo semántico (`empty.goals.hint`) y en su namespace correcto, y
   mover los literales sueltos al diccionario. El renombrado es seguro: al estar tipado, cualquier olvido **falla en
   el typecheck**, no en producción.
+
+**✅ RESUELTO (2026-09-26).** Cómo:
+
+- **261 claves renombradas** (de 824) a `<area>.<cosa><Rol>` en inglés, describiendo **dónde** se usan y no qué dicen:
+  `knowledge.anadeRecursosReutilizablesConElBotonNuev` → `knowledge.assetsEmptyHint`,
+  `crm.creaElPrimeroConElBotonNuevo` → `common.createFirstHint`. Roles fijos: `Title` · `Empty`/`EmptyHint` ·
+  `Label` · `Link` · `Hint` · `Confirm*`. La convención queda escrita en la cabecera de `es.ts`.
+- **Namespaces corregidos.** Lo que se usaba en varias secciones sale de `crm.*`/`knowledge.*`: el bloque de
+  contexto de las fichas pasa a **`meta.*`** (`meta.sourceOfTruth`, `meta.createdAt`, `meta.createdAtFem`,
+  `meta.updatedAt`), las etiquetas y acciones compartidas a **`common.*`** y los filtros de lista a **`filter.*`**.
+  **`ui.*` desaparece entero** (era un cajón de sastre de 60 claves): sus entradas se reparten por dominio
+  (`automation.panel*`, `knowledge.channel*`, `projects.*`, `resources.*`, `settings.photo*`, `panel.*`, `login.*`).
+- **Literales llevados al diccionario:** `Reemplaza a`/`Reemplazada por` y el «otra decisión» de la cadena de
+  supersede · los **tres `confirm()`** (borrar fase, desconectar integración, eliminar canal) · las cuatro
+  alertas de la foto de perfil · el estado y el «usado/sin usar» de los canales del Inbox · el `check:`/`sin check`
+  de la salud de integración · los mensajes de ejecución del panel de automatización (`Hecho ✓ · N borrado(s)`…) ·
+  el ámbito (`Por organización`/`Global`) y la clasificación (`Núcleo del motor`…) · las tres políticas de
+  retención (`Borrar tras {n} días`) · los títulos de la insignia de procedencia (`source.native`,
+  `source.syncedFrom`). Dos sitios que repetían a mano «Lo gestiona X; se edita en el origen» ahora **reusan**
+  `panel.ownedByProvider`.
+- **Guarda para que no vuelva a pasar:** `i18n.test.ts` falla si una clave nueva se nombra con la frase española
+  (busca palabras funcionales del castellano como segmento camel, o nombres de más de 32 caracteres). De paso se
+  completaron las familias de plural que el test no cubría (`table.filterMatches`, `tasks.countActive`,
+  `tasks.countCompleted`) y se borró `ui.abrirEnElOrigen`, que no usaba nadie.
+- **Lo que queda fuera a propósito:** los mensajes de **error de la API y del dominio**
+  (`app/api/v1/**/route.ts`, `lib/api.ts`, `lib/auth.ts`, los `AppError` de `packages/*`) siguen siendo literales
+  en español. No son texto de interfaz: viven fuera de `apps/web` en parte, y traerlos al diccionario del cliente
+  exige un catálogo aparte compartido con los paquetes. Si algún día se añade idioma, ese es un ítem nuevo, no
+  este. Tampoco se toca el `confirm()` nativo como control (eso es **P2 de la auditoría de UI/UX**, no F-30).
+- Verificado: `pnpm -r typecheck` (el renombrado está protegido por el tipo `MessageKey`) · `pnpm lint` ·
+  `pnpm test` (134, uno nuevo) · `pnpm build`.
 
 ### F-31 · Despliegue: la imagen del worker lleva el proyecto entero y no hay límites de recursos 🟡 ABIERTO — imagen ✅ · techo de memoria **sin comprobar en vibox** (el arreglo de la Pi ya no aplica)
 - **Hallado en:** sesión 27. **Nuevo** respecto a `SECURITY_CHECKLIST.md`, que ya cubre lo de los contenedores

@@ -47,7 +47,7 @@ export default async function SettingsPage() {
       {/* Tu perfil va primero: es lo más personal y lo que más se toca. Sólo el NOMBRE es editable: el email es la
           credencial de acceso y cambiarlo pide su propio flujo con verificación (pendiente, ver E-9). */}
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">{t('settings.tuPerfil')}</h2>
+        <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">{t('settings.yourProfile')}</h2>
         <ProfilePhoto user={{ name: ctx.user.name, image: ctx.user.image }} />
         <InlineEditSection
           endpoint="/api/v1/profile"
@@ -65,8 +65,8 @@ export default async function SettingsPage() {
         />
         <DescriptionList
           items={[
-            { label: t('settings.rolEnLaOrganizacion'), value: enumLabel(ctx.org.role) },
-            { label: t('settings.slugDeLaOrganizacion'), value: <code>{org.slug}</code> },
+            { label: t('settings.roleInOrg'), value: enumLabel(ctx.org.role) },
+            { label: t('settings.orgSlug'), value: <code>{org.slug}</code> },
           ]}
         />
       </section>
@@ -74,75 +74,75 @@ export default async function SettingsPage() {
       {/* Separador entre bloques: sin él, «Tu perfil» y «Organización» se leían como una sola lista. */}
       <div className="border-t border-line pt-6">
       <InlineEditSection
-        title={t('settings.organizacion')}
+        title={t('settings.organization')}
         endpoint="/api/v1/organization"
         canEdit={canManage}
         fields={[
           { name: 'name', label: t('field.name'), type: 'text', value: org.name },
-          { name: 'timezone', label: t('settings.zonaHoraria'), type: 'select', options: TIMEZONES, value: org.settings.timezone ?? null },
-          { name: 'defaultCurrency', label: t('settings.monedaPorDefecto'), type: 'select', options: CURRENCIES, value: org.settings.defaultCurrency ?? null },
+          { name: 'timezone', label: t('settings.timezone'), type: 'select', options: TIMEZONES, value: org.settings.timezone ?? null },
+          { name: 'defaultCurrency', label: t('settings.defaultCurrency'), type: 'select', options: CURRENCIES, value: org.settings.defaultCurrency ?? null },
           {
             name: 'completedTaskRetentionDays',
-            label: t('settings.retencionDeTareasCompletadas'),
+            label: t('settings.retentionCompletedTasks'),
             type: 'select',
             options: RETENTION_DAYS,
-            emptyLabel: t('settings.conservarSiempre'),
+            emptyLabel: t('settings.keepForever'),
             value: org.settings.completedTaskRetentionDays ?? null,
             display: org.settings.completedTaskRetentionDays
-              ? `Borrar tras ${org.settings.completedTaskRetentionDays} días`
-              : t('settings.conservarSiempre'),
+              ? t('settings.retentionDeleteAfter', { n: org.settings.completedTaskRetentionDays })
+              : t('settings.keepForever'),
             // El barrido lo ejecuta el worker; el botón lo lanza ahora, junto a la política que aplica.
-            action: canManage ? <PurgeCompletedButton policyLabel={t('settings.retencionDeTareasCompletadas')} /> : undefined,
+            action: canManage ? <PurgeCompletedButton policyLabel={t('settings.retentionCompletedTasks')} /> : undefined,
           },
           {
             name: 'archivedRetentionDays',
-            label: t('settings.retencionDeArchivados'),
+            label: t('settings.retentionArchived'),
             type: 'select',
             options: RETENTION_DAYS,
-            emptyLabel: t('settings.conservarSiempre'),
+            emptyLabel: t('settings.keepForever'),
             value: org.settings.archivedRetentionDays ?? null,
             display: org.settings.archivedRetentionDays
-              ? `Borrar tras ${org.settings.archivedRetentionDays} días`
-              : t('settings.conservarSiempre'),
-            action: canManage ? <PurgeArchivedButton policyLabel={t('settings.retencionDeArchivados')} /> : undefined,
+              ? t('settings.retentionDeleteAfter', { n: org.settings.archivedRetentionDays })
+              : t('settings.keepForever'),
+            action: canManage ? <PurgeArchivedButton policyLabel={t('settings.retentionArchived')} /> : undefined,
           },
           {
             name: 'reviewRetentionDays',
-            label: t('settings.retencionPorRevisar'),
+            label: t('settings.retentionReviewItems'),
             type: 'select',
             options: RETENTION_DAYS,
-            emptyLabel: t('settings.conservarSiempre'),
+            emptyLabel: t('settings.keepForever'),
             value: org.settings.reviewRetentionDays ?? null,
             display: org.settings.reviewRetentionDays
-              ? `Borrar tras ${org.settings.reviewRetentionDays} días`
-              : t('settings.conservarSiempre'),
-            action: canManage ? <PurgeReviewedButton policyLabel={t('settings.retencionPorRevisar')} /> : undefined,
+              ? t('settings.retentionDeleteAfter', { n: org.settings.reviewRetentionDays })
+              : t('settings.keepForever'),
+            action: canManage ? <PurgeReviewedButton policyLabel={t('settings.retentionReviewItems')} /> : undefined,
           },
         ]}
       />
       {!canManage && (
-        <p className="mt-2 text-xs text-fg-subtle">{t('settings.soloElOwnerDeLaOrganizacionPuedeEditarEs')}</p>
+        <p className="mt-2 text-xs text-fg-subtle">{t('settings.ownerOnlyHint')}</p>
       )}
       </div>
 
       <section className="flex flex-col gap-2 border-t border-line pt-6">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">{t('settings.guiaDeUso')}</h2>
+        <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">{t('settings.guide')}</h2>
         <Link className="text-sm text-link underline-offset-2 hover:underline" href="/settings/guide">
-          {t('settings.abrirLaGuia')}
+          {t('settings.openGuideLink')}
         </Link>
       </section>
 
       <section className="flex flex-col gap-2 border-t border-line pt-6">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">{t('settings.archivados')}</h2>
+        <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">{t('settings.archivedTitle')}</h2>
         <Link className="text-sm text-link underline-offset-2 hover:underline" href="/settings/archived">
-          {t('settings.verArchivados')}
+          {t('settings.viewArchivedLink')}
         </Link>
       </section>
 
       <section className="flex flex-col gap-2 border-t border-line pt-6">
         <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">{t('home.integrations')}</h2>
         <Link className="text-sm text-link underline-offset-2 hover:underline" href="/automation/integrations">
-          {t('settings.irAIntegraciones')}
+          {t('settings.goToIntegrationsLink')}
         </Link>
       </section>
     </div>

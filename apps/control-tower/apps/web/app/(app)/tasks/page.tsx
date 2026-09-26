@@ -70,7 +70,7 @@ function assocCell(task: {
   opportunityName?: string | null;
   parentTaskId?: string | null;
 }) {
-  const sub = task.parentTaskId ? <span className="text-xs text-fg-subtle">{t('tasks.subtarea')}</span> : null;
+  const sub = task.parentTaskId ? <span className="text-xs text-fg-subtle">{t('tasks.subtaskSuffix')}</span> : null;
   if (task.projectId) {
     return <span className="text-xs"><Link className="underline underline-offset-2" href={`/projects/${task.projectId}`}>{task.projectName ?? t('entity.project')}</Link>{sub}</span>;
   }
@@ -102,7 +102,7 @@ function TasksLayout({
   return (
     <ListPage
       breadcrumb={[{ label: t('nav.projects'), href: '/projects' }]}
-      title={t('tasks.todasLasTareas')}
+      title={t('tasks.allTitle')}
       subtitle={
         <span className="text-sm text-fg-muted">
           {tPlural(view === 'active' ? 'tasks.countActive' : 'tasks.countCompleted', count)} ·{' '}
@@ -158,8 +158,8 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
           rows={done}
           getKey={(task) => task.id}
           empty={{
-            title: t('tasks.aunNoHayTareasCompletadas'),
-            hint: t('tasks.lasTareasHechasOCanceladasApareceranAqui'),
+            title: t('tasks.completedEmpty'),
+            hint: t('tasks.completedEmptyHint'),
           }}
           selectable
           remove={{ entityType: 'task' }}
@@ -243,7 +243,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   return (
     <TasksLayout view="active" count={rows.length} timezone={org.settings.timezone}>
       {rows.length === 0 && overdue.length === 0 ? (
-        <EmptyState title={t('tasks.noHayTareasActivas')} hint={t('tasks.creaUnaDentroDeUnProyectoOUnaOportunidad')} />
+        <EmptyState title={t('tasks.activeEmpty')} hint={t('tasks.activeEmptyHint')} />
       ) : (
         <>
           {/* Vencidas: TODAS las activas con fecha pasada (incl. subtareas y tareas de oportunidad), arriba del todo. */}
@@ -252,7 +252,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
               <div className="flex items-baseline gap-2">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-danger">{t('common.overdue')}</h2>
                 <span className="text-xs font-normal text-fg-subtle">({overdue.length})</span>
-                <span className="text-xs text-fg-subtle">{t('tasks.reprogramaSuFechaParaReactivarlas')}</span>
+                <span className="text-xs text-fg-subtle">{t('tasks.blockedHint')}</span>
               </div>
               <RecordTable
                 columns={overdueColumns}

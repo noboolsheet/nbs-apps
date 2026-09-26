@@ -39,15 +39,15 @@ export default async function PortfolioDetailPage({ params }: { params: Promise<
 
       <div className="flex flex-col gap-3 text-sm">
         <div className="flex items-center gap-2">
-          <span className="text-fg-muted">{t('knowledge.estado')}</span>
+          <span className="text-fg-muted">{t('common.statusLabel')}</span>
           <PortfolioStatusControl id={item.id} current={item.status} />
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-fg-muted">{t('portfolio.visibilidad')}</span>
+          <span className="text-fg-muted">{t('portfolio.visibilityLabel')}</span>
           <PortfolioVisibilityControl id={item.id} current={item.visibility} />
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-fg-muted">{t('portfolio.referenciaExterna')}</span>
+          <span className="text-fg-muted">{t('portfolio.externalRefLabel')}</span>
           <ExternalSourceLink url={item.externalUrl} />
         </div>
         <div className="text-fg-muted">
