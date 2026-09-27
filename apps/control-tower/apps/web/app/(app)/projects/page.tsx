@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getDb } from '@ct/db';
-import { listProjects, type ProjectWithDerived } from '@ct/application';
+import { LIST_LIMIT, listProjects, type ProjectWithDerived } from '@ct/application';
 import { getCurrentContext } from '@/lib/auth-context';
 import { type Column } from '@/components/ui/entity-table';
 import { RecordTable } from '@/components/ui/record-table';
@@ -51,7 +51,7 @@ export default async function ProjectsPage({
 }) {
   const ctx = await getCurrentContext();
   if (!ctx?.org) return <p className="text-warning">{t('common.noOrg')}</p>;
-  const all = await listProjects(getDb(), ctx.org);
+  const all = await listProjects(getDb(), ctx.org, undefined, LIST_LIMIT);
   const tab = (await searchParams).tab ?? 'Active'; // sin query → Activos (vista por defecto)
   const rows = all.filter((p) => matchesTab(p, tab));
 
@@ -108,6 +108,7 @@ export default async function ProjectsPage({
       <RecordTable
         columns={columns}
         rows={rows}
+        truncatedAt={LIST_LIMIT}
         getKey={(r) => r.id}
         empty={{ title: t('projects.emptyView'), hint: t('common.createWithNewButton') }}
         selectable

@@ -111,6 +111,9 @@ export async function listProjects(
   db: Database,
   ctx: OrgContext,
   filter?: { clientId?: string; type?: string },
+  /** Tope de la página que la pinta (F-28). Sin él no hay límite: la misma función alimenta los desplegables de
+   *  relación y el dashboard, donde recortar en silencio sería peor que una lista larga. */
+  limit?: number,
 ): Promise<ProjectWithDerived[]> {
   const now = new Date();
   const where = and(
@@ -120,7 +123,7 @@ export async function listProjects(
     filter?.type ? eq(projects.type, filter.type) : undefined,
   );
   const [rows, counts, clientRows, contactRows] = await Promise.all([
-    db.select().from(projects).where(where).orderBy(desc(projects.createdAt)),
+    db.select().from(projects).where(where).orderBy(desc(projects.createdAt)).limit(rowCap(limit)),
     taskCountsByProject(db, ctx),
     db.select({ id: clients.id, name: clients.name }).from(clients).where(orgEq(clients.organizationId, ctx)),
     db.select({ id: contacts.id, firstName: contacts.firstName, lastName: contacts.lastName, email: contacts.email }).from(contacts).where(orgEq(contacts.organizationId, ctx)),

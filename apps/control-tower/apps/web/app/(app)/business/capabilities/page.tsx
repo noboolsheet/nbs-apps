@@ -1,5 +1,5 @@
 import { getDb } from '@ct/db';
-import { listCapabilities } from '@ct/application';
+import { LIST_LIMIT, listCapabilities } from '@ct/application';
 import { getCurrentContext } from '@/lib/auth-context';
 import { type Column } from '@/components/ui/entity-table';
 import { RecordTable } from '@/components/ui/record-table';
@@ -18,7 +18,7 @@ type Capability = Awaited<ReturnType<typeof listCapabilities>>[number];
 export default async function CapabilitiesPage() {
   const ctx = await getCurrentContext();
   if (!ctx?.org) return <p className="text-warning">{t('common.noOrg')}</p>;
-  const rows = await listCapabilities(getDb(), ctx.org);
+  const rows = await listCapabilities(getDb(), ctx.org, LIST_LIMIT);
 
   const columns: Column<Capability>[] = [
     {
@@ -44,6 +44,7 @@ export default async function CapabilitiesPage() {
       <RecordTable
         columns={columns}
         rows={rows}
+        truncatedAt={LIST_LIMIT}
         getKey={(r) => r.id}
         empty={{ title: t('business.capabilitiesEmpty'), hint: t('common.createFirstHintFem') }}
         selectable

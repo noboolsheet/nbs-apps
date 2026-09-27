@@ -34,6 +34,7 @@ import { requireCan, orgEq, type OrgContext } from '../auth/index';
 import { isSystemActor, recordAudit } from '../audit/index';
 import { deleteNotesFor } from '../notes/index';
 import { archivedByOrigin, mapDbError, notFound } from '../errors';
+import { LIST_LIMIT } from '../list-limit';
 import { logger } from '@ct/shared';
 
 /**
@@ -602,7 +603,10 @@ export async function listArchived(db: Database, ctx: OrgContext): Promise<Archi
         .select({ id: c.id, name: meta.nameCol, archivedAt: c.archivedAt })
         .from(meta.table)
         .where(and(orgEq(c.organizationId, ctx), isNotNull(c.archivedAt)))
-        .orderBy(desc(c.archivedAt))) as { id: string; name: string | null; archivedAt: Date | null }[];
+        .orderBy(desc(c.archivedAt))
+        // Tope POR GRUPO (F-28): son 19 consultas en paralelo y aquí no hay una página que pueda pasar el suyo.
+        // Se avisa en pantalla con `truncatedAt`, como en el resto de las listas.
+        .limit(LIST_LIMIT)) as { id: string; name: string | null; archivedAt: Date | null }[];
       if (rows.length === 0) {
         return { entityType, restorable: !isExternallyArchived(entityType), items: [] };
       }

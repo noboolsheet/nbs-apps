@@ -2,24 +2,27 @@ import { and, eq, asc, desc, count, isNull } from 'drizzle-orm';
 import type { Database } from '@ct/db';
 import { strategicAreas, goals, capabilities, services, serviceCapabilities, knowledgeItems } from '@ct/db/schema';
 import { orgEq, type OrgContext } from '../auth/index';
+import { rowCap } from '../list-limit';
 import { notFound } from '../errors';
 
 /** Consultas de lectura del módulo Governance. Todas filtran por organización. */
 
-export function listStrategicAreas(db: Database, ctx: OrgContext) {
+export function listStrategicAreas(db: Database, ctx: OrgContext, limit?: number) {
   return db
     .select()
     .from(strategicAreas)
     .where(and(orgEq(strategicAreas.organizationId, ctx), isNull(strategicAreas.archivedAt)))
-    .orderBy(asc(strategicAreas.sortOrder), asc(strategicAreas.name));
+    .orderBy(asc(strategicAreas.sortOrder), asc(strategicAreas.name))
+    .limit(rowCap(limit));
 }
 
-export function listGoals(db: Database, ctx: OrgContext) {
+export function listGoals(db: Database, ctx: OrgContext, limit?: number) {
   return db
     .select()
     .from(goals)
     .where(and(orgEq(goals.organizationId, ctx), isNull(goals.archivedAt)))
-    .orderBy(desc(goals.createdAt));
+    .orderBy(desc(goals.createdAt))
+    .limit(rowCap(limit));
 }
 
 /**
@@ -41,20 +44,22 @@ export function listGoalsByArea(db: Database, ctx: OrgContext, strategicAreaId: 
     .orderBy(asc(goals.sortOrder), desc(goals.createdAt));
 }
 
-export function listCapabilities(db: Database, ctx: OrgContext) {
+export function listCapabilities(db: Database, ctx: OrgContext, limit?: number) {
   return db
     .select()
     .from(capabilities)
     .where(and(orgEq(capabilities.organizationId, ctx), isNull(capabilities.archivedAt)))
-    .orderBy(asc(capabilities.name));
+    .orderBy(asc(capabilities.name))
+    .limit(rowCap(limit));
 }
 
-export function listServices(db: Database, ctx: OrgContext) {
+export function listServices(db: Database, ctx: OrgContext, limit?: number) {
   return db
     .select()
     .from(services)
     .where(and(orgEq(services.organizationId, ctx), isNull(services.archivedAt)))
-    .orderBy(asc(services.name));
+    .orderBy(asc(services.name))
+    .limit(rowCap(limit));
 }
 
 export async function getStrategicArea(db: Database, ctx: OrgContext, id: string) {

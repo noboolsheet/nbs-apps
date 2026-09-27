@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getDb } from '@ct/db';
-import { listGoals, listStrategicAreas } from '@ct/application';
+import { LIST_LIMIT, listGoals, listStrategicAreas } from '@ct/application';
 import { getCurrentContext } from '@/lib/auth-context';
 import { type Column } from '@/components/ui/entity-table';
 import { RecordTable } from '@/components/ui/record-table';
@@ -19,7 +19,7 @@ export default async function GoalsPage() {
   const ctx = await getCurrentContext();
   if (!ctx?.org) return <p className="text-warning">{t('common.noOrg')}</p>;
   const db = getDb();
-  const [rows, areas] = await Promise.all([listGoals(db, ctx.org), listStrategicAreas(db, ctx.org)]);
+  const [rows, areas] = await Promise.all([listGoals(db, ctx.org, LIST_LIMIT), listStrategicAreas(db, ctx.org)]);
   const areaById = new Map(areas.map((a) => [a.id, a.name]));
 
   const columns: Column<Goal>[] = [
@@ -59,6 +59,7 @@ export default async function GoalsPage() {
       <RecordTable
         columns={columns}
         rows={rows}
+        truncatedAt={LIST_LIMIT}
         getKey={(r) => r.id}
         empty={{ title: t('business.goalsEmpty'), hint: t('common.createFirstHint') }}
         selectable

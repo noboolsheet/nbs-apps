@@ -28,21 +28,23 @@ export function listContacts(db: Database, ctx: OrgContext, limit?: number) {
 }
 
 /** Oportunidades ACTIVAS (no archivadas) → vista Kanban. */
-export function listOpportunities(db: Database, ctx: OrgContext) {
+export function listOpportunities(db: Database, ctx: OrgContext, limit?: number) {
   return db
     .select()
     .from(opportunities)
     .where(and(orgEq(opportunities.organizationId, ctx), isNull(opportunities.archivedAt)))
-    .orderBy(desc(opportunities.createdAt));
+    .orderBy(desc(opportunities.createdAt))
+    .limit(rowCap(limit));
 }
 
 /** Oportunidades ARCHIVADAS (cerradas y retiradas del tablero) → vista de lista. Más recientes primero. */
-export function listArchivedOpportunities(db: Database, ctx: OrgContext) {
+export function listArchivedOpportunities(db: Database, ctx: OrgContext, limit?: number) {
   return db
     .select()
     .from(opportunities)
     .where(and(orgEq(opportunities.organizationId, ctx), isNotNull(opportunities.archivedAt)))
-    .orderBy(desc(opportunities.archivedAt));
+    .orderBy(desc(opportunities.archivedAt))
+    .limit(rowCap(limit));
 }
 
 export async function getContact(db: Database, ctx: OrgContext, id: string) {

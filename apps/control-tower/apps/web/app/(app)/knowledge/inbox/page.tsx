@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getDb } from '@ct/db';
-import { listInbox, listInboxChannels } from '@ct/application';
+import { LIST_LIMIT, listInbox, listInboxChannels } from '@ct/application';
 import { getCurrentContext } from '@/lib/auth-context';
 import { type Column } from '@/components/ui/entity-table';
 import { RecordTable } from '@/components/ui/record-table';
@@ -20,7 +20,7 @@ export default async function InboxPage() {
   const ctx = await getCurrentContext();
   if (!ctx?.org) return <p className="text-warning">{t('common.noOrg')}</p>;
   const db = getDb();
-  const [rows, channels] = await Promise.all([listInbox(db, ctx.org), listInboxChannels(db, ctx.org)]);
+  const [rows, channels] = await Promise.all([listInbox(db, ctx.org, LIST_LIMIT), listInboxChannels(db, ctx.org)]);
   const canManage = ctx.org.role === 'OWNER';
 
   const columns: Column<InboxItem>[] = [
@@ -57,6 +57,7 @@ export default async function InboxPage() {
       <RecordTable
         columns={columns}
         rows={rows}
+        truncatedAt={LIST_LIMIT}
         getKey={(r) => r.id}
         empty={{ title: t('knowledge.inboxEmpty'), hint: t('knowledge.inboxEmptyHint') }}
       />

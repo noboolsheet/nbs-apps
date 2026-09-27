@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getDb } from '@ct/db';
-import { listArchived } from '@ct/application';
+import { LIST_LIMIT, listArchived } from '@ct/application';
 import { getCurrentContext } from '@/lib/auth-context';
 import { RecordTable } from '@/components/ui/record-table';
 import { type Column } from '@/components/ui/entity-table';
@@ -75,7 +75,8 @@ export default async function ArchivedPage() {
               <RecordTable
                 columns={columns}
                 rows={g.items}
-                getKey={(it) => it.id}
+                truncatedAt={LIST_LIMIT}
+        getKey={(it) => it.id}
                 selectable
                 restore={g.restorable ? { entityType: g.entityType } : undefined}
                 purge={{ entityType: g.entityType }}

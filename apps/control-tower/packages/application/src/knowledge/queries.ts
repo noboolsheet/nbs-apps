@@ -8,12 +8,13 @@ import { rowCap } from '../list-limit';
 
 /** Consultas del módulo Knowledge. Todas filtran por organización. */
 
-export function listInbox(db: Database, ctx: OrgContext) {
+export function listInbox(db: Database, ctx: OrgContext, limit?: number) {
   return db
     .select()
     .from(knowledgeInbox)
     .where(orgEq(knowledgeInbox.organizationId, ctx))
-    .orderBy(desc(knowledgeInbox.capturedAt));
+    .orderBy(desc(knowledgeInbox.capturedAt))
+    .limit(rowCap(limit));
 }
 
 /**

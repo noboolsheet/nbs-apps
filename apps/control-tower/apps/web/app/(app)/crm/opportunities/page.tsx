@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { getDb } from '@ct/db';
-import { listOpportunities, listArchivedOpportunities, listClients, listIdentitiesByInternalType } from '@ct/application';
+import { LIST_LIMIT, listOpportunities, listArchivedOpportunities, listClients, listIdentitiesByInternalType } from '@ct/application';
 import { getCurrentContext } from '@/lib/auth-context';
 import { EmptyState } from '@/components/ui/empty-state';
 import { SourceBadge } from '@/components/ui/source-badge';
@@ -29,8 +29,8 @@ export default async function OpportunitiesPage() {
   if (!ctx?.org) return <p className="text-warning">{t('common.noOrg')}</p>;
   const db = getDb();
   const [rows, archived, clients, identities] = await Promise.all([
-    listOpportunities(db, ctx.org),
-    listArchivedOpportunities(db, ctx.org),
+    listOpportunities(db, ctx.org, LIST_LIMIT),
+    listArchivedOpportunities(db, ctx.org, LIST_LIMIT),
     listClients(db, ctx.org),
     listIdentitiesByInternalType(db, ctx.org, 'opportunity'),
   ]);

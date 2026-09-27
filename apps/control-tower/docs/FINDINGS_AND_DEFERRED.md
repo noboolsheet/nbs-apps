@@ -17,11 +17,9 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
 >   healthcheck** (lo tiene en los tres compose), el **autoguardado frágil** (`lib/client.ts` convierte un fallo de
 >   red en `{ error }` con mensaje) y el **login sin primitivas** (usa `btnPrimary`/`fieldCls`). De la UI/UX: las
 >   «5 métricas clónicas» ya son **3** y con significados distintos (F-39).
-> - **Se recorta a lo que queda de verdad:** **F-28** (el tope de lista existe y está aplicado en 8 vistas, pero **23
->   consultas `list*` siguen sin tope**: proyectos, oportunidades, recursos, las cuatro de gobernanza, bandeja,
->   archivados, subtareas…) y **E-8** (los **barridos no dejan ninguna huella consultable**: `getAutomation` sólo
->   calcula «última ejecución» para los `sync.*`, así que de los **siete barridos** —dos de los cuales archivan y
->   borran datos— no se sabe desde la app si corrieron ni qué hicieron; sólo queda el log del worker).
+> - **Se recortaron a lo que quedaba de verdad y luego se cerraron los dos:** **F-28** (el tope existía pero 23
+>   consultas no lo aceptaban; ahora lo reciben las de página y las excepciones están listadas con su motivo en un
+>   test) y **E-8** (los barridos no dejaban huella; ahora la dejan en `automation_runs`).
 > - **Se arregla en el momento:** el copy del estado vacío de Clientes decía «Crea uno con el formulario de arriba»,
 >   y ahí ya no hay formulario **ni** botón de crear (los clientes son de Twenty).
 > - **Nuevos, y ya cerrados el mismo día:** **F-40** (había texto de interfaz en español **fuera del diccionario**,
@@ -52,9 +50,8 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
 >   Pi** (kernel sin cgroup de memoria). Desde la migración a **vibox (Fedora)** el 2026-09-24 el arreglo de la Pi
 >   (`cgroup_enable=memory` en `/boot/firmware/cmdline.txt`) **ya no aplica**: falta confirmar en vibox que
 >   `docker stats` mide de verdad y que los `mem_limit` del compose son los correctos para esa máquina.
-> - **Trabajo pendiente acotado:** varias carpetas/DBs por proveedor (E-4) · **huella de los barridos** (E-8: ninguno
->   de los siete deja constancia consultable de su última ejecución ni de su resultado) y editar sus cadencias desde el
->   panel · **invitaciones** (E-11; la edición de perfil —nombre y foto— ya está, comprobado en el repaso del
+> - **Trabajo pendiente acotado:** varias carpetas/DBs por proveedor (E-4) · editar las **cadencias** de los barridos
+>   desde el panel (lo que queda de E-8: la huella ya está) · **invitaciones** (E-11; la edición de perfil —nombre y foto— ya está, comprobado en el repaso del
 >   2026-09-27, así que de E-9 sólo queda el email y la contraseña: E-9a) · `Initiatives`/sub-goals (E-3) · tareas por
 >   asignado (E-2).
 > - **Menores de UI/UX** (`AUDIT_UIUX_2026-08-30.md`): micro-confirmación al guardar · aviso si falla el GET del panel ·
@@ -66,9 +63,8 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
 >   del owner en vibox; el deploy ya avisa).
 > - **Rendimiento:** E-14 — medir consultas por página e índices (el owner reportó varios segundos por página **en la
 >   Pi**; hay que volver a medir **en vibox**, que es otra máquina: 47/47 páginas `force-dynamic` y sólo 18 paralelizan
->   sus consultas). Y **F-28**, recortado: el tope (`LIST_LIMIT` + `rowCap` + aviso en la tabla) existe y está
->   aplicado en 8 vistas, pero **23 consultas `list*` siguen sin tope** — entre ellas proyectos, oportunidades,
->   recursos, gobernanza, bandeja y archivados.
+>   sus consultas). **F-28 ya está cerrado** (addendum del 2026-09-27: el tope lo reciben todas las listas de página y
+>   las excepciones están listadas con su motivo en `list-limit.test.ts`).
 >
 > **⚑ Añadido por la revisión de producto (2026-09-01, sesión 27 — sección G).** Lo que salió **nuevo** al evaluar la
 > app como producto, cotejado antes contra este registro y las dos auditorías:
@@ -887,6 +883,17 @@ El detalle cronológico está en [`BUILD_LOG.md`](./BUILD_LOG.md); las decisione
 - **Verificado en vivo:** `POST /api/v1/inbox/webhook/basura` → **400**.
 
 ### F-28 · Ninguna lista tiene límite, ordenación ni filtro ✅ RESUELTO (2026-09-02)
+
+> **⚑ Addendum (2026-09-27) — el techo, terminado.** El repaso de estados encontró que el mecanismo estaba puesto
+> (`LIST_LIMIT` + `rowCap` + el aviso `truncatedAt` en la tabla) pero **sólo 8 vistas lo pasaban**: 23 consultas `list*`
+> no aceptaban tope siquiera, así que no había forma de ponérselo. Ahora lo reciben —y lo pasan sus páginas— las de
+> **proyectos, oportunidades (activas y archivadas), objetivos, áreas, capacidades, servicios y la bandeja**;
+> «Archivados» lleva el suyo **por grupo** dentro de la consulta (son 19 en paralelo y no hay una página que pueda
+> pasarlo). Lo que sigue sin tope está **listado con su motivo** en `list-limit.test.ts`, que es la guarda nueva: o es
+> una consulta de **apoyo** (identidades, sectores: un tope ahí no recorta una pantalla, la **rompe**), o está acotada
+> por su **padre** (las tareas de un proyecto), o es **configuración** (cinco integraciones), o la usa el **push a
+> Notion**, donde recortar en silencio dejaría de sincronizar a partir de la fila N. Si aparece una `list*` nueva sin
+> tope y sin motivo escrito, el test falla — que es justo el momento de decidir cuál de las dos cosas es.
 - **Hallado en:** sesión 27. Complementa a **E-14** (rendimiento) por el lado del producto.
 - **Qué pasa, en dos planos:**
   - **Sin techo:** ninguna consulta de lista lleva `LIMIT`. `listProjects`

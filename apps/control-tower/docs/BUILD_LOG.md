@@ -5,6 +5,32 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-09-27 — F-28: el techo de las listas, terminado ✅
+
+El repaso encontró que F-28 estaba mal cerrado: el mecanismo sí existía —`LIST_LIMIT`, `rowCap` y el aviso de la tabla
+cuando se alcanza— pero **sólo 8 vistas lo pasaban**, y 23 consultas `list*` **no aceptaban tope siquiera**, así que no
+había manera de ponérselo.
+
+Ahora lo reciben (y lo pasan sus páginas) **proyectos, oportunidades activas y archivadas, objetivos, áreas,
+capacidades, servicios y la bandeja de conocimiento**, con su aviso de recorte. **«Archivados»** lleva el suyo **por
+grupo dentro de la consulta**: son 19 en paralelo y no hay una página que pueda pasar un tope por grupo.
+
+**Lo que sigue sin tope está listado con su motivo**, y eso es la parte que importa: no todas las `list*` son listas.
+Cuatro familias se quedan fuera a propósito —y un tope en las dos primeras no recortaría una pantalla, la **rompería**:
+- **Consultas de apoyo:** `listIdentitiesByInternalType` alimenta el mapa que pone el enlace «Abrir en el CRM» fila a
+  fila en la vista de clientes; `listSectors` son las opciones de un desplegable.
+- **Acotadas por su padre:** las tareas de un proyecto, las subtareas de una tarea, los recursos de un cliente.
+- **Configuración:** cinco integraciones, los canales de captura.
+- **Las que usa el push a Notion** (`listResources`): un tope ciego ahí dejaría de sincronizar a partir de la fila N en
+  silencio, que es peor que una lista larga. Por eso el tope es **opt-in** desde el principio.
+
+La guarda nueva (`list-limit.test.ts`) ata las dos listas: toda `list*` tiene techo —por parámetro o fijo— **o** está
+en el mapa de excepciones con su motivo escrito; y un segundo test comprueba que esas excepciones siguen existiendo, no
+sea que se renombre una función y la exención se quede protegiendo a un fantasma.
+
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (203, 2 guardas nuevas) · `pnpm build` ·
+`pnpm test:integration` (219) · `e2e-journeys` (todos OK).
+
 ## 2026-09-27 — F-40: el texto de la interfaz vuelve al diccionario ✅
 
 La regla E-10 promete que añadir un idioma es **copiar `es.ts` y traducir sus valores, sin tocar ninguna vista**. Era
@@ -982,7 +1008,14 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-09-27): F-40 — el texto de la interfaz vuelve al diccionario.** La capa de aplicación escribía
+> **⚑ ÚLTIMO (2026-09-27): los tres del repaso, cerrados.** **E-8** (los barridos dejan huella en `automation_runs` y
+> el panel dice qué hicieron) · **F-40** (el texto de interfaz vuelve al diccionario; la aplicación manda códigos y
+> datos) · **F-28** (todas las listas de página reciben tope, y las excepciones están listadas con su motivo en un
+> test). Más **F-41**, el test que dependía del orden. Lo que queda del backlog está en la cabecera de
+> `FINDINGS_AND_DEFERRED.md`: HAB-1 (Telegram), E-18, multiusuario, E-4, E-14, las menores de UI/UX y tres acciones
+> tuyas en vibox.
+>
+> **⚑ ANTES (2026-09-27): F-40 — el texto de la interfaz vuelve al diccionario.** La capa de aplicación escribía
 > frases en español (las alertas de Inicio, las 19 etiquetas de `ARCHIVABLE` que titulan Archivados, los rellenos
 > «(sin título)»/«Todo el día») y el login tenía tres literales sueltos. Ahora la aplicación manda **códigos y datos**
 > y la vista traduce; **dos guardas** nuevas lo vigilan (una encontró un párrafo suelto que nadie había visto). Queda

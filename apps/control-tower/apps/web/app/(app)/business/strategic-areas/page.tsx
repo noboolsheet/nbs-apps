@@ -1,5 +1,5 @@
 import { getDb } from '@ct/db';
-import { listStrategicAreas } from '@ct/application';
+import { LIST_LIMIT, listStrategicAreas } from '@ct/application';
 import { getCurrentContext } from '@/lib/auth-context';
 import { type Column } from '@/components/ui/entity-table';
 import { RecordTable } from '@/components/ui/record-table';
@@ -15,7 +15,7 @@ type Area = Awaited<ReturnType<typeof listStrategicAreas>>[number];
 export default async function StrategicAreasPage() {
   const ctx = await getCurrentContext();
   if (!ctx?.org) return <p className="text-warning">{t('common.noOrg')}</p>;
-  const rows = await listStrategicAreas(getDb(), ctx.org);
+  const rows = await listStrategicAreas(getDb(), ctx.org, LIST_LIMIT);
 
   const columns: Column<Area>[] = [
     {
@@ -40,6 +40,7 @@ export default async function StrategicAreasPage() {
       <RecordTable
         columns={columns}
         rows={rows}
+        truncatedAt={LIST_LIMIT}
         getKey={(r) => r.id}
         empty={{ title: t('business.areasEmpty'), hint: t('common.createFirstHintFem') }}
         selectable

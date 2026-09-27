@@ -1,5 +1,5 @@
 import { getDb } from '@ct/db';
-import { listServices } from '@ct/application';
+import { LIST_LIMIT, listServices } from '@ct/application';
 import { getCurrentContext } from '@/lib/auth-context';
 import { type Column } from '@/components/ui/entity-table';
 import { RecordTable } from '@/components/ui/record-table';
@@ -17,7 +17,7 @@ type Service = Awaited<ReturnType<typeof listServices>>[number];
 export default async function ServicesPage() {
   const ctx = await getCurrentContext();
   if (!ctx?.org) return <p className="text-warning">{t('common.noOrg')}</p>;
-  const rows = await listServices(getDb(), ctx.org);
+  const rows = await listServices(getDb(), ctx.org, LIST_LIMIT);
 
   const columns: Column<Service>[] = [
     {
@@ -44,6 +44,7 @@ export default async function ServicesPage() {
       <RecordTable
         columns={columns}
         rows={rows}
+        truncatedAt={LIST_LIMIT}
         getKey={(r) => r.id}
         empty={{ title: t('business.servicesEmpty'), hint: t('common.createFirstHint') }}
         selectable
