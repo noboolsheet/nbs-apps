@@ -185,7 +185,8 @@ export const RECORDS: Record<string, RecordSpec> = {
     // Sin `createPath`: los contactos nacen en Twenty (ADR-009).
     itemPath: (id) => `/api/v1/contacts/${id}`,
     source: true,
-    contextCreate: { client: { presetField: 'clientId' } },
+    // Tampoco creación contextual desde el cliente: la sección «Contactos» de una ficha de cliente ya no tiene
+    // botón de crear, porque un contacto nace en Twenty. Dejar la config aquí invitaba a volver a montarlo.
     fields: [
       { name: 'firstName', label: t('field.name'), type: 'text', ownedBy: ['TWENTY'] },
       { name: 'lastName', label: t('field.lastName'), type: 'text', ownedBy: ['TWENTY'] },

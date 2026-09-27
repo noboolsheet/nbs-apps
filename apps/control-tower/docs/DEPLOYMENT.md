@@ -84,17 +84,37 @@ Luego en la UI `/automation/integrations`: **Connect** el proveedor → **Sync n
 > **una vez al día** a `SYNC_DAILY_HOUR` (7am por defecto) en la zona horaria de la org. Si conectaste en local con `dev-sync`, el `displayName` queda como
 > "PROVIDER (dev-sync)" — es **cosmético**; en prod conecta por la UI y saldrá el nombre correcto.
 
-## Acceso por IP de Tailscale (prod)
-Para acceder a CT por la **IP de Tailscale** del Pi (puerto de prod **4272**), en `apps/control-tower/.env`:
+## Por dónde se entra: tailnet, red local y Caddy (prod)
+
+**El contenedor ya escucha en las tres.** `CONTROL_TOWER_APP_IFACE="${DOCKER_IFACE}"` (= `0.0.0.0`) en
+`nbs-apps/envs/.env.prod`, y vibox no tiene IP pública ni puertos abiertos en el router, así que el 4272 se
+alcanza desde la LAN de casa y desde el tailnet, y **no** desde internet. Caddy, además, sirve
+`https://control-tower.noboolsheet.local` en 80/443 de todas las interfaces.
+
+Lo que fallaba (owner 2026-09-27: «entré desde la IP de la red local y me dijo que el origen no era
+permitido») **no era la red: era el login**. Better Auth valida el `Origin` de las peticiones de auth contra
+su `baseURL`, que es UNA; cualquier otra URL se rechaza con 403. Se resuelve declarando los hosts admitidos:
+
 ```sh
 APP_URL=http://<IP-TAILSCALE>:4272
-BETTER_AUTH_URL=http://<IP-TAILSCALE>:4272   # DEBE coincidir con el origen exacto o el login falla
+BETTER_AUTH_URL=http://<IP-TAILSCALE>:4272     # la URL canónica (la de los enlaces que genera el worker)
+# Los DEMÁS sitios por los que quieres entrar (coma, admite comodines):
+BETTER_AUTH_ALLOWED_HOSTS=control-tower.noboolsheet.local,192.168.*.*:4272,100.*.*.*:4272
 ```
-- El origen (`Origin`/`Host`) debe coincidir con `BETTER_AUTH_URL`; si accedes por **varias** URLs a la vez
-  (IP de Tailscale **y** el hostname de Caddy `https://control-tower.noboolsheet.local`), lista ambas en
-  `BETTER_AUTH_TRUSTED_ORIGINS` (separadas por coma).
-- Por HTTP (IP directa) la cookie de sesión **no** es Secure (aceptable dentro de la red cifrada de Tailscale).
-  Para cookies Secure, accede por Caddy con HTTPS y pon `BETTER_AUTH_URL=https://control-tower.noboolsheet.local`.
+
+- Es una **allowlist**: un host que no esté en la lista sigue rechazado, y un `Origin` ajeno con un `Host`
+  permitido —la forma real de un CSRF— también. Lo sostiene `apps/web/lib/auth-access.test.ts`, que monta
+  Better Auth de verdad y comprueba los tres casos.
+- **Cookies `Secure` y http plano no se llevan**: con `BETTER_AUTH_URL` en https, entrar por
+  `http://<IP>:4272` deja iniciar sesión y luego no guarda nada (la cookie no viaja por http). Si quieres los
+  dos esquemas a la vez, `BETTER_AUTH_SECURE_COOKIES=false`; si prefieres cookies Secure, entra siempre por
+  Caddy y pon `BETTER_AUTH_URL=https://control-tower.noboolsheet.local`.
+- Detrás de Caddy el esquema real llega en `X-Forwarded-Proto`; la app se fía de esa cabecera **sólo** cuando
+  hay `BETTER_AUTH_ALLOWED_HOSTS` (el host que traiga tiene que pasar igualmente por la allowlist).
+- Para que el nombre de Caddy funcione desde la LAN tiene que **resolver a la IP de vibox** (router, Pi-hole o
+  `/etc/hosts`) y el dispositivo tiene que confiar en la CA interna de Caddy o aceptar el aviso del
+  certificado. Las demás apps de vibox (Twenty, n8n, Zammad) sólo tienen esta vía: ver
+  `nbs-infra/docs/PORTS.md`.
 
 ## Configuración de integraciones en la DB del Pi (Drive/Notion)
 Twenty, GitHub y Calendar se configuran **solo con `.env`** (no usan `integrations.configuration`). **Drive**

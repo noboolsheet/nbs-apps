@@ -5,6 +5,53 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-09-27 — Entrar desde la red local (y la guarda de que el CRM no se crea en CT) ✅
+
+**1. La guarda de test que faltaba.** Cerrar la creación de clientes/contactos/oportunidades vive en dos sitios y
+ninguno falla si se reabre por descuido: el registro del panel (sin `createPath`) y las vistas (sin botón). El test
+nuevo de `record-registry.test.ts` ata los dos: ninguna de las tres entidades tiene `createPath` **ni creación
+contextual**, y ninguna vista monta `NewRecordButton`/`ContextNewButton` para ellas (con un suelo de 10 botones
+encontrados, para que el test no pase en verde si el patrón cambia de forma y deja de mirar nada). Verificado a la
+inversa: al devolverle el `createPath` a `contact`, el test falla. De paso se retira el `contextCreate` muerto de
+`contact` — la sección «Contactos» de un cliente ya no tiene botón, así que era una invitación a volver a montarlo.
+
+**2. Entrar por la red local (owner: «me dijo que el origen no era permitido, sólo puedo entrar desde la tailnet»).**
+No era la red: **el puerto ya estaba abierto**. `CONTROL_TOWER_APP_IFACE="${DOCKER_IFACE}"` = `0.0.0.0` en
+`nbs-apps/envs/.env.prod`, y vibox no tiene IP pública ni puertos abiertos en el router, así que el 4272 se alcanza
+desde la LAN y desde el tailnet. Lo que rechazaba era **el login**: Better Auth valida el `Origin` de las peticiones
+de auth contra su `baseURL`, que es UNA, y con `BETTER_AUTH_URL` apuntando al tailnet cualquier otra URL se va en 403.
+
+La solución no relaja el transporte, acota los orígenes: **`BETTER_AUTH_ALLOWED_HOSTS`** (hosts separados por coma,
+admite comodines) hace que Better Auth derive su `baseURL` de cada petición y la valide contra esa **allowlist**, así
+que los mismos contenedores sirven por LAN, por tailnet y por el nombre de Caddy. La lógica pura vive en
+`apps/web/lib/auth-access.ts` (fuera de `auth.ts`, que abre la conexión a la base de datos al importarse) y el test
+**monta Better Auth de verdad** con adaptador en memoria: reproduce el 403 del owner sin la lista, comprueba los tres
+accesos con ella, y comprueba que un `Origin` ajeno con un `Host` permitido —la forma real de un CSRF— sigue
+rechazado. Dos trampas del test, documentadas en él: Better Auth **apaga** el chequeo de origen cuando
+`NODE_ENV=test`, y sólo lo aplica si la petición **trae cookies**.
+
+Dos cosas que hay que saber al usarlo: la **cookie `Secure` no viaja por http**, así que entrar por
+`http://<IP>:4272` con una `BETTER_AUTH_URL` https deja iniciar sesión y no guarda la sesión →
+`BETTER_AUTH_SECURE_COOKIES=false` si se quieren los dos esquemas (decisión consciente, sólo en red privada); y
+detrás de Caddy el esquema real llega en `X-Forwarded-Proto`, que la app sólo se cree **cuando hay allowlist**.
+
+**3. Lo mismo para las demás apps de vibox (Twenty, n8n, Zammad).** Ahí el caso es el contrario: sus puertos están
+atados a la IP de Tailscale, así que por ahí la LAN no llega, y **las tres admiten una sola URL propia**. La vía que
+sirve para las dos redes es Caddy, que ya escucha en 80/443 de todas las interfaces y las alcanza por
+`noboolsheet_network`: se añaden los bloques `twenty|n8n|zammad.noboolsheet.local` (con `tls internal`) y las tres
+apps aprenden su URL nueva por variable —`TWENTY_PUBLIC_URL`, `N8N_PUBLIC_*`, `ZAMMAD_PUBLIC_FQDN`— con **el
+comportamiento de hoy como valor por defecto**. Quedan **comentadas** en `nbs-infra/envs/.env.prod`: activarlas
+cambia la URL canónica de esas apps y depende de que `*.noboolsheet.local` resuelva a la IP de vibox desde la LAN,
+que es cosa del router/Pi-hole y no se puede comprobar desde aquí. Descomentar + redesplegar ese stack.
+
+**Documentación saneada, porque decía dos cosas distintas:** `nbs-infra/docs/CONVENTIONS.md` y el `CLAUDE.md` raíz
+prohibían publicar un `prod` en `0.0.0.0` mientras los `envs` lo hacían desde siempre; ahora dicen lo que es y por
+qué (`0.0.0.0` en vibox = LAN + tailnet, no internet). `PORTS.md` gana la tabla de acceso por Caddy, y el punto 5 del
+`SECURITY_CHECKLIST` («decidir exposición: forzar Caddy o aceptar HTTP en la LAN») queda **decidido** por el owner.
+
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (177, 8 nuevos) · `pnpm build` · `pnpm test:integration`
+(191) · `docker compose config` de los tres stacks de infra, con y sin las variables nuevas.
+
 ## 2026-09-27 — La vista de clientes, alineada con que el CRM es de Twenty ✅
 
 Tres ajustes que salen de ADR-009/ADR-010 (addendum en el propio ADR-010):
@@ -683,7 +730,14 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-09-27): la vista de clientes, alineada con Twenty.** El campo que decía «Industria» ahora es el
+> **⚑ ÚLTIMO (2026-09-27): se entra desde la red local.** Lo que rechazaba no era la red —el puerto 4272 ya
+> escuchaba en la LAN— sino el login: Better Auth admitía un solo origen. Con **`BETTER_AUTH_ALLOWED_HOSTS`** se
+> declaran los hosts válidos (LAN, tailnet, nombre de Caddy) y la app deriva su URL de cada petición. Twenty, n8n y
+> Zammad tienen ya su nombre en Caddy (`*.noboolsheet.local`) y su variable para asumirlo, **comentada** hasta que el
+> DNS de la LAN resuelva esos nombres. Además, la guarda de test de que clientes/contactos/oportunidades **no se
+> crean** desde CT.
+>
+> **⚑ ANTES (2026-09-27): la vista de clientes, alineada con Twenty.** El campo que decía «Industria» ahora es el
 > **Tipo de organización** que viene de Twenty (y si el campo no existe allí, no se pisa nada) · la columna «Fuente»
 > se cambia por un **enlace para abrirlo en el CRM** · y **no hay botones de crear** clientes, contactos ni
 > oportunidades, porque nacen en Twenty.

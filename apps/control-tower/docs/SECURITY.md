@@ -9,7 +9,8 @@ Checklist operativo (doc old_9 §26, doc 4 §34). Estado del MVP self-hosted sin
 ## Autenticación / sesión
 - ✅ **Better Auth** email/password; hashing de contraseñas gestionado por Better Auth (nunca en la DB de dominio).
 - ✅ `BETTER_AUTH_SECRET` **obligatorio** (Better Auth falla sin él): en dev va en el compose; en prod en `.env`.
-- ✅ Sesiones con cookie **HttpOnly**; `useSecureCookies` sólo sobre **HTTPS** (baseURL https; por http://localhost se sirven no-Secure para que el login funcione en dev).
+- ✅ Sesiones con cookie **HttpOnly**; `useSecureCookies` sólo sobre **HTTPS** (baseURL https; por http://localhost se sirven no-Secure para que el login funcione en dev). Con acceso por varios esquemas a la vez (LAN en http + Caddy en https) se puede forzar con `BETTER_AUTH_SECURE_COOKIES` — decisión consciente, sólo en red privada.
+- ✅ **Orígenes admitidos** (2026-09-27): `BETTER_AUTH_ALLOWED_HOSTS` declara los hosts por los que se puede entrar (LAN, tailnet, nombre de Caddy) y Better Auth deriva su `baseURL` de cada petición validándola contra esa **allowlist**; sin la variable, sólo vale el origen de `BETTER_AUTH_URL`. Un `Origin` de fuera de la lista sigue dando 403, también con un `Host` permitido. Cubierto por `apps/web/lib/auth-access.test.ts`.
 - ✅ `minPasswordLength: 8`.
 - ✅ **Rate limiting** de Better Auth en los endpoints de auth (30/min).
 - ✅ **Registro BOOTSTRAP-ONLY** (crítico #4 auditoría, 2026-08-31): sólo se permite crear la **primera** cuenta (el owner);

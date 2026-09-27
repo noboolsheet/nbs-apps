@@ -21,6 +21,10 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
 >   viajan a Twenty y están vacías; hay que decidir si se mapean, se quedan como datos propios de CT o se retiran.
 >   *(Con **ADR-009** el marco ya está: nada de CT viaja a Twenty salvo el `stage`, así que la pregunta se reduce a
 >   quedárselos como datos propios de CT o retirarlos.)*
+> - **Pendiente de una acción en vibox:** **F-37** — el acceso desde la red local ya está resuelto en código; falta
+>   poner `BETTER_AUTH_ALLOWED_HOSTS` en el `.env.prod` del servidor y, si se quiere el mismo acceso a Twenty/n8n/
+>   Zammad, descomentar sus `*_PUBLIC_*` en `nbs-infra/envs/.env.prod` (requiere que `*.noboolsheet.local` resuelva
+>   a la IP de vibox desde la LAN).
 > - **Pendiente de una comprobación en vibox:** **F-31** — el techo de memoria no estaba en efecto **en la Raspberry
 >   Pi** (kernel sin cgroup de memoria). Desde la migración a **vibox (Fedora)** el 2026-09-24 el arreglo de la Pi
 >   (`cgroup_enable=memory` en `/boot/firmware/cmdline.txt`) **ya no aplica**: falta confirmar en vibox que
@@ -1188,6 +1192,38 @@ hay que volver a medir antes de dar por bueno el síntoma.
      —eso sí, se le quitó el `outline-none`, que se saltaba la regla de no matar el foco sin alternativa—.
 - **De paso:** `learning-list` pintaba su enlace externo con `text-blue-600 dark:text-blue-400`, saltándose los
   tokens del tema (DESIGN_TOKENS prohíbe `dark:` a mano); ahora usa `ExternalSourceLink`.
+
+### F-37 · Entrar por la red local: el login rechazaba el origen (y las apps de vibox sólo se alcanzaban por el tailnet) ✅ RESUELTO (2026-09-27) · ⬜ queda el interruptor de Twenty/n8n/Zammad
+
+- **Hallado en:** el owner («el otro día intenté entrar en Control Tower desde la IP de la red local y me dijo que el
+  origen no era permitido, que sólo puedo entrar desde la tailnet. Lo mismo para Twenty y todas las apps que tenga
+  hosteadas en mi vibox»).
+- **Lo que NO era:** un problema de red ni de puertos. `CONTROL_TOWER_APP_IFACE="${DOCKER_IFACE}"` = `0.0.0.0` en
+  `nbs-apps/envs/.env.prod`, así que el 4272 ya escuchaba en la LAN. Lo que rechazaba era **el login**: Better Auth
+  valida el `Origin` de las peticiones de auth contra su `baseURL`, que es UNA, y devuelve 403 para cualquier otra.
+  El chequeo CSRF propio de CT (`lib/api.ts`) no tenía nada que ver: compara `Origin` contra `Host`, que por la LAN
+  coinciden.
+- **Cómo se resolvió (CT):** `BETTER_AUTH_ALLOWED_HOSTS` — lista de hosts admitidos (con comodines) que hace que
+  Better Auth derive su `baseURL` de cada petición y la valide contra esa **allowlist**. Lógica pura en
+  `apps/web/lib/auth-access.ts`; el test `auth-access.test.ts` monta Better Auth de verdad (adaptador en memoria) y
+  comprueba el 403 de antes, los tres accesos de ahora y que un `Origin` ajeno con `Host` permitido sigue rechazado.
+  Añadido `BETTER_AUTH_SECURE_COOKIES` porque una cookie `Secure` no viaja por http: sin él, entrar por
+  `http://<IP>:4272` con `BETTER_AUTH_URL` https inicia sesión y no la guarda.
+- **Cómo se resolvió (Twenty, n8n, Zammad):** caso contrario — sus puertos están atados a la IP de Tailscale y **cada
+  app admite una sola URL propia**, así que la única vía que sirve para LAN y tailnet a la vez es Caddy (ya escucha en
+  todas las interfaces y las alcanza por `noboolsheet_network`). Añadidos los bloques
+  `twenty|n8n|zammad.noboolsheet.local` con `tls internal`, y las tres aprenden su URL por variable
+  (`TWENTY_PUBLIC_URL`, `N8N_PUBLIC_*`, `ZAMMAD_PUBLIC_FQDN`) **con el comportamiento actual por defecto**.
+- **Lo que queda (acción del owner, no código):** esas variables están **comentadas** en `nbs-infra/envs/.env.prod`.
+  Activarlas cambia la URL canónica de cada app y depende de dos cosas que no se pueden comprobar desde el Mac: que
+  `*.noboolsheet.local` **resuelva a la IP de vibox desde la LAN** (router/Pi-hole o `/etc/hosts`) y que el
+  dispositivo acepte la **CA interna** de Caddy. Al activar Twenty hay que actualizar también `TWENTY_CRM_URL` en
+  `apps/control-tower/.env.prod` (es la URL del enlace «Abrir en el CRM»). En CT hay que poner
+  `BETTER_AUTH_ALLOWED_HOSTS` en su `.env.prod` del servidor y redesplegar.
+- **De paso, documentación que se contradecía:** el `CLAUDE.md` raíz y `nbs-infra/docs/CONVENTIONS.md` prohibían
+  publicar un `prod` en `0.0.0.0` mientras los `envs` lo hacían desde siempre. Ahora dicen lo que es (en vibox
+  `0.0.0.0` = LAN + tailnet, sin IP pública ni puertos abiertos) y el punto 5 del `SECURITY_CHECKLIST` («forzar Caddy
+  o aceptar HTTP en la LAN») queda **decidido** por el owner.
 
 ### E-15 · Notas y comentarios por registro ✅ RESUELTO (2026-09-26)
 - **Hallado en:** sesión 27.

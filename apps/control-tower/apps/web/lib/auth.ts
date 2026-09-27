@@ -3,26 +3,22 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { getDb } from '@ct/db';
 import { users, sessions, accounts, verifications } from '@ct/db/schema';
 import { ensureUserOrganization } from '@ct/application';
+import { authAccess } from './auth-access';
 
 /**
  * Configuración server de Better Auth (ADR-003). email/password + sesiones.
  * `user` = tabla de dominio `users`; sessions/accounts/verifications propias de Better Auth.
  * IDs generados por la DB (generateId: false → columnas uuid con gen_random_uuid()).
  */
-const baseURL = process.env.BETTER_AUTH_URL ?? process.env.APP_URL ?? 'http://localhost:4270';
-// Orígenes de confianza extra (Better Auth valida el Origin de las peticiones de auth contra baseURL).
-// Útil si accedes por una URL distinta a baseURL a la vez (p. ej. IP de Tailscale + hostname de Caddy).
-// Vacío por defecto → sin cambio de comportamiento. `BETTER_AUTH_TRUSTED_ORIGINS` = orígenes separados por coma.
-const trustedOrigins = (process.env.BETTER_AUTH_TRUSTED_ORIGINS ?? '')
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean);
+const access = authAccess(process.env);
 
 export const auth = betterAuth({
   appName: 'Control Tower',
   secret: process.env.BETTER_AUTH_SECRET,
-  baseURL,
-  ...(trustedOrigins.length > 0 ? { trustedOrigins } : {}),
+  // Con hosts declarados la baseURL es dinámica (se deriva del host de la petición y se valida contra la lista);
+  // si no, es la de siempre. Ver `auth-access.ts` para el por qué.
+  baseURL: access.baseURL,
+  ...(access.trustedOrigins.length > 0 ? { trustedOrigins: access.trustedOrigins } : {}),
   database: drizzleAdapter(getDb(), {
     provider: 'pg',
     schema: {
@@ -45,9 +41,10 @@ export const auth = betterAuth({
     max: 30,
   },
   advanced: {
-    // Cookies seguras SOLO sobre HTTPS (no según NODE_ENV): en dev por http://localhost se sirven
-    // cookies no-Secure para que la sesión funcione; en prod (Caddy HTTPS) serán Secure.
-    useSecureCookies: baseURL.startsWith('https://'),
+    // Cookies seguras SOLO sobre HTTPS (no según NODE_ENV) y cabeceras del proxy de confianza cuando hay varios
+    // hosts admitidos: las dos decisiones y su por qué están en `auth-access.ts`.
+    useSecureCookies: access.secureCookies,
+    trustedProxyHeaders: access.trustedProxyHeaders,
     database: {
       // Deja que PostgreSQL genere los UUID (columnas uuid defaultRandom).
       generateId: false,
