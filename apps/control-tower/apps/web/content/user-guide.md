@@ -145,6 +145,9 @@ Direcciones: **pull** = el sistema externo manda y CT importa · **push** = CT m
   (sincronizaciones, barridos de mantenimiento, acciones por evento y el motor). Pulsa una para ver el detalle y, si
   procede, **activarla/desactivarla** (efecto real: pausada no se ejecuta) o **Ejecutarla ahora**. El motor central
   (cola de eventos y de trabajos) siempre está activo. El estado se guarda por organización.
+  El detalle dice **cuándo corrió por última vez y qué hizo** («archivados: 3»), y avisa **«con advertencias»** cuando
+  una purga conservó algo porque otro registro vivo lo seguía usando. Si nunca ha corrido, lo dice también — que es lo
+  que hay que mirar cuando algo que debería pasar solo no está pasando.
 - **Nueva automatización por evento** → hoy se implementan como **código** (no hay constructor visual). Pídelo y se añade.
 - **Un tipo de recurso que no existe** → el campo "tipo" de los recursos es de **etiqueta libre**: escribe una nueva y queda disponible.
 

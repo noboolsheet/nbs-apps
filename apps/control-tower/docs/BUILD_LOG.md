@@ -5,6 +5,38 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-09-27 — Documentación al día (README, CLAUDE.md, guía y memoria) ✅
+
+Repaso de los documentos después de las cuatro tandas del día. Lo que estaba mal, que era sobre todo el **README**:
+
+- `pnpm dev` decía **puerto 3000** (ya corregido en el script al 4270, pero el README seguía con el viejo) ·
+  `cp .env.example .env` cuando el deploy usa **un fichero por perfil** (`.env.prod`) · rutas a
+  `infrastructure/caddy` y `infrastructure/twenty`, que hoy son **`nbs-infra/`** · «self-hosted ARM64» cuando vibox es
+  **x86_64** · un `old_docs/` que no existe · y los 9 documentos de diseño «en la raíz de esta carpeta» cuando están en
+  `docs/`. Añadidos: **qué tiene la app hoy**, la **cadena de verificación** completa (con integración y e2e, que no
+  aparecían) y que la base de datos de prod vive en `nbs-db` y no en su compose.
+- **`CLAUDE.md`**: el estado «(2026-09-01)» pasa a 2026-09-27 con las últimas tandas y lo que queda; ADR-001**..010**
+  (decía ..008); y tres convenciones nuevas que son las que evitan repetir los fallos de hoy — **barrido nuevo** (spec
+  + tick + `sweepEachOrg`, que es quien deja la huella), **`list*` nueva** (tope o excepción con motivo escrito) y el
+  refuerzo de la regla de i18n: **la capa de aplicación no escribe texto de interfaz**. Más las dos entidades nuevas
+  (`quick_notes`, `automation_runs`) y la regla de Inicio.
+- **`docs/README.md`**: ADRs hasta 010 y las cuatro tablas que faltaban en el índice (las dos auditorías,
+  `DESIGN_TOKENS`, el runbook de rotación de la clave de Google).
+- **`docs/DEVELOPMENT_PATTERN.md`** gana la sección **«la guarda que ata dos listas»**: es el patrón que más fallos ha
+  evitado en este proyecto y no estaba escrito en el método, sólo aplicado. Con los ocho casos reales y los dos
+  detalles que lo hacen funcionar (el suelo del test y el motivo escrito junto a cada excepción).
+- **`NOTION_INFORMATION_ARCHITECTURE.md`**: el bloc de notas y la huella de los barridos **no se espejan**, con el por
+  qué (el pósit está a punto de desaparecer; los runs son registro operativo local).
+- **Guía del usuario**: el detalle de una automatización dice ahora cuándo corrió y qué hizo.
+- **`nbs-apps/README.md`**: aviso de que *alcanzar el puerto no basta para entrar* — el login valida el origen.
+- **Memoria de trabajo** (fuera del repo, en `~/.claude`): tres notas nuevas — cómo levantar la app para que el owner
+  revise (y **por qué no arrancar el worker** al hacerlo: sus barridos archivan y borran), que pide propuestas
+  numeradas y decide por número, y sus dos criterios de producto (nada que aparente hacer algo sin hacerlo; lo
+  automático tiene que verse en pantalla).
+
+Verificado: `pnpm build` (la guía se inlina en la app, así que un error de formato se vería aquí) · `pnpm -r typecheck`
+· `pnpm lint` · `pnpm test` (203).
+
 ## 2026-09-27 — F-28: el techo de las listas, terminado ✅
 
 El repaso encontró que F-28 estaba mal cerrado: el mecanismo sí existía —`LIST_LIMIT`, `rowCap` y el aviso de la tabla
@@ -1008,7 +1040,12 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-09-27): los tres del repaso, cerrados.** **E-8** (los barridos dejan huella en `automation_runs` y
+> **⚑ ÚLTIMO (2026-09-27): documentación al día.** README (decía puerto 3000, `.env` único y rutas a
+> `infrastructure/`), `CLAUDE.md` (estado, ADRs hasta 010 y tres convenciones nuevas), índice de `docs/`, el patrón de
+> desarrollo (la **guarda que ata dos listas**, que se aplicaba sin estar escrita), el contrato de Notion y la guía del
+> usuario. Antes, en el mismo día: **E-8 · F-40 · F-28 · F-41**.
+>
+> **⚑ ANTES (2026-09-27): los tres del repaso, cerrados.** **E-8** (los barridos dejan huella en `automation_runs` y
 > el panel dice qué hicieron) · **F-40** (el texto de interfaz vuelve al diccionario; la aplicación manda códigos y
 > datos) · **F-28** (todas las listas de página reciben tope, y las excepciones están listadas con su motivo en un
 > test). Más **F-41**, el test que dependía del orden. Lo que queda del backlog está en la cabecera de

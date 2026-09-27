@@ -12,11 +12,15 @@ Raspberry Pi, y buena parte de la documentación antigua todavía la nombra.
 ## ⚑ Para retomar una sesión: dónde está el estado
 
 - **`docs/BUILD_LOG.md`** = **fuente de verdad del progreso** (bitácora cronológica, lo más reciente arriba). Léelo
-  primero para saber "en qué punto nos quedamos". Estado (2026-09-01): **roadmap M01–M18 completo**, **Bloque 2
-  completo** (integraciones + automatización por evento), **panel lateral estilo Twenty terminado y probado por el
-  owner**, **auditorías técnica y de UI/UX cerradas** y el **grueso del backlog de hallazgos vaciado** (sesión 14).
+  primero para saber "en qué punto nos quedamos". **Estado (2026-09-27):** roadmap **M01–M18 completo**, Bloque 2
+  completo (integraciones + automatización por evento), panel lateral estilo Twenty terminado y probado por el owner,
+  auditorías técnica y de UI/UX **cerradas** y el backlog vaciado hasta lo que necesita una decisión. Las últimas
+  tandas: **ADR-009/010** (el CRM es de Twenty · una Person con `INDIVIDUAL_CLIENT` es cliente) · **F-38** (el
+  archivado, en un solo mecanismo) · **F-39** (Inicio revisado: dinero, tareas en tres cubos, bloc de notas rápidas) ·
+  **E-8/F-40/F-28** (huella de los barridos · el texto de interfaz sólo desde el diccionario · topes de lista).
   **Lo grande que queda son las automatizaciones**, bloqueadas por HAB-1 (canal de notificación: el owner ya eligió
-  **bot de Telegram**, pero pidió NO implementarlo todavía).
+  **bot de Telegram**, pero pidió NO implementarlo todavía). Lo demás abierto, con su motivo, en la cabecera de
+  `FINDINGS_AND_DEFERRED.md`; tres cosas son **acción del owner en vibox** (F-31, F-37 y la contraseña de Postgres).
 - **`docs/AUDIT_2026-08-30.md`** (técnica) y **`docs/AUDIT_UIUX_2026-08-30.md`** (UI/UX) = fotos críticas con el estado
   de cada hallazgo. **`docs/AUTOMATION_BACKLOG.md`** = catálogo de automatizaciones (HAB-1/HAB-2 son los habilitadores
   que bloquean el resto; hoy **no existe canal de notificación al humano**).
@@ -25,6 +29,14 @@ Raspberry Pi, y buena parte de la documentación antigua todavía la nombra.
   es una entidad**, es un `knowledge_item` de tipo proceso (el documento vive en Notion y sus anexos en Drive; ver
   `docs/INFORMATION_ORGANIZATION.md`). Antes de proponer una tabla nueva para algo documental, mira si encaja aquí. Pagos (migración 0019/m35) es CT-nativo: cobros (IN, con cliente/contacto) y gastos (OUT, con etiqueta
   libre), con estado pendiente/pagado y totales por moneda.
+- **Inicio (F-39, 2026-09-27):** es una **proyección** y sigue una regla — un dato está ahí si pide una acción o es
+  señal de salud, y **si tiene lista en la página no tiene además contador ni alerta** (antes la misma cosa salía tres
+  veces). Orden: dinero · tres cifras sin lista · bloc de notas · atención (sólo lo que no sale en otro bloque) · dos
+  columnas, izquierda «qué ha pasado» (proyectos, decisiones en revisión, estado del sistema, actividad reciente) y
+  derecha «qué hay que hacer» (vencidas · hoy · próximos 7 días · eventos). El único bloque que **escribe** es el bloc.
+- **Huella de las automatizaciones (E-8, M45):** tabla `automation_runs` — una fila por ejecución de cada barrido, con
+  lo que hizo. Es lo que el panel de Automatización enseña como «última ejecución»; los `sync.*` la siguen sacando de
+  la tabla `jobs`, porque ésos sí pasan por la cola.
 - **Bloc de notas rápidas (M44, Inicio):** tabla `quick_notes` + `packages/application/src/quick-notes/`. Es un cajón de
   **paso**: una nota sale por `fileQuickNote` (se convierte en tarea/decisión/conocimiento/«por revisar») o se descarta,
   y en los dos casos **se borra** —el rastro queda en `audit_logs` con `targetType`/`targetId`—. Por eso **no** tiene
@@ -33,9 +45,10 @@ Raspberry Pi, y buena parte de la documentación antigua todavía la nombra.
   tiene test. No confundir con `notes` (cuelgan de un registro) ni con `knowledge_inbox` (contenido capturado, con
   canales y promoción a la Biblioteca).
 - **`docs/FINDINGS_AND_DEFERRED.md`** = backlog vivo (hallazgos `F-*` y diferidos `E-*`, con estado 🔴/🟡/🟢).
-- **`docs/adr/`** + **`docs/DECISIONS_FROZEN.md`** = decisiones de arquitectura (por qué es como es). Hay **ADR-001..008**
+- **`docs/adr/`** + **`docs/DECISIONS_FROZEN.md`** = decisiones de arquitectura (por qué es como es). Hay **ADR-001..010**
   (005 tipo de proyecto · 006 cadena de decisiones · 007 activos reutilizables por proyecto · **008 CT es sólo la
-  máquina de estados de las oportunidades**).
+  máquina de estados de las oportunidades** · **009 Twenty es el dueño del CRM** · **010 una Person con
+  `INDIVIDUAL_CLIENT` es un cliente**, con addendum).
 - **`docs/NOTION_INFORMATION_ARCHITECTURE.md`** = contrato del espejo a Notion (propiedad por campo, IDs de las DBs).
 - `docs/IMPLEMENTATION_ROADMAP.md` (plan de 18 milestones), `docs/DEPLOYMENT.md`, `docs/SECURITY.md`.
 - **`apps/web/content/user-guide.md`** = guía de uso para el usuario final + **matriz de información** (dueño/origen/
@@ -345,12 +358,29 @@ crea nada; CT lo **propone** (aviso en Inicio + botón en la ficha de la oportun
   `--ring`), así que un control nuevo no necesita nada; **nunca pongas `outline-none` sin dar una alternativa visible**.
 - **Fechas:** siempre con `formatDate`/`formatDateTime`/`formatTime` de `lib/i18n/format.ts` (día/mes/año). **Nunca
   `toLocaleDateString()` a pelo**: sin locale usa el del navegador y salía `12/31/2026`.
+- **Barrido nuevo** (`sweep.*`) ⇒ tres sitios o no sirve: la **spec** en `automations/catalog.ts` (para que se pueda
+  pausar y ejecutar a mano), el **tick** del worker, y el bucle **`sweepEachOrg`** de `maintenance/retention.ts`, que
+  es quien recorre las organizaciones **y deja la huella** en `automation_runs` (E-8). Lo que devuelva `fn` se guarda
+  tal cual y es lo que el panel enseña como «última ejecución»; devolver `null` significa «sin política configurada» y
+  **no cuenta como ejecución**. Un `skipped`/`blocked` > 0 marca el run «con advertencias» solo.
+- **Consulta de lista nueva** (`list*`) ⇒ o acepta `limit?: number` y aplica `rowCap(limit)` —y la página que la pinta
+  le pasa `LIST_LIMIT` y un `truncatedAt`—, o entra en el mapa de excepciones de `list-limit.test.ts` **con su motivo
+  escrito** (F-28). El tope es *opt-in* a propósito: las mismas funciones las usa el push a Notion, y ahí recortar en
+  silencio dejaría de sincronizar a partir de la fila N. Cuidado con las consultas de **apoyo** (identidades, sectores):
+  un tope ahí no recorta una pantalla, **rompe** lo que se pinta con ellas.
 - **⚑ i18n (E-10): TODO el texto de la interfaz va en `apps/web/lib/i18n/es.ts`** y se usa con `t('clave')` (o
   `tPlural('base', n)` para plurales). **Nunca escribas un literal visible en una vista.** Lo que **no** se traduce:
   los datos del usuario y lo importado de terceros (nombres de clientes, títulos de tareas, texto de Notion/Twenty).
   Los códigos de enum se muestran con `enumLabel` (lee `enum.<CODIGO>` del diccionario) → **al añadir un enum cerrado
   nuevo, añade sus códigos ahí**; hay un test que falla si falta alguno. Para añadir un idioma: copiar `es.ts`,
   traducir los valores y hacer que `resolveLocale()` devuelva la preferencia real (ninguna vista cambia).
+  **⚑ Y la capa de aplicación NO escribe texto de interfaz (F-40, 2026-09-27):** devuelve **códigos y datos** y la
+  vista los traduce —las alertas de Inicio viajan como `kind` + `params`, y `ARCHIVABLE` ya no trae etiquetas—. Los
+  rellenos visibles («(sin título)», «Todo el día», «(sin nombre)») también son de la vista: la consulta devuelve
+  `null`. Dos guardas en `i18n.test.ts` lo vigilan: una busca frases en castellano pintadas a pelo en **todos** los
+  `.tsx` y otra que `home.ts`/`archive.ts` no vuelvan a mandar frases hechas. **Excepción consciente:** los mensajes
+  de **error** de dominio/aplicación siguen en español, y el `'(sin título)'` de `notion-specs.ts` no es interfaz —es
+  el nombre que se **guarda** cuando la página de Notion no tiene título.
 - **Auditoría:** todo comando de escritura registra `recordAudit`; los cambios de estado añaden `recordChangeEvent`
   (`STATUS`) y las ediciones de metadatos `recordFieldChanges` (diff campo a campo, F-4). Se ve en el bloque
   «Historial» del panel lateral (`GET /api/v1/history`).

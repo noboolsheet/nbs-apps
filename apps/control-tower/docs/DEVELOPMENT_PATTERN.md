@@ -239,6 +239,29 @@ correr el flujo afectado y observar el resultado (p. ej. sync en vivo contra una
 revertida, o driving de la UI). Verificar de forma **no destructiva** sobre datos reales (transacciones que se
 revierten, fixtures que se limpian).
 
+### 5.1 La **guarda** que ata dos listas (lo que más fallos ha evitado aquí)
+
+El fallo que más veces se ha repetido en este proyecto tiene una forma constante: **dos listas que tienen que
+coincidir y nada las obliga**. Una allowlist en la capa de aplicación y las vistas que la usan; el conjunto de
+entidades indexadas y el de entidades buscables; los estados que un barrido considera terminales y los que existen de
+verdad en su enum. Cuando divergen **no hay error**: simplemente algo deja de aparecer, de archivarse o de
+sincronizarse, en silencio y a veces durante semanas.
+
+El patrón que funciona es un test pequeño y aburrido que **lee el código** —o los dos mapas— y exige que cuadren:
+
+- `NOTE_TARGETS` ↔ el registro del panel · `REORDERABLE` ↔ los `reorder=` de las vistas · los destinos del bloc de
+  notas ↔ los casos de `fileQuickNote`.
+- `SEARCH_TYPES` ↔ las tablas con `search_vector` (cuando se escribió, la búsqueda ignoraba **4 de 15**).
+- `ARCHIVABLE` ↔ `PURGE_ORDER` (dos entidades se archivaban y no se purgaban nunca) y ↔ los hijos de la cascada.
+- `TERMINAL_STATUS` ↔ los enums reales (un estado mal escrito no archiva nunca y no falla).
+- Las vistas ↔ el diccionario de i18n (ninguna frase pintada a pelo) y ↔ las reglas de producto («el CRM no se crea
+  ni se archiva desde aquí»: ni `createPath`, ni botón).
+- Toda `list*` ↔ su tope, o una excepción **con el motivo escrito** en el propio test.
+
+Dos detalles que hacen la diferencia: el test lleva **un suelo** (`expect(encontrados).toBeGreaterThan(10)`) para que
+no pase en verde si el patrón que busca cambia de forma y deja de mirar nada; y cada excepción se anota **con su
+motivo** en el propio test, que es donde alguien la va a leer.
+
 ---
 
 ## 6. Roles: humano ↔ IA

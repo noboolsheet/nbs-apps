@@ -223,6 +223,14 @@ Notion. (Si más adelante quieres verlas en Notion, sería CT→Notion read-only
 > («hablado con el cliente, mueve la entrega a marzo») y el **cuerpo de la página** de Notion ya es de quien escribe:
 > espejarlas duplicaría el sitio donde se apunta lo mismo. Decisión del owner.
 
+> **Bloc de notas rápidas (M44, 2026-09-27): tampoco se espeja.** `quick_notes` es un cajón de **paso** del Inicio: una
+> nota vive ahí hasta que se convierte en tarea/decisión/conocimiento/«por revisar» —y **entonces** el registro que se
+> crea sí entra en el espejo si su entidad está reflejada— o se descarta. Espejar el pósit además del resultado sería
+> sincronizar dos veces la misma idea, y la primera de las dos está a punto de desaparecer.
+
+> **Huella de los barridos (E-8, 2026-09-27): fuera del contrato.** `automation_runs` es registro operativo local
+> («¿corrió el barrido?, ¿qué borró?»), igual que `jobs`, `sync_runs` y `audit_logs`: no se refleja en Notion.
+
 ### 4.9 Clients — **Twenty es la verdad**; Notion solo "client knowledge"
 No crear una DB `Clients` que compita con Twenty. En Notion: páginas de conocimiento/documentación por cliente
 (Notion→CT como Knowledge Items/Documents ref). Si se quiere una relación `Client` en otras DBs de Notion, la DB de

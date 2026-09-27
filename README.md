@@ -36,6 +36,13 @@ vibox no tiene IP pública ni puertos abiertos, así que `0.0.0.0` significa "la
 de casa y el tailnet", no internet. Lo público sale por el túnel de Cloudflare
 (ver `nbs-infra`), que sólo enruta contenedores del perfil `demo`.
 
+⚠ **Que el puerto se alcance no basta para entrar.** Una app con login valida el
+**origen** de la petición: si su `BETTER_AUTH_URL` es la del tailnet, entrar por la IP
+de la red local falla con «origen no permitido» aunque el puerto responda. En
+control-tower se declaran los sitios válidos con `BETTER_AUTH_ALLOWED_HOSTS` (ver
+`apps/control-tower/docs/DEPLOYMENT.md`); los servicios de `nbs-infra` (Twenty, n8n,
+Zammad) admiten **una sola** URL y llegan a la LAN por Caddy.
+
 | Proyecto | dev | prod | demo |
 |----------|-----|------|------|
 | control-tower | 4270 | 4272 | 4274 |
