@@ -138,9 +138,14 @@ const jobRegistry: JobRegistry = {
       // identificadores de API, así que si aquí no hay nada se usa el nombre estándar y, si tampoco existe, el
       // sync avisa de que no ha reclasificado a nadie en vez de suponerlo.
       const integ = await getIntegrationByProvider(db, ctx, 'TWENTY');
-      const rolesField = (integ?.configuration as { fields?: { personRelationshipRoles?: string } } | null)?.fields
-        ?.personRelationshipRoles;
-      const adapter = new TwentyAdapter(new HttpTwentyDataSource({ baseUrl, apiKey }), rolesField);
+      const fields = (integ?.configuration as {
+        fields?: { personRelationshipRoles?: string; companyOrganizationType?: string };
+      } | null)?.fields;
+      const adapter = new TwentyAdapter(
+        new HttpTwentyDataSource({ baseUrl, apiKey }),
+        fields?.personRelationshipRoles,
+        fields?.companyOrganizationType,
+      );
       // TWENTY_CRM_URL = URL del navegador (Tailscale/LAN), para el enlace "Open in CRM" (F-1).
       const summary = await syncTwenty(db, ctx, adapter, { crmBaseUrl: process.env.TWENTY_CRM_URL ?? null });
       log.info('twenty sync done', { summary });

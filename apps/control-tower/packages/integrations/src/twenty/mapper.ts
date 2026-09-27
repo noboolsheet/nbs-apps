@@ -1,6 +1,6 @@
 import { OPPORTUNITY_STAGE, type OpportunityStage, type TaskStatus } from '@ct/domain';
 import type { TwentyRawRecord } from './client';
-import { parsePersonRoles } from '@ct/domain';
+import { ORGANIZATION_TYPE, parsePersonRoles } from '@ct/domain';
 import type { NormalizedCompany, NormalizedPerson, NormalizedOpportunity, NormalizedTask } from '../types';
 
 /**
@@ -53,12 +53,30 @@ export function mapTwentyStage(raw: unknown): OpportunityStage {
   return legacy[s] ?? 'LEAD';
 }
 
-export function mapCompany(raw: TwentyRawRecord): NormalizedCompany {
+/**
+ * Nombre POR DEFECTO del campo **Organization Type** en la API de Twenty. Configurable por integración
+ * (`configuration.fields.companyOrganizationType`) por lo mismo que el de roles: no se adivina.
+ */
+export const DEFAULT_ORG_TYPE_FIELD = 'organizationType';
+
+/** Normaliza una etiqueta de Twenty al código del enum («Public Body» → `PUBLIC_BODY`). */
+function orgTypeCode(raw: unknown): string | undefined {
+  if (typeof raw !== 'string' || raw.trim() === '') return undefined;
+  const code = raw.trim().toUpperCase().replace(/[\s-]+/g, '_');
+  // Si no es uno de los tipos del contrato, se guarda lo que venga: en ese Twenty puede haber una etiqueta propia,
+  // y mostrarla es más útil que descartarla (la interfaz traduce sólo los códigos que conoce).
+  return (ORGANIZATION_TYPE as readonly string[]).includes(code) ? code : raw.trim();
+}
+
+export function mapCompany(raw: TwentyRawRecord, orgTypeField = DEFAULT_ORG_TYPE_FIELD): NormalizedCompany {
+  const rawType = (raw as Record<string, unknown>)[orgTypeField];
   return {
     externalId: raw.id,
     name: str(raw.name) ?? '(sin nombre)',
-    industry: str(raw.industry),
+    // `industry` guarda el **tipo de organización** (owner 2026-09-27): el «industry» del CRM viejo no se usa.
+    industry: orgTypeCode(rawType),
     websiteUrl: toUrl(str(raw.domainName) ?? nested(raw, 'domainName', 'primaryLinkUrl')),
+    orgTypeFieldPresent: rawType !== undefined && rawType !== null,
   };
 }
 

@@ -119,13 +119,23 @@ export async function syncTwenty(
   }
 
   // --- Companies → clients --- (por-registro: un registro inválido no aborta el resto, F-13)
+  // `clients.industry` guarda el **Organization Type** de Twenty desde el 2026-09-27 (Empresa, Centro educativo,
+  // Autónomo…). Si el campo no viene en el pull —puede llamarse de otra forma en ese Twenty— **no se pisa** lo que
+  // hubiera: borrar un dato por no encontrar un campo sería peor que no actualizarlo.
+  let orgTypeFieldMissing = 0;
   for (const c of data.companies) {
     try {
+      if (!c.orgTypeFieldPresent) orgTypeFieldMissing++;
       const existing = await resolveInternalId(db, ctx, P, 'company', c.externalId);
       if (existing) {
         await db
           .update(clients)
-          .set({ name: c.name, industry: c.industry, websiteUrl: c.websiteUrl, updatedAt: new Date() })
+          .set({
+            name: c.name,
+            ...(c.orgTypeFieldPresent ? { industry: c.industry } : {}),
+            websiteUrl: c.websiteUrl,
+            updatedAt: new Date(),
+          })
           .where(and(eq(clients.id, existing), orgEq(clients.organizationId, ctx)));
         await upsertIdentity(db, ctx, { provider: P, externalType: 'company', externalId: c.externalId, internalType: 'client', internalId: existing, metadata: { url: twentyRecordUrl(opts.crmBaseUrl, 'company', c.externalId) } });
         summary.companies.updated++;
@@ -142,6 +152,16 @@ export async function syncTwenty(
     } catch (e) {
       summary.skipped.push({ entity: 'company', externalId: c.externalId, error: errMsg(e) });
     }
+  }
+  if (orgTypeFieldMissing > 0) {
+    summary.skipped.push({
+      entity: 'config',
+      externalId: `${orgTypeFieldMissing} empresa(s)`,
+      error:
+        'No se encontró el campo «Organization Type» en Twenty, así que el tipo de organización de los clientes no ' +
+        'se ha actualizado (no se ha borrado el que hubiera). Si en tu Twenty ese campo se llama de otra forma, ' +
+        'ponlo en la configuración de la integración (`fields.companyOrganizationType`).',
+    });
   }
 
   /**

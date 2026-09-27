@@ -3,8 +3,26 @@ import { mapCompany, mapPerson, mapOpportunity, mapTwentyStage, opportunityPatch
 
 describe('twenty mapper', () => {
   it('mapea company defensivamente', () => {
-    const c = mapCompany({ id: 'c1', name: 'Acme', industry: 'Retail', domainName: { primaryLinkUrl: 'https://acme.com' } });
-    expect(c).toMatchObject({ externalId: 'c1', name: 'Acme', industry: 'Retail', websiteUrl: 'https://acme.com' });
+    const c = mapCompany({ id: 'c1', name: 'Acme', domainName: { primaryLinkUrl: 'https://acme.com' } });
+    expect(c).toMatchObject({ externalId: 'c1', name: 'Acme', websiteUrl: 'https://acme.com' });
+  });
+
+  it('`industry` guarda el Organization Type de Twenty, no el «industry» viejo', () => {
+    // Owner 2026-09-27: en la ficha y en la lista ese campo muestra el TIPO DE ORGANIZACIÓN. El «industry» del CRM
+    // viejo ya no se lee (el contrato nuevo no lo incluye), así que mandarlo no debe colarse como tipo.
+    expect(mapCompany({ id: 'c1', name: 'Acme', industry: 'Retail' })).toMatchObject({
+      industry: undefined,
+      orgTypeFieldPresent: false,
+    });
+    // Etiqueta tal y como la escribe Twenty → código del contrato.
+    expect(mapCompany({ id: 'c1', name: 'Acme', organizationType: 'Public Body' })).toMatchObject({
+      industry: 'PUBLIC_BODY',
+      orgTypeFieldPresent: true,
+    });
+    // Una etiqueta propia de ese Twenty se conserva tal cual: mostrarla informa más que descartarla.
+    expect(mapCompany({ id: 'c1', name: 'Acme', organizationType: 'Cooperativa' }).industry).toBe('Cooperativa');
+    // Nombre de campo distinto, como en un Twenty con campo personalizado.
+    expect(mapCompany({ id: 'c1', name: 'Acme', tipoOrg: 'BUSINESS' }, 'tipoOrg').industry).toBe('BUSINESS');
   });
 
   it('normaliza el dominio sin esquema a URL absoluta (bug real de sync)', () => {

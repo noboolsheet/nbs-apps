@@ -376,7 +376,9 @@ export const es = {
   'field.expectedCloseDate': 'Fecha de cierre',
   'field.externalUrl': 'URL externa',
   'field.hosting': 'Hosting',
-  'field.industry': 'Industria',
+  // `clients.industry` guarda el **Organization Type** de Twenty (owner 2026-09-27): la columna se llama por lo que
+  // contiene, no por su nombre en la base de datos.
+  'field.organizationType': 'Tipo de organización',
   'field.jobTitle': 'Cargo',
   'field.kind': 'Tipo',
   'field.lastName': 'Apellido',

@@ -5,6 +5,38 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-09-27 — La vista de clientes, alineada con que el CRM es de Twenty ✅
+
+Tres ajustes que salen de ADR-009/ADR-010 (addendum en el propio ADR-010):
+
+**1. `clients.industry` se llena del «Organization Type» de Twenty.** Antes leía el campo «industry» del CRM viejo,
+que el contrato nuevo no incluye y que probablemente ya no exista allí, así que en la práctica estaba vacío. Ahora
+guarda el **código** del enum `ORGANIZATION_TYPE` (Empresa, Centro educativo, Organismo público, Asociación,
+Autónomo…) y la interfaz lo traduce; una etiqueta propia de ese Twenty se conserva tal cual. La **columna de la base
+de datos no se renombra** (modelo aditivo), pero la etiqueta visible pasa a «Tipo de organización»: llamarla
+«Industria» cuando dice «Autónomo» sería mentir. El nombre del campo en la API es configuración
+(`fields.companyOrganizationType`) y **si no viene, no se pisa** lo que hubiera — borrar un dato por no encontrar un
+campo es peor que no actualizarlo, y el run queda «con advertencias».
+
+**2. Fuera la columna «Fuente» de la lista de clientes, y en su lugar un enlace «Abrir en el CRM».** Con todo el CRM
+viniendo de Twenty, saber que un cliente viene de Twenty no informa; poder abrirlo allí, sí. Sale de
+`metadata.url` de su identidad, que ya estaba guardada (F-1). La procedencia sigue en la ficha.
+
+**3. Sin botones de crear en clientes, contactos y oportunidades.** Nacen en Twenty, así que un «＋ Nuevo» sólo podía
+crear un registro que el CRM no conoce. Se retiran los de las dos listas y el «Nuevo contacto» de la ficha del
+cliente, y los `RecordSpec` de `client`/`contact` pierden el `createPath` (el panel dice «Este registro no se crea
+desde Control Tower» si alguien llega por URL). **Los comandos siguen existiendo** —los usa el sync y son la vía de
+importación— y, a diferencia de `createOpportunity`, no rechazan a un actor USER: el e2e crea sus fixtures por HTTP y
+cerrarlo exige reescribir esas pruebas. Queda anotado en el ADR como decisión, no como olvido.
+
+**Dos tests que pinchaban el comportamiento viejo:** el del mapper esperaba que `industry` viniera del campo
+«industry» (ahora comprueba las cuatro formas del tipo de organización: etiqueta con espacios → código, etiqueta
+propia conservada, campo con otro nombre, y que el «industry» viejo **no** se cuele), y el de resiliencia F-13 hacía
+inválida una empresa precisamente por `industry`, así que inyecta el dato inválido por el campo nuevo.
+
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (169) · `pnpm build` · `pnpm test:integration` (191) ·
+e2e (69/69).
+
 ## 2026-09-27 — ADR-010 · Una Person con `INDIVIDUAL_CLIENT` es un cliente, no un contacto ✅
 
 **El problema, en una frase del owner:** en Twenty cada persona lleva un multi-select `Relationship Roles`, y quien
@@ -651,7 +683,12 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-09-27): ADR-010 — los clientes particulares ya son clientes.** Una Person de Twenty con el rol
+> **⚑ ÚLTIMO (2026-09-27): la vista de clientes, alineada con Twenty.** El campo que decía «Industria» ahora es el
+> **Tipo de organización** que viene de Twenty (y si el campo no existe allí, no se pisa nada) · la columna «Fuente»
+> se cambia por un **enlace para abrirlo en el CRM** · y **no hay botones de crear** clientes, contactos ni
+> oportunidades, porque nacen en Twenty.
+>
+> **⚑ ANTES (2026-09-27): ADR-010 — los clientes particulares ya son clientes.** Una Person de Twenty con el rol
 > `INDIVIDUAL_CLIENT` se sincroniza como **cliente** (antes era un contacto, y por eso no podía tener proyectos ni
 > pagos); si cambia de rol, su registro se mueve y el viejo se archiva. El campo de roles es **configurable** y, si no
 > viene, no se reclasifica a nadie. De paso: `upsertIdentity` no actualizaba `internal_type` y la reconciliación no

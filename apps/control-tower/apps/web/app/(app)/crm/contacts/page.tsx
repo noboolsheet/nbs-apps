@@ -5,7 +5,6 @@ import { type Column } from '@/components/ui/entity-table';
 import { RecordTable } from '@/components/ui/record-table';
 import { SourceBadge } from '@/components/ui/source-badge';
 import { ListPage } from '@/components/ui/list-page';
-import { NewRecordButton } from '@/components/ui/new-record-button';
 import { RecordLink } from '@/components/ui/record-link';
 import { t } from '@/lib/i18n';
 
@@ -46,7 +45,8 @@ export default async function ContactsPage() {
       breadcrumb={[{ label: t('nav.crm'), href: '/crm' }]}
       title={t('crm.contactsTitle')}
       count={rows.length}
-      action={<NewRecordButton entity="contact" />}
+      // Sin botón de «Nuevo»: los contactos nacen en Twenty (ADR-009). Un contacto creado aquí no existiría en
+      // el CRM, que es su dueño.
     >
       <RecordTable
         columns={columns}

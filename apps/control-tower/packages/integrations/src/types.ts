@@ -15,8 +15,18 @@ export interface HealthResult {
 export interface NormalizedCompany {
   externalId: string;
   name: string;
+  /**
+   * Lo que CT guarda en `clients.industry`. Desde el 2026-09-27 sale del **Organization Type** de Twenty (Empresa,
+   * Centro educativo, Autónomo…): el campo «industry» del CRM viejo no se usa. Es el CÓDIGO del enum
+   * `ORGANIZATION_TYPE` cuando se reconoce, o el valor tal cual si en ese Twenty hay una etiqueta propia.
+   */
   industry?: string;
   websiteUrl?: string;
+  /**
+   * ¿VENÍA el campo de tipo de organización? Si no venía, el sync **no pisa** lo que ya hubiera en `industry` y
+   * avisa: el nombre del campo puede ser otro en ese Twenty y el handoff prohíbe inferir identificadores de API.
+   */
+  orgTypeFieldPresent?: boolean;
 }
 export interface NormalizedPerson {
   externalId: string;

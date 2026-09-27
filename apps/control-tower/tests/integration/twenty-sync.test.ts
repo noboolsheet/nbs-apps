@@ -162,9 +162,11 @@ describe('twenty sync (fixture)', () => {
   it('un registro inválido no aborta el resto del pull (resiliencia F-13)', async () => {
     await inRollback(async (tx) => {
       const ctx = await makeOrg(tx);
-      // c2 "Globex" tiene industry demasiado largo → createClient lo rechaza; c1 debe crearse igual.
+      // c2 "Globex" trae un tipo de organización larguísimo → `createClient` lo rechaza (`industry` tiene tope);
+      // c1 debe crearse igual. Desde el 2026-09-27 `industry` se llena del **Organization Type** de Twenty, así que
+      // el dato inválido se inyecta por ese campo: por el viejo `industry` ya no entra nada.
       const data = fixture();
-      (data.companies[1] as { industry?: string }).industry = 'x'.repeat(200);
+      (data.companies[1] as { organizationType?: string }).organizationType = 'x'.repeat(200);
       const summary = await syncTwenty(tx, sync(ctx), new TwentyAdapter(new FixtureSource(data)));
       expect(summary.companies.created).toBe(1); // sólo Acme
       // Los saltados de REGISTROS se cuentan aparte de los avisos de configuración (`entity: 'config'`), que en

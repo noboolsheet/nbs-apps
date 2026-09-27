@@ -69,3 +69,26 @@ relleno** para un particular. Faltaba aplicar la misma idea a qué entidad de CT
 - **Añadir `email`/`phone` a `clients`.** Se valoró para no perder el contacto del particular, pero dejaría dos campos
   vacíos y bloqueados en el panel de todos los clientes-empresa. Si en el uso real molesta consultarlo en Twenty, es
   una migración aditiva de dos columnas y se hace entonces.
+
+## Addendum (2026-09-27, mismo día) — tres consecuencias de que el CRM sea de Twenty
+
+1. **`clients.industry` guarda el «Organization Type» de Twenty** (Empresa, Centro educativo, Organismo público,
+   Asociación, Autónomo…), no el viejo campo «industry» del CRM —que el contrato nuevo no incluye y que probablemente
+   ya no exista allí—. Se guarda el **código** del enum `ORGANIZATION_TYPE` y la interfaz lo traduce con `enumLabel`;
+   una etiqueta propia de ese Twenty se conserva tal cual, porque mostrarla informa más que descartarla. La columna
+   de la base de datos **no se renombra** (el modelo es aditivo), pero la etiqueta visible pasa a ser «Tipo de
+   organización»: llamarla «Industria» cuando dice «Autónomo» sería mentir. El nombre del campo en la API es
+   configuración (`configuration.fields.companyOrganizationType`, por defecto `organizationType`) y, si no viene en el
+   pull, **no se pisa** lo que hubiera: borrar un dato por no encontrar un campo es peor que no actualizarlo.
+2. **La columna «Fuente» de la lista de clientes se sustituye por un enlace «Abrir en el CRM»**. Con todo el CRM
+   viniendo de Twenty, saber que un cliente viene de Twenty no informa de nada; poder abrirlo allí, sí. La procedencia
+   sigue visible en la ficha (donde un cliente nativo de CT se distingue) y la columna nueva muestra «—» cuando no hay
+   registro externo.
+3. **No hay botones para crear clientes, contactos ni oportunidades.** Nacen en Twenty y llegan con el sync, así que
+   un «＋ Nuevo» aquí sólo podía producir un registro que el CRM no conoce. Se retiran el botón de las dos listas y el
+   «Nuevo contacto» de la ficha del cliente, y los `RecordSpec` de `client`/`contact` pierden su `createPath` (el panel
+   dice «Este registro no se crea desde Control Tower» si alguien llega por URL), igual que ya hacía `opportunity`.
+   **Los comandos `createClient`/`createContact` siguen existiendo**: los usa el sync y son la vía para importar. A
+   diferencia de `createOpportunity` (ADR-008) **no rechazan a un actor USER**, porque el e2e crea sus fixtures por
+   HTTP; si se quiere cerrar también a nivel de API, hay que reescribir esas pruebas primero.
+

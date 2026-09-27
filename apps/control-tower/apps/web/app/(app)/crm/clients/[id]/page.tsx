@@ -123,12 +123,10 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
             ),
           },
           {
-            label: `Contactos (${contacts.length})`,
+            label: `${t('crm.contactsTitle')} (${contacts.length})`,
             content: (
               <div className="flex flex-col gap-3">
-                <div className="flex justify-end">
-                  <ContextNewButton entity="contact" ctxKey="client" parentId={client.id} label={t('crm.newContact')} />
-                </div>
+                {/* Sin «Nuevo contacto»: los contactos nacen en Twenty (ADR-009) y llegan con el sync. */}
                 {contacts.length === 0 ? (
                   <EmptyState title={t('crm.contactsEmptyShort')} />
                 ) : (

@@ -162,14 +162,16 @@ export const RECORDS: Record<string, RecordSpec> = {
     label: t('entity.client'),
     listPath: '/crm/clients',
     detailPath: (id) => `/crm/clients/${id}`, // Cliente tiene secciones internas → ficha completa
-    createPath: '/api/v1/clients',
+    // Sin `createPath` (owner 2026-09-27): los clientes nacen en Twenty, como las oportunidades (ADR-008/009/010).
+    // El panel muestra «Este registro no se crea desde Control Tower» si alguien llega a `?rec=client:new`.
     itemPath: (id) => `/api/v1/clients/${id}`,
     source: true,
     pick: (d) => (d as { client: Record<string, unknown> }).client,
     fields: [
       { name: 'name', label: t('field.name'), type: 'text', required: true, ownedBy: ['TWENTY'] },
       { name: 'status', label: t('field.status'), type: 'select', options: CLIENT_STATUS },
-      { name: 'industry', label: t('field.industry'), type: 'text', ownedBy: ['TWENTY'] },
+      // Guarda el **Organization Type** de Twenty (Empresa, Centro educativo, Autónomo…), de ahí la etiqueta.
+      { name: 'industry', label: t('field.organizationType'), type: 'text', ownedBy: ['TWENTY'] },
       { name: 'websiteUrl', label: t('field.websiteUrl'), type: 'text', ownedBy: ['TWENTY'] },
       { name: 'notes', label: t('field.notes'), type: 'textarea' },
     ],
@@ -180,7 +182,7 @@ export const RECORDS: Record<string, RecordSpec> = {
     label: t('entity.contact'),
     listPath: '/crm/contacts',
     // Sin secciones internas → el panel es la ficha (no hay "Abrir ficha completa").
-    createPath: '/api/v1/contacts',
+    // Sin `createPath`: los contactos nacen en Twenty (ADR-009).
     itemPath: (id) => `/api/v1/contacts/${id}`,
     source: true,
     contextCreate: { client: { presetField: 'clientId' } },
