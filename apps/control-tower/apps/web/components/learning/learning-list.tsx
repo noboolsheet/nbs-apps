@@ -18,7 +18,6 @@ export interface LearningRow {
   status: string;
   sector: string | null;
   url: string | null;
-  progress: number | null;
 }
 
 const selCls = fieldCls;
@@ -56,11 +55,8 @@ export function LearningList({ items }: { items: LearningRow[] }) {
     { header: t('field.kind'), value: (r) => r.kind, cell: (r) => r.kind },
     { header: t('field.sector'), value: (r) => r.sector, cell: (r) => r.sector ?? <span className="text-fg-subtle">—</span> },
     { header: t('field.status'), value: (r) => r.status, cell: (r) => <StatusBadge status={r.status} /> },
-    {
-      header: t('projects.colProgress'),
-      value: (r) => r.progress,
-      cell: (r) => (r.progress != null ? `${r.progress}%` : <span className="text-fg-subtle">—</span>),
-    },
+    // Columna «Progreso» retirada (owner 2026-09-27): un porcentaje a mano en una ruta de aprendizaje no se
+    // mantiene actualizado, así que informaba menos que el propio estado (Pendiente/En curso/Completado).
     {
       header: t('entity.resource'),
       // El enlace usa `ExternalSourceLink`: aquí estaba escrito a mano con `text-blue-600 dark:text-blue-400`,

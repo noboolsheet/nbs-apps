@@ -3,25 +3,56 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import {
+  registerVisit,
+  relabel,
+  topFrequent,
+  rankFrequent,
+  type FrequentEntry,
+} from '@/lib/frequent';
 import { t } from '@/lib/i18n';
 
 /**
  * «Más usados»: accesos directos a las páginas **profundas** que más visitas (la ficha de un proyecto, una lista
- * concreta…). Se aprende solo del uso, sin configurar nada.
+ * concreta…). Se aprende solo del uso, sin configurar nada. La lógica de puntuación vive en `lib/frequent.ts`.
  *
  * Vive en `localStorage`, no en la base de datos: es una preferencia de navegación de ESTE navegador, no un dato de
  * negocio — y evita escribir en Postgres en cada clic. Se pierde al cambiar de equipo, que para esto es aceptable.
  *
- * Va **abierto por defecto**: su razón de ser es que se vean.
+ * ⚑ **Cómo se consigue la etiqueta, que es donde estaba el fallo (2026-09-27).** El nombre se toma del `<h1>` de la
+ * página visitada (así sale «Web corporativa Acme» y no `/projects/<uuid>`). Antes se leía a ciegas **600 ms después**
+ * de cambiar la ruta; como todas las páginas son `force-dynamic` y algunas tardan segundos, a esa altura el DOM
+ * **seguía mostrando la página anterior** (Next mantiene la UI vieja hasta que llega el payload) y se guardaba la
+ * ruta nueva con el **título de la página anterior**. De ahí los nombres que no correspondían con su destino.
  *
- * La etiqueta se toma del `<h1>` de la página visitada (así sale «Web corporativa Acme» y no `/projects/<uuid>`), con
- * la ruta como respaldo. Las secciones que ya están en el menú se excluyen: repetirlas sería ruido.
+ * Ahora: se recuerda el `<h1>` que había ANTES de navegar y sólo se acepta un `<h1>` **distinto** (o el primero, si
+ * venimos de una carga en frío). Se observa el DOM hasta 8 s y, si la etiqueta buena llega tarde, se **corrige** la
+ * entrada sin contar otra visita. La visita se cuenta a los 1,5 s de permanencia: pasar de largo por una página no
+ * la convierte en «más usada».
  */
 const STORAGE_KEY = 'ct.frequentPages.v1';
-const MAX_TRACKED = 60;
 const SHOWN = 4;
+/** Permanencia mínima para contar la visita. Pasar de largo no cuenta. */
+const DWELL_MS = 1500;
+/** Cuánto se espera a que la página pinte su `<h1>` antes de rendirse y quedarse con la ruta. */
+const LABEL_WAIT_MS = 8000;
 
-type Entry = { path: string; label: string; count: number; last: number };
+function read(): FrequentEntry[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as FrequentEntry[]) : [];
+  } catch {
+    return []; // localStorage lleno o deshabilitado: la sección simplemente no aparece
+  }
+}
+
+function write(list: FrequentEntry[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  } catch {
+    /* sin espacio: no pasa nada, es una comodidad */
+  }
+}
 
 /** Rutas que ya tienen su sitio en la navegación principal: no se ofrecen como "más usadas". */
 const NAV_PATHS = new Set([
@@ -36,49 +67,63 @@ const NAV_PATHS = new Set([
   '/settings',
 ]);
 
-function read(): Entry[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Entry[]) : [];
-  } catch {
-    return []; // localStorage lleno o deshabilitado: la sección simplemente no aparece
-  }
+function currentHeading(): string | null {
+  return document.querySelector('main h1')?.textContent?.trim() || null;
 }
 
 export function FrequentLinks() {
   const pathname = usePathname();
-  const [entries, setEntries] = useState<Entry[]>([]);
+  const [entries, setEntries] = useState<FrequentEntry[]>([]);
 
   useEffect(() => {
+    const now = Date.now();
     if (!pathname || NAV_PATHS.has(pathname)) {
-      setEntries(read());
+      // En una sección del menú no se cuenta nada, pero sí se repunta la lista: el decaimiento depende de la fecha.
+      setEntries(rankFrequent(read(), now));
       return;
     }
-    // Un pequeño retardo para que la página haya pintado su <h1> antes de leerlo.
-    const id = window.setTimeout(() => {
-      const label = document.querySelector('main h1')?.textContent?.trim() || pathname;
-      const list = read();
-      const found = list.find((e) => e.path === pathname);
-      if (found) {
-        found.count += 1;
-        found.last = Date.now();
-        found.label = label; // el nombre puede haber cambiado (se renombró el proyecto)
-      } else {
-        list.push({ path: pathname, label, count: 1, last: Date.now() });
+
+    // El `<h1>` que hay ANTES de que pinte la página nueva. Cualquier `<h1>` igual a éste es el de la página vieja.
+    const previous = currentHeading();
+    let label: string | null = null;
+    let counted = false;
+
+    const accept = (heading: string | null) => {
+      if (!heading || heading === previous) return false;
+      label = heading;
+      return true;
+    };
+    accept(currentHeading()); // carga en frío: si ya está pintada, se coge directamente
+
+    const observer = new MutationObserver(() => {
+      if (!accept(currentHeading())) return;
+      observer.disconnect();
+      // Si la visita ya se contó con una etiqueta provisional, se corrige ahora sin sumar otra.
+      if (counted && label) {
+        const fixed = relabel(read(), pathname, label);
+        write(fixed);
+        setEntries(fixed);
       }
-      // Se conservan las más usadas y, a igualdad, las más recientes.
-      const trimmed = list.sort((a, b) => b.count - a.count || b.last - a.last).slice(0, MAX_TRACKED);
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
-      } catch {
-        /* sin espacio: no pasa nada, es una comodidad */
-      }
-      setEntries(trimmed);
-    }, 600);
-    return () => window.clearTimeout(id);
+    });
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+
+    const countId = window.setTimeout(() => {
+      counted = true;
+      const list = registerVisit(read(), pathname, label ?? pathname, Date.now());
+      write(list);
+      setEntries(list);
+    }, DWELL_MS);
+
+    const giveUpId = window.setTimeout(() => observer.disconnect(), LABEL_WAIT_MS);
+
+    return () => {
+      window.clearTimeout(countId);
+      window.clearTimeout(giveUpId);
+      observer.disconnect();
+    };
   }, [pathname]);
 
-  const top = entries.filter((e) => e.count > 1).slice(0, SHOWN);
+  const top = topFrequent(entries, Date.now(), SHOWN);
   if (top.length === 0) return null; // hasta que haya costumbre, no se enseña nada
 
   return (

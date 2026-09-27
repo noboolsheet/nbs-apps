@@ -73,16 +73,4 @@ describe('registro del panel ↔ notas', () => {
     expect(broken).toEqual([]);
   });
 
-  it('lo que `hideFields` oculta existe en los campos de la entidad', () => {
-    // Un nombre mal escrito en `hideFields` no oculta nada y no da error: el campo derivado seguiría pidiéndose.
-    const wrong: string[] = [];
-    for (const [key, spec] of Object.entries(RECORDS)) {
-      for (const [ctx, cfg] of Object.entries(spec.contextCreate ?? {})) {
-        for (const name of cfg.hideFields ?? []) {
-          if (!spec.fields.some((f) => f.name === name)) wrong.push(`${key}@${ctx}:${name}`);
-        }
-      }
-    }
-    expect(wrong).toEqual([]);
-  });
 });

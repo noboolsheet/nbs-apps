@@ -318,7 +318,6 @@ export function RecordPanel() {
     const payload: Record<string, unknown> = {};
     for (const f of spec!.fields) {
       if (ctxCfg && f.name === ctxCfg.presetField) continue; // lo fija el contexto (padre)
-      if (ctxCfg?.hideFields?.includes(f.name)) continue; // lo DERIVA el backend del padre (ver `hideFields`)
       if (f.derivedFrom || f.context) continue; // heredado/solo lectura → no se guarda en este registro
       if (isHidden(f)) continue; // oculto por otro campo (p. ej. proyecto personal) → no se envía
       const raw = values[f.name] ?? '';
@@ -382,8 +381,6 @@ export function RecordPanel() {
                 .filter(
                   (f) =>
                     !(ctxCfg && f.name === ctxCfg.presetField) &&
-                    // Campos que el backend deriva del padre: ni se piden ni se envían (ver `hideFields`).
-                    !(ctxCfg?.hideFields?.includes(f.name) ?? false) &&
                     !isHidden(f) &&
                     !f.context,
                 )

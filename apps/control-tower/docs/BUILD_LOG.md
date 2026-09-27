@@ -5,6 +5,41 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-09-27 — El panel del recurso, el progreso de aprendizaje y «Más usados» ✅
+
+**1. El recurso de un proyecto ya no pide ni cliente ni proyecto.** Lo que faltaba del arreglo anterior: `contextCreate`
+sólo existe al **crear**, así que al abrir después ese mismo recurso los dos campos volvían a aparecer vacíos para
+rellenar. Ahora la regla es de **datos**, no de contexto, y vale en los dos modos:
+- **Cliente**: `hidden: (v) => !!v.projectId`. Si el recurso es de un proyecto, su cliente lo copia el backend del
+  cliente del proyecto (ADR-004): pedirlo no serviría de nada y, en un proyecto **personal** (que no tiene cliente),
+  era directamente engañoso. Sigue visible para un recurso que sólo cuelga de un cliente.
+- **Proyecto**: pasa a `context: true` → se ve en «Contexto», de solo lectura. Un recurso creado dentro de un proyecto
+  pertenece a ese proyecto; un desplegable invitaba a moverlo de sitio por accidente.
+- Con esto, el `hideFields` que añadí ayer **se retira**: `hidden` hace lo mismo y además funciona editando, y dos
+  mecanismos para lo mismo es peor que uno.
+
+**2. Fuera el progreso de las rutas de aprendizaje** (columna de la lista, campo del panel y de la ficha): un
+porcentaje a mano no se mantiene actualizado, así que informaba menos que el propio estado del ítem.
+
+**3. «Más usados» tenía tres defectos** (el owner sospechaba que no funcionaba bien; sospechaba bien):
+- **La etiqueta se leía a ciegas 600 ms después de cambiar de ruta.** Todas las páginas son `force-dynamic` y varias
+  tardan segundos: a los 600 ms el DOM **seguía mostrando la página anterior** (Next mantiene la UI vieja hasta que
+  llega el payload), así que se guardaba la ruta nueva con el **título de la página anterior**. De ahí los nombres que
+  no correspondían con su destino. Ahora se recuerda el `<h1>` de antes de navegar, sólo se acepta uno **distinto**, se
+  observa el DOM hasta 8 s y, si la etiqueta buena llega tarde, se **corrige** la entrada sin contar otra visita.
+  Además nunca se degrada un nombre bueno a la ruta cruda.
+- **Ordenaba por visitas totales, sin decaimiento**: lo que usaste mucho hace un mes se quedaba arriba para siempre.
+  Ahora la puntuación decae con **semivida de 30 días** → la lista sigue los hábitos actuales.
+- **No olvidaba nada**: recortaba a 60 entradas *por visitas*, así que una página nueva podía caer antes que una vieja
+  irrelevante. Ahora se purga lo que no se visita en **120 días**.
+- La visita se cuenta tras **1,5 s de permanencia**: pasar de largo por una página no la convierte en «más usada».
+- La lógica sale del componente a `lib/frequent.ts` (puro) con **6 tests**: el orden con decaimiento, el olvido, el no
+  duplicar entradas, el no degradar la etiqueta y el «hasta la segunda visita no se enseña».
+
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (154) · `pnpm build` · `pnpm test:integration` (188) ·
+e2e (69/69). *(El contenedor de Postgres se había parado a mitad de la sesión y las 26 suites fallaban con «Failed
+query: select 1»; levantado de nuevo, todo en verde.)*
+
 ## 2026-09-27 — Otra tanda de siete ajustes ✅
 
 **1. La búsqueda global lleva al registro, no a su lista.** Era el fallo de verdad de la tanda: **diez de los quince
@@ -524,7 +559,12 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-09-27, segunda tanda): siete ajustes más.** La **búsqueda global ya lleva al registro** (diez de
+> **⚑ ÚLTIMO (2026-09-27, tercera tanda):** el **recurso de un proyecto** ya no pide cliente ni proyecto (la regla es
+> de datos, así que también vale editando, y en un proyecto personal el cliente no aparece) · fuera el **progreso** de
+> las rutas de aprendizaje · y **«Más usados» arreglado**: la etiqueta se leía a ciegas a los 600 ms y se guardaba el
+> título de la página ANTERIOR, no había decaimiento y no se olvidaba nada. Lógica a `lib/frequent.ts` con 6 tests.
+>
+> **⚑ ANTES (2026-09-27, segunda tanda): siete ajustes más.** La **búsqueda global ya lleva al registro** (diez de
 > quince tipos llevaban a la lista) · fuera «Entorno» de los recursos · el panel del proyecto pierde «Oportunidad» y
 > gana **enlace a su Notion** (`meta.mirrors`, nuevo) · **«Prompt»** como tipo de conocimiento (migración `0027_m43`) ·
 > fuera la columna «Tipo» de documentos · los entregables muestran su enlace · y la herencia del padre al crear dentro

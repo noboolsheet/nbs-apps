@@ -105,14 +105,13 @@ export interface RecordSpec {
   // Creación contextual desde la sección de un padre (?rec=<e>:new&in=<ctxKey>:<parentId>):
   // fija (y oculta) la relación al padre. `createPath` opcional para rutas anidadas (task/deliverable).
   /**
-   * Creación dentro de un padre. `presetField` se fija y se **oculta** (lo da el contexto). `hideFields` oculta
-   * además lo que el backend DERIVA de ese padre: pedirlo sería invitar a rellenar un valor que se va a ignorar
-   * —o peor, a contradecirlo— (p. ej. el cliente de un recurso, que se copia del cliente del proyecto).
+   * Creación dentro de un padre: `presetField` se fija y se **oculta** (lo da el contexto).
+   *
+   * Lo que el backend DERIVA de ese padre no se oculta aquí sino con el `hidden` del propio campo: `contextCreate`
+   * sólo existe al CREAR, y editando después el campo derivado volvía a aparecer vacío para rellenar (era el caso
+   * del cliente de un recurso de proyecto, que reportó el owner).
    */
-  contextCreate?: Record<
-    string,
-    { presetField: string; createPath?: (parentId: string) => string; hideFields?: readonly string[] }
-  >;
+  contextCreate?: Record<string, { presetField: string; createPath?: (parentId: string) => string }>;
 }
 
 const CLIENT_REL = { source: '/api/v1/clients', labelFields: ['name'] };
@@ -465,7 +464,7 @@ export const RECORDS: Record<string, RecordSpec> = {
       { name: 'kind', label: t('field.kind'), type: 'text', required: true },
       { name: 'status', label: t('field.status'), type: 'select', options: LEARNING_STATUS },
       { name: 'sector', label: t('field.sector'), type: 'text', suggest: '/api/v1/knowledge/sectors' },
-      { name: 'progress', label: t('field.progress'), type: 'number' },
+      // «Progreso (%)» retirado (owner 2026-09-27): el estado del ítem ya dice por dónde va.
       { name: 'url', label: t('field.url'), type: 'text' },
       { name: 'notes', label: t('field.notes'), type: 'textarea' },
     ],
@@ -538,20 +537,19 @@ export const RECORDS: Record<string, RecordSpec> = {
     listPath: '/resources',
     createPath: '/api/v1/resources',
     itemPath: (id) => `/api/v1/resources/${id}`,
-    contextCreate: {
-      // ADR-004: al crear con proyecto, el backend copia el cliente DEL PROYECTO (denormalización). Por eso el
-      // campo «Cliente» no se pide aquí: era el único que quedaba visible y vacío al crear desde un proyecto, y
-      // rellenarlo con otro cliente no habría servido de nada.
-      project: { presetField: 'projectId', hideFields: ['clientId'] },
-      client: { presetField: 'clientId' },
-    },
+    contextCreate: { project: { presetField: 'projectId' }, client: { presetField: 'clientId' } },
     fields: [
       { name: 'name', label: t('field.name'), type: 'text', required: true },
       { name: 'type', label: t('field.kind'), type: 'text', required: true },
       { name: 'status', label: t('field.status'), type: 'select', options: RESOURCE_STATUS },
       { name: 'hosting', label: t('field.hosting'), type: 'select', options: RESOURCE_HOSTING },
-      { name: 'clientId', label: t('entity.client'), type: 'relation', relation: CLIENT_REL },
-      { name: 'projectId', label: t('entity.project'), type: 'relation', relation: PROJECT_REL },
+      // ADR-004: si el recurso es de un PROYECTO, su cliente lo copia el backend del cliente del proyecto. Así que
+      // el campo no se pide —ni al crear ni al editar—: rellenarlo no serviría de nada, y en un proyecto **personal**
+      // (que no tiene cliente) pedirlo era directamente engañoso. Sigue visible para un recurso de sólo cliente.
+      { name: 'clientId', label: t('entity.client'), type: 'relation', relation: CLIENT_REL, hidden: (v) => !!v.projectId },
+      // Contexto de solo lectura: un recurso creado dentro de un proyecto pertenece a ese proyecto. Se ve en
+      // «Contexto», no como un desplegable que invite a moverlo de proyecto por accidente.
+      { name: 'projectId', label: t('entity.project'), type: 'relation', relation: PROJECT_REL, context: true },
       { name: 'provider', label: t('field.provider'), type: 'text' },
       { name: 'url', label: t('field.url'), type: 'text' },
       { name: 'credentialLocation', label: t('field.credentialLocation'), type: 'text' },

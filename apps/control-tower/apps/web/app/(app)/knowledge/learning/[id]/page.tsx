@@ -36,7 +36,6 @@ export default async function LearningDetailPage({ params }: { params: Promise<{
         <h1 className="text-2xl font-semibold tracking-tight">{item.title}</h1>
         <StatusBadge status={item.status} />
         <span className="rounded bg-neutral-soft px-2 py-0.5 text-xs">{item.kind}</span>
-        {item.progress != null && <span className="text-xs text-fg-muted">{item.progress}%</span>}
       </div>
 
       <InlineEditSection
@@ -47,7 +46,6 @@ export default async function LearningDetailPage({ params }: { params: Promise<{
           { name: 'kind', label: t('field.kind'), type: 'text', value: item.kind },
           { name: 'status', label: t('field.status'), type: 'select', options: LEARNING_STATUS, value: item.status },
           { name: 'sector', label: t('field.sector'), type: 'text', value: item.sector },
-          { name: 'progress', label: t('field.progress'), type: 'number', value: item.progress },
           { name: 'url', label: t('knowledge.resourceLinkLabel'), type: 'text', value: item.url },
           { name: 'notes', label: t('field.notes'), type: 'textarea', value: item.notes },
         ]}
