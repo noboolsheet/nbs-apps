@@ -1,9 +1,9 @@
-import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { getDb } from '@ct/db';
 import { listArchived } from '@ct/application';
 import { getCurrentContext } from '@/lib/auth-context';
 import { RecordTable } from '@/components/ui/record-table';
+import { type Column } from '@/components/ui/entity-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import { t } from '@/lib/i18n';
 import { formatDateTime } from '@/lib/i18n/format';
@@ -34,9 +34,9 @@ export default async function ArchivedPage() {
         <EmptyState title={t('settings.archivedEmpty')} hint={t('settings.archivedEmptyHint')} />
       ) : (
         groups.map((g) => {
-          const columns: { header: string; className?: string; cell: (it: (typeof g.items)[number]) => ReactNode }[] = [
-            { header: t('field.name'), cell: (it) => it.name ?? <span className="text-fg-subtle">(sin nombre)</span> },
-            { header: t('settings.archivedAt'), className: 'w-48', cell: (it) => <span className="text-xs text-fg-muted">{fmt(it.archivedAt)}</span> },
+          const columns: Column<(typeof g.items)[number]>[] = [
+            { header: t('field.name'), value: (it) => it.name, cell: (it) => it.name ?? <span className="text-fg-subtle">(sin nombre)</span> },
+            { header: t('settings.archivedAt'), className: 'w-48', value: (it) => it.archivedAt, cell: (it) => <span className="text-xs text-fg-muted">{fmt(it.archivedAt)}</span> },
           ];
           return (
             <section key={g.entityType} className="flex flex-col gap-2">

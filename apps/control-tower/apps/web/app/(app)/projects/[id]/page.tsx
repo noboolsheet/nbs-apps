@@ -112,7 +112,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         </RecordLink>
       ),
     },
-    { header: t('field.status'), value: (ph) => ph.status, className: 'w-36', cell: (ph) => <StatusBadge status={ph.status} /> },
+    { header: t('field.status'), value: (ph) => enumLabel(ph.status), className: 'w-36', cell: (ph) => <StatusBadge status={ph.status} /> },
     { header: t('common.actions'), className: 'w-24', cell: (ph) => <PhaseActions phaseId={ph.id} frozen={closed} /> },
   ];
 

@@ -2,13 +2,14 @@ import Link from 'next/link';
 import { getDb } from '@ct/db';
 import { listInbox, listInboxChannels } from '@ct/application';
 import { getCurrentContext } from '@/lib/auth-context';
-import { EntityTable, type Column } from '@/components/ui/entity-table';
+import { type Column } from '@/components/ui/entity-table';
+import { RecordTable } from '@/components/ui/record-table';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { SourceBadge } from '@/components/ui/source-badge';
-import { EmptyState } from '@/components/ui/empty-state';
 import { CaptureForm } from '@/components/knowledge/forms';
 import { RecordLink } from '@/components/ui/record-link';
 import { InboxChannels } from '@/components/knowledge/inbox-channels';
+import { enumLabel } from '@/lib/labels';
 import { t } from '@/lib/i18n';
 
 export const dynamic = 'force-dynamic';
@@ -25,6 +26,7 @@ export default async function InboxPage() {
   const columns: Column<InboxItem>[] = [
     {
       header: t('entity.knowledge_inbox'),
+      value: (r) => r.title ?? r.rawContent,
       cell: (r) => (
         <RecordLink entity="knowledge_inbox" id={r.id} className="line-clamp-2 text-fg hover:underline">
           {r.title ?? r.rawContent.slice(0, 120)}
@@ -32,8 +34,8 @@ export default async function InboxPage() {
       ),
       className: 'w-full',
     },
-    { header: t('field.sourceType'), cell: (r) => <SourceBadge source={r.sourceType} url={r.sourceUrl} />, className: 'whitespace-nowrap' },
-    { header: t('field.status'), cell: (r) => <StatusBadge status={r.status} />, className: 'whitespace-nowrap' },
+    { header: t('field.sourceType'), value: (r) => r.sourceType, cell: (r) => <SourceBadge source={r.sourceType} url={r.sourceUrl} />, className: 'whitespace-nowrap' },
+    { header: t('field.status'), value: (r) => enumLabel(r.status), cell: (r) => <StatusBadge status={r.status} />, className: 'whitespace-nowrap' },
   ];
 
   return (
@@ -50,11 +52,14 @@ export default async function InboxPage() {
         <InboxChannels channels={channels} canManage={canManage} />
       </section>
 
-      {rows.length === 0 ? (
-        <EmptyState title={t('knowledge.inboxEmpty')} hint={t('knowledge.inboxEmptyHint')} />
-      ) : (
-        <EntityTable columns={columns} rows={rows} getKey={(r) => r.id} />
-      )}
+      {/* `RecordTable` en vez de `EntityTable`: así la bandeja gana orden por columna, buscador y facetas como
+          el resto de las listas. Con `EntityTable` no tenía ninguna de las tres. */}
+      <RecordTable
+        columns={columns}
+        rows={rows}
+        getKey={(r) => r.id}
+        empty={{ title: t('knowledge.inboxEmpty'), hint: t('knowledge.inboxEmptyHint') }}
+      />
     </div>
   );
 }

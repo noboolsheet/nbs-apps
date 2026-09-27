@@ -12,6 +12,7 @@ import { ContextNewButton } from '@/components/ui/context-new-button';
 import { RecordLink } from '@/components/ui/record-link';
 import { RecordTable } from '@/components/ui/record-table';
 import { type Column } from '@/components/ui/entity-table';
+import { enumLabel } from '@/lib/labels';
 import { t } from '@/lib/i18n';
 import { formatDateTime } from '@/lib/i18n/format';
 
@@ -41,7 +42,7 @@ export default async function StrategicAreaDetailPage({ params }: { params: Prom
         <RecordLink entity="goal" id={g.id} className="underline underline-offset-2">{g.name}</RecordLink>
       ),
     },
-    { header: t('field.status'), value: (g) => g.status, cell: (g) => <StatusBadge status={g.status} /> },
+    { header: t('field.status'), value: (g) => enumLabel(g.status), cell: (g) => <StatusBadge status={g.status} /> },
   ];
 
   return (

@@ -3,7 +3,8 @@ import { getDb } from '@ct/db';
 import { getSystemHealth, listFailedOutbox, listRecentJobs, listLogArchives } from '@ct/application';
 import { getCurrentContext } from '@/lib/auth-context';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { EntityTable, type Column } from '@/components/ui/entity-table';
+import { type Column } from '@/components/ui/entity-table';
+import { RecordTable } from '@/components/ui/record-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Card } from '@/components/ui/card';
 import { CollapsibleSection } from '@/components/ui/collapsible-section';
@@ -37,10 +38,10 @@ export default async function SystemHealthPage() {
     listLogArchives(db, ctx.org), // F-24: lotes ya rotados (procesos y bandeja de salida)
   ]);
   const jobColumns: Column<JobRow>[] = [
-    { header: t('field.kind'), cell: (j) => j.jobType },
-    { header: t('field.status'), cell: (j) => <StatusBadge status={j.status} /> },
-    { header: t('automation.attemptsLabel'), cell: (j) => `${j.attempts}/${j.maxAttempts}` },
-    { header: t('automation.lastError'), cell: (j) => <span className="line-clamp-1 text-danger">{j.lastError ?? ''}</span> },
+    { header: t('field.kind'), value: (j) => j.jobType, cell: (j) => j.jobType },
+    { header: t('field.status'), value: (j) => enumLabel(j.status), cell: (j) => <StatusBadge status={j.status} /> },
+    { header: t('automation.attemptsLabel'), value: (j) => j.attempts, cell: (j) => `${j.attempts}/${j.maxAttempts}` },
+    { header: t('automation.lastError'), value: (j) => j.lastError, cell: (j) => <span className="line-clamp-1 text-danger">{j.lastError ?? ''}</span> },
   ];
   const jobStates = ['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED'];
   const outboxStates = ['PENDING', 'PROCESSING', 'PROCESSED', 'FAILED'];
@@ -133,7 +134,7 @@ export default async function SystemHealthPage() {
         {recentJobs.length === 0 ? (
           <EmptyState title={t('automation.jobsEmpty')} hint={t('automation.jobsEmptyHint')} />
         ) : (
-          <EntityTable columns={jobColumns} rows={recentJobs} getKey={(j) => j.id} />
+          <RecordTable columns={jobColumns} rows={recentJobs} getKey={(j) => j.id} />
         )}
       </CollapsibleSection>
 
