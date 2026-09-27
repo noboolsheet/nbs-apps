@@ -10,6 +10,24 @@
 
 Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisión de arquitectura.
 
+> **⚑ Repaso de estados (2026-09-27).** Segundo repaso ítem por ítem **contra el código** (el anterior es el de
+> 2026-09-01, abajo). Lo que cambió con este repaso:
+> - **Se cierran, porque ya estaban hechas y seguían anotadas** (auditoría técnica `AUDIT_2026-08-30.md`): el
+>   **over-fetch de `projects/[id]`** (las decisiones ya se piden filtradas por proyecto), el **worker sin
+>   healthcheck** (lo tiene en los tres compose), el **autoguardado frágil** (`lib/client.ts` convierte un fallo de
+>   red en `{ error }` con mensaje) y el **login sin primitivas** (usa `btnPrimary`/`fieldCls`). De la UI/UX: las
+>   «5 métricas clónicas» ya son **3** y con significados distintos (F-39).
+> - **Se recorta a lo que queda de verdad:** **F-28** (el tope de lista existe y está aplicado en 8 vistas, pero **23
+>   consultas `list*` siguen sin tope**: proyectos, oportunidades, recursos, las cuatro de gobernanza, bandeja,
+>   archivados, subtareas…) y **E-8** (los **barridos no dejan ninguna huella consultable**: `getAutomation` sólo
+>   calcula «última ejecución» para los `sync.*`, así que de los **siete barridos** —dos de los cuales archivan y
+>   borran datos— no se sabe desde la app si corrieron ni qué hicieron; sólo queda el log del worker).
+> - **Se arregla en el momento:** el copy del estado vacío de Clientes decía «Crea uno con el formulario de arriba»,
+>   y ahí ya no hay formulario **ni** botón de crear (los clientes son de Twenty).
+> - **Nuevos:** **F-40** (hay texto de interfaz en español **fuera del diccionario**, incluida la capa de aplicación:
+>   la promesa de E-10 de que traducir es copiar `es.ts` no se cumple) y **F-41** (un test de integración depende del
+>   orden de los ficheros).
+>
 > **⚑ Repaso de estados (2026-09-01).** Se revisó ítem por ítem contra el código y se marcaron los que ya estaban
 > hechos pero seguían abiertos en el registro (B-4, C-2, C-4, C-5, B-6, E-5, E-7, F-17, y los residuos de E-4/E-8/E-9/F-1).
 > **Lo que sigue REALMENTE abierto**, agrupado:
@@ -33,19 +51,23 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
 >   Pi** (kernel sin cgroup de memoria). Desde la migración a **vibox (Fedora)** el 2026-09-24 el arreglo de la Pi
 >   (`cgroup_enable=memory` en `/boot/firmware/cmdline.txt`) **ya no aplica**: falta confirmar en vibox que
 >   `docker stats` mide de verdad y que los `mem_limit` del compose son los correctos para esa máquina.
-> - **Trabajo pendiente acotado:** varias carpetas/DBs por
->   proveedor (E-4) · ver ejecuciones de los **barridos** y editar cadencias desde el panel (E-8) · edición de perfil e
->   invitaciones (E-9/E-11) · `Initiatives`/sub-goals (E-3) · tareas por asignado (E-2).
+> - **Trabajo pendiente acotado:** varias carpetas/DBs por proveedor (E-4) · **huella de los barridos** (E-8: ninguno
+>   de los siete deja constancia consultable de su última ejecución ni de su resultado) y editar sus cadencias desde el
+>   panel · **invitaciones** (E-11; la edición de perfil —nombre y foto— ya está, comprobado en el repaso del
+>   2026-09-27, así que de E-9 sólo queda el email y la contraseña: E-9a) · `Initiatives`/sub-goals (E-3) · tareas por
+>   asignado (E-2).
 > - **Menores de UI/UX** (`AUDIT_UIUX_2026-08-30.md`): micro-confirmación al guardar · aviso si falla el GET del panel ·
->   copy desincronizado en Clients · `EmptyState` que enseñe el siguiente paso · login sin primitivas y con el enlace
->   «Regístrate» ya inútil · jerarquía de encabezados y métricas (P2).
+>   `EmptyState` que enseñe el siguiente paso · el enlace «Regístrate» del login, que ya no sirve (el alta es
+>   bootstrap-only) · jerarquía de encabezados en mayúsculas (P2). *(El copy de Clientes y el login sin primitivas:
+>   resueltos, ver el repaso del 2026-09-27 arriba.)*
 > - **Seguridad** (`SECURITY_CHECKLIST.md`): ✅ guarda de `BETTER_AUTH_SECRET` · ✅ UUID en los params de ruta ·
 >   **queda**: redacción de claves sensibles en el logger · `folderId` de Drive · contraseña de Postgres (acción
 >   del owner en vibox; el deploy ya avisa).
 > - **Rendimiento:** E-14 — medir consultas por página e índices (el owner reportó varios segundos por página **en la
 >   Pi**; hay que volver a medir **en vibox**, que es otra máquina: 47/47 páginas `force-dynamic` y sólo 18 paralelizan
->   sus consultas). Ahora también **F-28**: ninguna consulta
->   de lista lleva `LIMIT`.
+>   sus consultas). Y **F-28**, recortado: el tope (`LIST_LIMIT` + `rowCap` + aviso en la tabla) existe y está
+>   aplicado en 8 vistas, pero **23 consultas `list*` siguen sin tope** — entre ellas proyectos, oportunidades,
+>   recursos, gobernanza, bandeja y archivados.
 >
 > **⚑ Añadido por la revisión de producto (2026-09-01, sesión 27 — sección G).** Lo que salió **nuevo** al evaluar la
 > app como producto, cotejado antes contra este registro y las dos auditorías:
@@ -1196,6 +1218,39 @@ hay que volver a medir antes de dar por bueno el síntoma.
      —eso sí, se le quitó el `outline-none`, que se saltaba la regla de no matar el foco sin alternativa—.
 - **De paso:** `learning-list` pintaba su enlace externo con `text-blue-600 dark:text-blue-400`, saltándose los
   tokens del tema (DESIGN_TOKENS prohíbe `dark:` a mano); ahora usa `ExternalSourceLink`.
+
+### F-40 · La interfaz no se puede traducir: hay texto en español fuera del diccionario (y dentro de la capa de aplicación) 🟡 ABIERTO (2026-09-27)
+
+- **Hallado en:** el repaso de estados del 2026-09-27, cotejando la regla E-10 («TODO el texto de la interfaz va en
+  `apps/web/lib/i18n/es.ts`… para añadir un idioma: copiar `es.ts`, traducir los valores y **ninguna vista cambia**»)
+  contra el código. Esa última promesa **hoy es falsa**.
+- **Dónde está el texto que se escapa:**
+  1. **En la capa de aplicación**, que genera etiquetas de interfaz en español: las **alertas de «Requiere atención»**
+     de Home (`context/home.ts`: «Proyecto en riesgo: …», «Oportunidad ganada sin proyecto: …», «N entregable(s) en
+     revisión») y las **23 etiquetas de `ARCHIVABLE`** (`maintenance/archive.ts`: 'Tareas', 'Proyectos', 'Clientes'…),
+     que son las cabeceras de grupo de «Archivados». También los rellenos `'(sin título)'` (home, búsqueda,
+     `notion-specs`) y `'Todo el día'` de los eventos.
+  2. **En vistas**, sueltos: `login/page.tsx` («Entrar», «Registrarse», «¿No tienes cuenta? Regístrate») y el
+     `'(sin nombre)'` de Archivados y de las dos vistas de contactos.
+- **Por qué importa aunque hoy sólo haya español:** no es cosmético, es una **fuga de capa**. La capa de aplicación no
+  debería decidir cómo se lee algo en pantalla; hoy decide, y por eso el diccionario no es la fuente única que dice
+  serlo. El test de i18n no lo ve: comprueba que las **claves** existen y cómo se nombran, no si alguien se saltó el
+  diccionario.
+- **Qué haría falta:** que la aplicación devuelva **códigos** (`kind` ya lo es en las alertas: `project_at_risk` +
+  `{ name }`) y que la vista los traduzca; que `ARCHIVABLE.label` pase a ser una clave (`entity.<tipo>`, que ya
+  existe en el diccionario para casi todas); y llevar los cuatro literales de vistas a `es.ts`. Al hacerlo, añadir un
+  test que **falle** si vuelve a aparecer texto visible fuera del diccionario, que es lo único que lo sostiene.
+
+### F-41 · Un test de integración depende del orden de los ficheros y falla de forma intermitente 🟢 ABIERTO (2026-09-27)
+
+- **Hallado en:** una pasada completa de `pnpm test:integration` durante la sesión del 2026-09-27. El test
+  «el histórico de procesos incluye los de la org y los globales, con el error de los fallidos»
+  (`automation.test.ts`) falló una vez y pasó sola en la siguiente pasada y en solitario.
+- **Causa:** `processNextJob` reclama **el job PENDING más antiguo de TODA la base**, no el de la organización del
+  test. Si otro fichero de tests deja un job pendiente cuando ese test corre, procesa el ajeno y el suyo se queda sin
+  `last_error`, así que la aserción falla. No es un fallo de la app: el worker real hace bien en coger cualquier job.
+- **Qué haría falta:** que el test procese **su** job (pasar el id, o filtrar por `jobType` propio del test) en vez de
+  «el siguiente». Mientras no se arregle, un rojo en ese test se verifica volviendo a correr el fichero solo.
 
 ### F-39 · El Inicio repetía la misma información hasta tres veces, y no tenía ni dinero ni dónde apuntar una idea ✅ RESUELTO (2026-09-27)
 

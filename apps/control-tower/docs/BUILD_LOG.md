@@ -5,6 +5,48 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-09-27 — Repaso de estados: el backlog contra el código ✅
+
+Segundo repaso completo de lo anotado (el primero fue el 2026-09-01), verificando **con el código** si lo que figura
+como pendiente sigue siéndolo. Resultado en `FINDINGS_AND_DEFERRED.md`, cabecera nueva.
+
+**Cuatro cosas estaban hechas y seguían anotadas** (auditoría técnica): el **over-fetch de `projects/[id]`** (las
+decisiones se piden ya filtradas por proyecto), el **worker sin healthcheck** (lo tiene en los tres compose), el
+**autoguardado frágil** (`lib/client.ts` convierte un fallo de red en `{ error: NETWORK }` con mensaje, así que el
+campo no se queda «guardando…») y el **login sin primitivas** (usa `btnPrimary`/`fieldCls`). De la UI/UX: las «5
+métricas clónicas» ya son 3 y con significados distintos. Marcadas en su propio documento, no sólo aquí.
+
+**Dos ítems se recortan a lo que queda de verdad**, que es distinto de lo que decían:
+- **F-28** no es «ninguna lista lleva `LIMIT`»: el mecanismo existe (`LIST_LIMIT` + `rowCap` + aviso en la tabla) y
+  está aplicado en 8 vistas, pero **23 consultas `list*` siguen sin tope** — proyectos, oportunidades, recursos, las
+  cuatro de gobernanza, bandeja, archivados, subtareas.
+- **E-8** no es «ver ejecuciones y editar cadencias»: lo importante es que **los barridos no dejan ninguna huella
+  consultable**. `getAutomation` calcula «última ejecución» sólo para los `sync.*`, así que de los **siete barridos**
+  —dos de los cuales archivan y borran datos— no se sabe desde la app si corrieron ni qué hicieron. Sólo el log del
+  worker. Con el autoarchivado nuevo (ACT-16) esto pesa más que antes.
+
+**Dos hallazgos nuevos:**
+- **F-40 — la interfaz no se puede traducir.** La regla E-10 dice que añadir un idioma es copiar `es.ts` y que
+  «ninguna vista cambia». Hoy es falso: la **capa de aplicación** genera texto de interfaz en español —las alertas de
+  «Requiere atención», las 23 etiquetas de `ARCHIVABLE` (que son las cabeceras de Archivados), «(sin título)», «Todo
+  el día»— y quedan cuatro literales sueltos en vistas (login y «(sin nombre)»). No es cosmético: es una fuga de capa,
+  y el test de i18n no lo ve porque comprueba las claves, no si alguien se salta el diccionario.
+- **F-41 — un test de integración depende del orden de los ficheros.** El del histórico de procesos falló una vez en
+  una pasada completa y pasó solo al repetirlo: `processNextJob` reclama el job PENDING más antiguo de **toda** la
+  base, así que si otro fichero deja uno pendiente, procesa el ajeno. La app hace bien; el test está mal escrito.
+
+**Arreglado en el momento** (una línea, y era texto visible mintiendo): el estado vacío de Clientes decía «Crea uno con
+el formulario de arriba» y ahí ya no hay formulario **ni** botón de crear — los clientes son de Twenty. Y el tracker
+del roadmap seguía titulando M18 «Deployment (Pi)» cuando el servidor es vibox desde el 2026-09-24.
+
+**Lo que sigue abierto, sin sorpresas:** HAB-1 (canal de Telegram, parado por decisión del owner, y con él todas las
+alertas por evento) · invitaciones/multiusuario (A-7/E-11) y E-9a (email y contraseña) · la decisión de producto E-18
+(los tres campos de oportunidad que no viajan a Twenty) · E-4, E-3, E-2 · E-14 (medir rendimiento en vibox) · las
+menores de UI/UX · y tres cosas que son **acción del owner en vibox**: F-31 (techo de memoria), F-37 (variables de la
+red local) y la contraseña de Postgres.
+
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (198) · `pnpm build`.
+
 ## 2026-09-27 — Inicio: el bloc de notas rápidas ✅ (2/2)
 
 La segunda mitad de la revisión de Inicio: **«una sección dinámica donde poner notas rápidas sobre ideas que me vengan
@@ -873,7 +915,14 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-09-27): Inicio, revisado entero.** Nada se repite (la misma cosa aparecía hasta tres veces: contador
+> **⚑ ÚLTIMO (2026-09-27): repaso de estados.** El backlog, verificado contra el código: **cuatro** ítems estaban
+> hechos y seguían anotados (over-fetch de la ficha de proyecto, healthcheck del worker, autoguardado frágil, login sin
+> primitivas), **dos** se recortan a lo que queda de verdad (F-28: 23 consultas sin tope · E-8: los barridos no dejan
+> huella consultable) y hay **dos nuevos**: **F-40** (hay texto de interfaz en español fuera del diccionario, incluida
+> la capa de aplicación: traducir la app no es copiar `es.ts`, como prometía E-10) y **F-41** (un test de integración
+> depende del orden de los ficheros). Ver la cabecera de `FINDINGS_AND_DEFERRED.md`.
+>
+> **⚑ ANTES (2026-09-27): Inicio, revisado entero.** Nada se repite (la misma cosa aparecía hasta tres veces: contador
 > + alerta + lista), arriba está el **dinero** (te deben · debes · neto · retrasado, por moneda) y hay un **bloc de
 > notas rápidas** donde apuntar una idea y luego convertirla en tarea, decisión, conocimiento o «por revisar» — o
 > descartarla. Tareas en **vencidas · hoy · próximos 7 días** (+ las que no tienen fecha), decisiones **en revisión** y

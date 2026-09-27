@@ -816,7 +816,7 @@ export const es = {
   'business.goalNativeSource': 'Control Tower (objetivo nativo)',
   'crm.noClient': 'Sin cliente',
   'crm.presalesTasksEmptyHint': 'Crea la primera con el botón «Nueva tarea». Útil para el trabajo de preventa.',
-  'crm.clientsEmptyHint': 'Crea uno con el formulario de arriba.',
+  'crm.clientsEmptyHint': 'Los clientes llegan del CRM: se crean en Twenty y aparecen aquí en la siguiente sincronización.',
   'crm.opportunityArchivedNotice': 'La oportunidad está archivada.',
   'crm.opportunityArchivedReadOnly': 'Oportunidad archivada — de solo lectura. Restáurala para editarla.',
   'crm.presalesTasksEmpty': 'Sin tareas de oportunidades',

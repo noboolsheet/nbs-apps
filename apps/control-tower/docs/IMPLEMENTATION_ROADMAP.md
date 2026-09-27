@@ -155,7 +155,7 @@ Capture→Review→Approve→Link · Decision Draft→Review→Approved · Creat
 | M15 | Google Drive adapter | ✅ completado y **PROBADO EN VIVO** (Bloque 2 · Fase 4: service account + carpeta recursiva) |
 | M16 | Audit + System Health | ✅ completado (audit+change events, Activity timeline, System Health; 69/69) |
 | M17 | Security + testing | ✅ completado (CSRF/rate-limit/headers; e2e journeys 5/5 + hardening) |
-| M18 | Deployment (Pi) | ✅ completado (backup/restore drill verde; compose prod validado; runbook) |
+| M18 | Deployment | ✅ completado (backup/restore drill verde; compose prod validado; runbook). Se hizo sobre la **Raspberry Pi**; desde 2026-09-24 el servidor es **vibox** y lo que queda de esa migración está en F-31 (techo de memoria) y F-37 (acceso por la red local) |
 
 **🎉 MVP COMPLETO (18/18).** Ver el resumen de cierre en [`BUILD_LOG.md`](./BUILD_LOG.md). Pendiente de infra/creds:
 pull real de integraciones + `docker compose up` de producción en la Pi (ver [`DEPLOYMENT.md`](./DEPLOYMENT.md)).

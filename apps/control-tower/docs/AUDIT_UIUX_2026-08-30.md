@@ -14,13 +14,13 @@ Superficies revisadas: `app-shell`, `sidebar`, Home (dashboard), lista (Clients)
 | # | Heurística | Punt. | Problema clave |
 |---|-----------|:---:|-----------|
 | 1 | Visibilidad del estado | 2 | Sin `loading.tsx`/skeletons: navegar entre rutas no da feedback hasta que responde el server. Guardar solo hace `router.refresh()`, sin confirmación (toast). **Los skeletons se probaron y se descartaron (owner, 2026-09-01)**; queda la micro-confirmación al guardar. |
-| 2 | Sistema ↔ mundo real | 3 | Español claro, términos de dominio razonables, orden lógico. Copy desincronizado: EmptyState de Clients dice "Crea uno con el formulario de arriba" y ese formulario ya no existe (ahora es panel lateral "＋ Nuevo"). |
+| 2 | Sistema ↔ mundo real | 3 | Español claro, términos de dominio razonables, orden lógico. ✅ El copy desincronizado de Clients está **corregido** (repaso 2026-09-27): decía "Crea uno con el formulario de arriba" y ahí ya no hay ni formulario ni botón —los clientes son de Twenty—, así que ahora lo explica. |
 | 3 | Control y libertad | 3 | Archivar es reversible (restaurar), borrar pide confirmación, paneles cierran con Esc/backdrop. Falta undo tras guardar y el foco no se restaura al cerrar el panel. |
 | 4 | Consistencia y estándares | 3 | Primitivas + tokens fuertes, vocabulario homogéneo. Grietas: login hace inputs a mano en vez de usar `Input`/`Button`; `record-panel` reimplementa `Drawer`; 4 colores crudos saltan el sistema de tokens. |
 | 5 | Prevención de errores | 3 | Confirma en destructivo, validación Zod, `disabled`, `minLength=8`. Falta validación cliente previa (título vacío se envía y lo rechaza el server). |
 | 6 | Reconocer > recordar | 3 | Nav con etiquetas de texto, filtros visibles, búsqueda global (⌘K), badges de fuente. Bien. |
 | 7 | Flexibilidad y eficiencia | 2 | Búsqueda con debounce, selección/archivado en lote. Sin atajos de teclado más allá de la búsqueda; combobox sin navegación por flechas; edición de uno en uno. |
-| 8 | Estética y minimalismo | 3 | Limpio, sobrio, densidad correcta. "Eyebrow" en mayúsculas en TODAS las secciones baja la jerarquía; 5 métricas idénticas (patrón genérico). |
+| 8 | Estética y minimalismo | 3 | Limpio, sobrio, densidad correcta. "Eyebrow" en mayúsculas en TODAS las secciones baja la jerarquía (sigue). ✅ Las **5 métricas clónicas** ya no están: Inicio tiene **3** y cada una significa algo distinto (F-39, 2026-09-27). |
 | 9 | Recuperación de errores | 2 | Un `fetch` que rechaza deja el campo/botón `busy` para siempre y sin mensaje; si falla el GET del panel, muestra formulario en blanco sin avisar. Mensajes genéricos. |
 | 10 | Ayuda y documentación | 3 | Guía completa embebida en la app (`/settings/guide`, con matriz de información). Muy buena para una herramienta propia; no es contextual (sin tooltips). |
 | **Total** | | **27/40** | **Aceptable-alto (base sólida, huecos reales en feedback, a11y y eficiencia)** |
@@ -180,7 +180,7 @@ le afectan poco a él, pero son los que bloquean cualquier apertura a colaborado
   la buena noticia (nada vencido, sin eventos hoy) y no hay siguiente paso que enseñar. Los que sí lo pedirían son los
   de listas dentro de fichas (entregables, decisiones de un proyecto).
 - **Copy desincronizado** ("formulario de arriba" en la lista de Clients) tras migrar al panel lateral.
-- **El registro abierto vive en la pantalla de login** (toggle "Regístrate"). **El riesgo de seguridad está CERRADO**
+- **El registro abierto vive en la pantalla de login** (toggle "Regístrate"). *(Repaso 2026-09-27: el toggle sigue ahí y el alta es bootstrap-only, así que lleva a un formulario que devuelve 403. Y sus tres literales están fuera del diccionario: ver F-40.)* **El riesgo de seguridad está CERRADO**
   (B-6, 2026-08-31: el registro es bootstrap-only — el segundo usuario recibe FORBIDDEN salvo escape hatch). Queda solo
   lo cosmético: el toggle sigue visible e invita a un registro que va a fallar. Merece ocultarlo cuando ya hay usuario.
 
