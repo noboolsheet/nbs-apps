@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   CLIENT_STATUS,
   OPPORTUNITY_STAGE,
@@ -121,5 +123,55 @@ describe('i18n', () => {
     // Una clave inexistente se devuelve tal cual: el olvido se ve en pantalla, no rompe el render.
     expect(t('no.existe' as never)).toBe('no.existe');
     expect(tOptional('enum.NO_EXISTE')).toBeUndefined();
+  });
+});
+
+/**
+ * F-40 — **el texto visible sólo sale del diccionario**. La regla E-10 promete que añadir un idioma es copiar `es.ts`
+ * y traducir sus valores, sin tocar ninguna vista. Eso se incumplía por dos sitios y ninguno daba error: literales
+ * sueltos en el JSX (el login decía «Entrar», «Registrarse», «¿No tienes cuenta? Regístrate») y, peor, **texto
+ * generado en la capa de aplicación** — las alertas de Home venían con su frase ya escrita y `ARCHIVABLE` traía 19
+ * etiquetas en español que eran las cabeceras de «Archivados».
+ *
+ * Estas dos guardas son lo único que lo sostiene: el resto del test de i18n comprueba las CLAVES, no si alguien se
+ * saltó el diccionario.
+ */
+describe('el texto visible sale del diccionario (F-40)', () => {
+  function tsxFiles(dir: string): string[] {
+    const out: string[] = [];
+    const walk = (d: string) => {
+      for (const name of readdirSync(d)) {
+        if (name === 'node_modules' || name === '.next') continue;
+        const p = join(d, name);
+        if (statSync(p).isDirectory()) walk(p);
+        else if (p.endsWith('.tsx')) out.push(p);
+      }
+    };
+    walk(dir);
+    return out;
+  }
+
+  it('ninguna vista pinta una frase en castellano a pelo', () => {
+    // Dos o más palabras seguidas empezando por mayúscula acentuada o no: es la forma de un texto de interfaz.
+    // Palabras sueltas no se buscan (habría demasiados falsos positivos con nombres de componentes y clases).
+    const frase = />\s*[A-ZÁÉÍÓÚÑ¿¡][a-záéíóúñü]+(\s+[a-záéíóúñü¿¡,.]+){1,6}\s*</;
+    const root = join(__dirname, '..', '..');
+    const culpables = tsxFiles(join(root, 'app'))
+      .concat(tsxFiles(join(root, 'components')))
+      .filter((f) => frase.test(readFileSync(f, 'utf8')))
+      .map((f) => f.split('/web/')[1]);
+    expect(culpables).toEqual([]);
+  });
+
+  it('la capa de aplicación no manda frases hechas a la interfaz', () => {
+    // Se vigilan los dos sitios donde pasó. `AttentionItem` ya no tiene `label` (manda `kind` + `params`) y
+    // `ARCHIVABLE` no tiene `label` (la vista traduce por tipo de entidad).
+    const app = readFileSync(join(__dirname, '../../../../packages/application/src/context/home.ts'), 'utf8');
+    expect(app).not.toMatch(/label: `Proyecto|label: `Oportunidad|label: `\$\{deliverablesReview\}/);
+    const archive = readFileSync(
+      join(__dirname, '../../../../packages/application/src/maintenance/archive.ts'),
+      'utf8',
+    );
+    expect(archive).not.toMatch(/label: '[A-ZÁÉÍÓÚÑ]/);
   });
 });

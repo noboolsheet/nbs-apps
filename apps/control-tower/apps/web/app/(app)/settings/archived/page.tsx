@@ -15,6 +15,13 @@ function fmt(d: Date | string | null): string {
   return formatDateTime(d);
 }
 
+/** Nombre de una familia de registros («Tareas», «Proyectos»…) desde su tipo, con el diccionario. */
+function entityLabel(entityType: string): string {
+  const key = `entity.${entityType}` as MessageKey;
+  const label = t(key);
+  return label === key ? entityType : label;
+}
+
 /**
  * Por qué está archivado. El código lo escribe quien archiva (`metadata.reason` del audit) y aquí se traduce; uno
  * desconocido se muestra tal cual en vez de desaparecer, que es como se pierde la pista de un motivo nuevo.
@@ -46,7 +53,7 @@ export default async function ArchivedPage() {
       ) : (
         groups.map((g) => {
           const columns: Column<(typeof g.items)[number]>[] = [
-            { header: t('field.name'), value: (it) => it.name, cell: (it) => it.name ?? <span className="text-fg-subtle">(sin nombre)</span> },
+            { header: t('field.name'), value: (it) => it.name, cell: (it) => it.name ?? <span className="text-fg-subtle">{t('common.unnamed')}</span> },
             {
               header: t('settings.archivedReason'),
               className: 'w-56',
@@ -58,8 +65,10 @@ export default async function ArchivedPage() {
           ];
           return (
             <section key={g.entityType} className="flex flex-col gap-2">
+              {/* La cabecera se traduce AQUÍ por tipo de entidad (F-40): antes el nombre en español venía de
+                  `ARCHIVABLE.label`, o sea texto de interfaz dentro de la capa de aplicación. */}
               <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">
-                {g.label} ({g.items.length})
+                {entityLabel(g.entityType)} ({g.items.length})
               </h2>
               {/* El CRM lo gobierna Twenty (ADR-009/ADR-010): aquí no se restaura nada, sólo se puede eliminar. */}
               {!g.restorable && <p className="text-xs text-fg-subtle">{t('settings.archivedNotRestorable')}</p>}

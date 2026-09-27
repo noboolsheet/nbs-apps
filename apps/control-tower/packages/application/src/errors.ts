@@ -85,11 +85,13 @@ export function opportunityExternalOnly(): AppError {
  * Los archiva la reconciliación del sync cuando dejan de venir en el pull, y el ciclo de vida de la oportunidad
  * retira del Kanban lo que se cerró hace una semana.
  */
-export function archivedByOrigin(entityLabel: string): AppError {
+export function archivedByOrigin(): AppError {
   return new AppError({
     code: 'ARCHIVE_OWNED_EXTERNALLY',
     kind: 'CONFLICT',
-    message: `«${entityLabel}» se archiva en el origen: aparece o desaparece según lo que exista en el CRM.`,
+    // Sin nombrar la entidad a propósito (F-40): el nombre en español vivía en `ARCHIVABLE.label`, que era texto de
+    // interfaz dentro de la capa de aplicación. Quien lo lee acaba de pulsar sobre esos registros: ya sabe cuáles son.
+    message: 'Este registro se archiva en el origen: aparece o desaparece según lo que exista en el CRM.',
   });
 }
 

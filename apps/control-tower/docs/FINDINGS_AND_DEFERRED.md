@@ -24,9 +24,10 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
 >   borran datos— no se sabe desde la app si corrieron ni qué hicieron; sólo queda el log del worker).
 > - **Se arregla en el momento:** el copy del estado vacío de Clientes decía «Crea uno con el formulario de arriba»,
 >   y ahí ya no hay formulario **ni** botón de crear (los clientes son de Twenty).
-> - **Nuevos:** **F-40** (hay texto de interfaz en español **fuera del diccionario**, incluida la capa de aplicación:
->   la promesa de E-10 de que traducir es copiar `es.ts` no se cumple) y **F-41** (un test de integración depende del
->   orden de los ficheros).
+> - **Nuevos, y ya cerrados el mismo día:** **F-40** (había texto de interfaz en español **fuera del diccionario**,
+>   incluida la capa de aplicación; ahora la aplicación manda códigos y datos, y dos guardas lo vigilan) y **F-41**
+>   (un test de integración dependía del orden de los ficheros).
+> - **Cerrado también:** **E-8** — los barridos dejan huella en `automation_runs` y el panel muestra qué hicieron.
 >
 > **⚑ Repaso de estados (2026-09-01).** Se revisó ítem por ítem contra el código y se marcaron los que ya estaban
 > hechos pero seguían abiertos en el registro (B-4, C-2, C-4, C-5, B-6, E-5, E-7, F-17, y los residuos de E-4/E-8/E-9/F-1).
@@ -1219,7 +1220,7 @@ hay que volver a medir antes de dar por bueno el síntoma.
 - **De paso:** `learning-list` pintaba su enlace externo con `text-blue-600 dark:text-blue-400`, saltándose los
   tokens del tema (DESIGN_TOKENS prohíbe `dark:` a mano); ahora usa `ExternalSourceLink`.
 
-### F-40 · La interfaz no se puede traducir: hay texto en español fuera del diccionario (y dentro de la capa de aplicación) 🟡 ABIERTO (2026-09-27)
+### F-40 · La interfaz no se puede traducir: hay texto en español fuera del diccionario (y dentro de la capa de aplicación) ✅ RESUELTO (2026-09-27)
 
 - **Hallado en:** el repaso de estados del 2026-09-27, cotejando la regla E-10 («TODO el texto de la interfaz va en
   `apps/web/lib/i18n/es.ts`… para añadir un idioma: copiar `es.ts`, traducir los valores y **ninguna vista cambia**»)
@@ -1236,10 +1237,25 @@ hay que volver a medir antes de dar por bueno el síntoma.
   debería decidir cómo se lee algo en pantalla; hoy decide, y por eso el diccionario no es la fuente única que dice
   serlo. El test de i18n no lo ve: comprueba que las **claves** existen y cómo se nombran, no si alguien se saltó el
   diccionario.
-- **Qué haría falta:** que la aplicación devuelva **códigos** (`kind` ya lo es en las alertas: `project_at_risk` +
-  `{ name }`) y que la vista los traduzca; que `ARCHIVABLE.label` pase a ser una clave (`entity.<tipo>`, que ya
-  existe en el diccionario para casi todas); y llevar los cuatro literales de vistas a `es.ts`. Al hacerlo, añadir un
-  test que **falle** si vuelve a aparecer texto visible fuera del diccionario, que es lo único que lo sostiene.
+- **Cómo se resolvió:**
+  - **Las alertas de Home** viajan como `kind` + `params` (`project_at_risk` + `{ name }`); la vista compone el texto
+    con el diccionario (`attention.<kind>`, con plural donde hay un número). Un `kind` sin clave se muestra como su
+    propio código: feo pero **visible**, en vez de un aviso en blanco.
+  - **`ARCHIVABLE` pierde sus 19 etiquetas**: la pantalla de Archivados traduce por tipo (`entity.<tipo>`, añadidas
+    las dos que faltaban: `document` y `learning_item`). El error «se archiva en el origen» ya no nombra la entidad —
+    quien lo lee acaba de pulsar sobre esos registros—, así que la etiqueta dejó de hacer falta también ahí.
+  - **Los rellenos**: los eventos devuelven `title: null` e `isAllDay`, y la vista pone «(sin título)» y «Todo el
+    día»; la búsqueda devuelve `title: null` igual; los «(sin nombre)» de contactos y archivados usan
+    `common.unnamed`. Y los literales del login («Entrar», «Registrarse», «¿No tienes cuenta? Regístrate») al
+    diccionario — de paso, ahí se dice ya que **el alta está cerrada**, que era la otra mitad de un hallazgo de la
+    auditoría de UI/UX: el toggle llevaba a un formulario que devuelve 403 sin avisar.
+  - Lo encontró además una frase entera con `<strong>` dentro en la ficha de documentos, que nadie había visto.
+- **Dos guardas nuevas, porque esto no da error nunca:** un test recorre **todos** los `.tsx` de `app/` y
+  `components/` buscando frases en castellano pintadas a pelo, y otro vigila que `home.ts` y `archive.ts` no vuelvan a
+  mandar frases hechas. El resto del test de i18n comprueba las **claves**, no si alguien se salta el diccionario.
+- **Lo que se queda en español a propósito:** los **mensajes de error** de dominio y aplicación (decisión ya tomada y
+  anotada en la auditoría técnica) y el `'(sin título)'` de `notion-specs.ts`, que **no es interfaz**: es el valor que
+  se **guarda** como nombre del registro cuando la página de Notion no tiene título.
 
 ### F-41 · Un test de integración depende del orden de los ficheros y falla de forma intermitente ✅ RESUELTO (2026-09-27)
 

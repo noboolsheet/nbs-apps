@@ -5,6 +5,34 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-09-27 — F-40: el texto de la interfaz vuelve al diccionario ✅
+
+La regla E-10 promete que añadir un idioma es **copiar `es.ts` y traducir sus valores, sin tocar ninguna vista**. Era
+falso, y por el sitio que más importa: **la capa de aplicación escribía texto de interfaz**.
+
+- **Las alertas de «Requiere atención»** venían con la frase hecha (`label: \`Proyecto en riesgo: ${p.name}\``). Ahora
+  viajan como **`kind` + `params`** y la vista compone el texto con el diccionario. Un `kind` sin clave se ve como su
+  propio código: feo, pero visible — un aviso en blanco no se nota.
+- **`ARCHIVABLE` traía 19 etiquetas en español** ('Tareas', 'Proyectos'…) que eran las **cabeceras de grupo** de la
+  pantalla de Archivados. Fuera: la vista traduce por tipo (`entity.<tipo>`; faltaban `document` y `learning_item`).
+  El error «se archiva en el origen» dejó de nombrar la entidad —quien lo lee acaba de pulsar sobre esos registros—,
+  así que la etiqueta tampoco hacía falta ahí.
+- **Los rellenos**: los eventos del día devuelven `title: null` e `isAllDay` y la vista pone «(sin título)» y «Todo el
+  día»; la búsqueda igual; los «(sin nombre)» de contactos y archivados salen del diccionario. Y los tres literales
+  del login, donde además ahora se avisa de que **el alta está cerrada** (el toggle «Regístrate» llevaba a un
+  formulario que responde 403 sin decir por qué: era la otra mitad de un hallazgo de la auditoría de UI/UX).
+
+**Dos guardas, porque esto no da error nunca:** un test recorre **todos** los `.tsx` de `app/` y `components/` buscando
+frases en castellano pintadas a pelo —encontró una que nadie había visto, un párrafo con `<strong>` dentro en la ficha
+de documentos— y otro vigila que `home.ts` y `archive.ts` no vuelvan a mandar frases hechas.
+
+**Lo que se queda en español a propósito:** los mensajes de error de dominio y aplicación (decisión ya tomada) y el
+`'(sin título)'` de `notion-specs.ts`, que no es interfaz sino el valor que se **guarda** como nombre de un registro
+cuando la página de Notion no tiene título.
+
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (201, 2 guardas nuevas) · `pnpm build` ·
+`pnpm test:integration` (219) · `e2e-journeys` (todos OK).
+
 ## 2026-09-27 — E-8: los barridos ya dejan huella (y F-41, el test que dependía del orden) ✅
 
 **El problema.** Siete barridos corren solos cada día y **dos de ellos archivan y borran datos**; de ninguno se sabía
@@ -954,7 +982,13 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-09-27): E-8 — los barridos dejan huella.** Tabla `automation_runs` (M45): cada ejecución de cada
+> **⚑ ÚLTIMO (2026-09-27): F-40 — el texto de la interfaz vuelve al diccionario.** La capa de aplicación escribía
+> frases en español (las alertas de Inicio, las 19 etiquetas de `ARCHIVABLE` que titulan Archivados, los rellenos
+> «(sin título)»/«Todo el día») y el login tenía tres literales sueltos. Ahora la aplicación manda **códigos y datos**
+> y la vista traduce; **dos guardas** nuevas lo vigilan (una encontró un párrafo suelto que nadie había visto). Queda
+> **F-28** (topes de lista).
+>
+> **⚑ ANTES (2026-09-27): E-8 — los barridos dejan huella.** Tabla `automation_runs` (M45): cada ejecución de cada
 > barrido queda anotada con **lo que hizo**, y el panel de Automatización lo muestra («archivados: 3», o «con
 > advertencias» si la purga conservó algo). El bucle de los seis barridos pasa a estar **una sola vez**. Arreglado
 > también **F-41** (el test que dependía del orden de los ficheros). Siguen **F-40** (i18n) y **F-28** (topes).

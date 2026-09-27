@@ -49,32 +49,30 @@ interface ArchivableMeta {
    * (los que no tenían salían como «(sin nombre)» aunque sí tuvieran nombre).
    */
   nameCol: AnyPgColumn | SQL<string>;
-  label: string;
 }
 export const ARCHIVABLE: Record<string, ArchivableMeta> = {
-  task: { table: tasks, nameCol: tasks.title, label: 'Tareas' },
-  project: { table: projects, nameCol: projects.name, label: 'Proyectos' },
-  deliverable: { table: deliverables, nameCol: deliverables.name, label: 'Entregables' },
-  resource: { table: resources, nameCol: resources.name, label: 'Recursos' },
-  client: { table: clients, nameCol: clients.name, label: 'Clientes' },
+  task: { table: tasks, nameCol: tasks.title },
+  project: { table: projects, nameCol: projects.name },
+  deliverable: { table: deliverables, nameCol: deliverables.name },
+  resource: { table: resources, nameCol: resources.name },
+  client: { table: clients, nameCol: clients.name },
   contact: {
     table: contacts,
     nameCol: sql<string>`coalesce(nullif(trim(concat_ws(' ', ${contacts.firstName}, ${contacts.lastName})), ''), ${contacts.email})`,
-    label: 'Contactos',
   },
-  opportunity: { table: opportunities, nameCol: opportunities.name, label: 'Oportunidades' },
-  strategic_area: { table: strategicAreas, nameCol: strategicAreas.name, label: 'Áreas estratégicas' },
-  goal: { table: goals, nameCol: goals.name, label: 'Objetivos' },
-  capability: { table: capabilities, nameCol: capabilities.name, label: 'Capacidades' },
-  service: { table: services, nameCol: services.name, label: 'Servicios' },
-  decision: { table: decisions, nameCol: decisions.title, label: 'Decisiones' },
-  knowledge_item: { table: knowledgeItems, nameCol: knowledgeItems.title, label: 'Conocimiento' },
-  document: { table: documents, nameCol: documents.name, label: 'Documentos' },
-  asset: { table: assets, nameCol: assets.name, label: 'Reutilizables' },
-  portfolio_item: { table: portfolioItems, nameCol: portfolioItems.name, label: 'Portafolio' },
-  learning_item: { table: learningItems, nameCol: learningItems.title, label: 'Aprendizaje' },
-  payment: { table: payments, nameCol: payments.concept, label: 'Pagos' },
-  review_item: { table: reviewItems, nameCol: reviewItems.title, label: 'Por revisar' },
+  opportunity: { table: opportunities, nameCol: opportunities.name },
+  strategic_area: { table: strategicAreas, nameCol: strategicAreas.name },
+  goal: { table: goals, nameCol: goals.name },
+  capability: { table: capabilities, nameCol: capabilities.name },
+  service: { table: services, nameCol: services.name },
+  decision: { table: decisions, nameCol: decisions.title },
+  knowledge_item: { table: knowledgeItems, nameCol: knowledgeItems.title },
+  document: { table: documents, nameCol: documents.name },
+  asset: { table: assets, nameCol: assets.name },
+  portfolio_item: { table: portfolioItems, nameCol: portfolioItems.name },
+  learning_item: { table: learningItems, nameCol: learningItems.title },
+  payment: { table: payments, nameCol: payments.concept },
+  review_item: { table: reviewItems, nameCol: reviewItems.title },
 };
 
 /** Columnas comunes a toda tabla archivable (todas llevan id/organization_id/archived_at). */
@@ -177,7 +175,7 @@ async function setArchived(
   // Lo que llega de Twenty no lo archiva ni lo restaura una PERSONA: aparece o desaparece según lo que viva allí.
   // El sync (actor SYSTEM) sí puede: es quien archiva lo que dejó de venir en el pull y quien mueve una Person que
   // cambia de rol (ADR-010). Mismo patrón que `createOpportunity`, que rechaza al usuario y deja pasar al sistema.
-  if (isExternallyArchived(entityType) && !isSystemActor(ctx)) throw archivedByOrigin(meta.label);
+  if (isExternallyArchived(entityType) && !isSystemActor(ctx)) throw archivedByOrigin();
   const c = meta.table as unknown as ArchivableCols;
   const onlyMatching = value === null ? isNotNull(c.archivedAt) : isNull(c.archivedAt);
   try {
@@ -233,7 +231,6 @@ export function restoreRecords(db: Database, ctx: OrgContext, input: unknown): P
 
 export interface ArchivedGroup {
   entityType: string;
-  label: string;
   /** `false` para lo que gobierna el origen (CRM de Twenty): ahí no se ofrece restaurar. */
   restorable: boolean;
   items: { id: string; name: string | null; archivedAt: Date | null; reason: string | null }[];
@@ -607,7 +604,7 @@ export async function listArchived(db: Database, ctx: OrgContext): Promise<Archi
         .where(and(orgEq(c.organizationId, ctx), isNotNull(c.archivedAt)))
         .orderBy(desc(c.archivedAt))) as { id: string; name: string | null; archivedAt: Date | null }[];
       if (rows.length === 0) {
-        return { entityType, label: meta.label, restorable: !isExternallyArchived(entityType), items: [] };
+        return { entityType, restorable: !isExternallyArchived(entityType), items: [] };
       }
       // Un solo viaje por entidad: el motivo del ARCHIVE más reciente de cada fila.
       const trail = await db
@@ -635,7 +632,6 @@ export async function listArchived(db: Database, ctx: OrgContext): Promise<Archi
       }
       return {
         entityType,
-        label: meta.label,
         restorable: !isExternallyArchived(entityType),
         items: rows.map((r) => ({ ...r, reason: reasonById.get(String(r.id)) ?? null })),
       };

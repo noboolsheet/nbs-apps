@@ -85,16 +85,20 @@ export default function LoginPage() {
           disabled={loading}
           className={btnPrimary}
         >
-          {loading ? '…' : mode === 'signin' ? 'Entrar' : 'Registrarse'}
+          {loading ? '…' : mode === 'signin' ? t('login.submitSignIn') : t('login.submitSignUp')}
         </button>
       </form>
+
+      {/* El alta es **bootstrap-only**: sólo se puede crear la PRIMERA cuenta, así que este formulario responde 403
+          en una instancia ya usada. Se dice antes de que lo intente, en vez de dejarle descubrirlo con un error. */}
+      {mode === 'signup' && <p className="text-xs text-fg-muted">{t('login.signUpClosed')}</p>}
 
       <button
         type="button"
         onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
         className={btnLink}
       >
-        {mode === 'signin' ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
+        {mode === 'signin' ? t('login.toSignUp') : t('login.toSignIn')}
       </button>
     </main>
   );

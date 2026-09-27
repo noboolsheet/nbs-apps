@@ -31,7 +31,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
   ]);
   const clientName = contact.clientId ? clients.find((c) => c.id === contact.clientId)?.name : null;
   const crmUrl = (identity?.metadata as { url?: string } | null)?.url ?? null;
-  const fullName = [contact.firstName, contact.lastName].filter(Boolean).join(' ') || '(sin nombre)';
+  const fullName = [contact.firstName, contact.lastName].filter(Boolean).join(' ') || t('common.unnamed');
 
   return (
     <div className="flex max-w-3xl flex-col gap-6">

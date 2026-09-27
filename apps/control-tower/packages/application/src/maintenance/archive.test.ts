@@ -12,11 +12,21 @@ describe('purga de archivados', () => {
     expect(purgeOrderMissingEntities()).toEqual([]);
   });
 
-  it('toda entidad archivable declara tabla, columna de nombre y etiqueta', () => {
+  it('toda entidad archivable declara tabla y columna de nombre', () => {
     for (const [key, meta] of Object.entries(ARCHIVABLE)) {
       expect(meta.table, key).toBeTruthy();
       expect(meta.nameCol, key).toBeTruthy();
-      expect(meta.label, key).toBeTruthy();
+    }
+  });
+
+  /**
+   * F-40 — aquí vivían 19 etiquetas en español ('Tareas', 'Proyectos'…) que eran las **cabeceras de grupo** de la
+   * pantalla de Archivados: texto de interfaz decidido en la capa de aplicación. Ahora la vista traduce por tipo de
+   * entidad (`entity.<tipo>`), y esto vigila que no vuelvan.
+   */
+  it('NO declara etiquetas de interfaz (eso lo traduce la vista)', () => {
+    for (const [key, meta] of Object.entries(ARCHIVABLE)) {
+      expect(meta, key).not.toHaveProperty('label');
     }
   });
 });

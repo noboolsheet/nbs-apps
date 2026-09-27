@@ -30,7 +30,7 @@ export default async function ContactsPage() {
       value: (r) => [r.firstName, r.lastName].filter(Boolean).join(' '),
       cell: (r) => (
         <RecordLink entity="contact" id={r.id} className="font-medium underline-offset-2 hover:underline">
-          {[r.firstName, r.lastName].filter(Boolean).join(' ') || '(sin nombre)'}
+          {[r.firstName, r.lastName].filter(Boolean).join(' ') || t('common.unnamed')}
         </RecordLink>
       ),
     },

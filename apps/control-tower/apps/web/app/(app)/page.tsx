@@ -12,7 +12,7 @@ import { RecordLink } from '@/components/ui/record-link';
 import { auditEntityTarget } from '@/lib/record-registry';
 import { TaskCompleteButton, TaskDueDateControl } from '@/components/projects/forms';
 import { enumLabel } from '@/lib/labels';
-import { t, tPlural } from '@/lib/i18n';
+import { t, tPlural, type MessageKey } from '@/lib/i18n';
 import { formatDate, formatDateTime, formatMoney } from '@/lib/i18n/format';
 
 export const dynamic = 'force-dynamic';
@@ -75,7 +75,10 @@ export default async function HomePage() {
                       }`}
                     >
                       <span aria-hidden>{a.severity === 'high' ? '■' : '◐'}</span>
-                      {a.label}
+                      {/* El texto se compone AQUÍ (F-40): la capa de aplicación manda el código del aviso y sus
+                          datos, no la frase. Un `kind` nuevo sin clave en el diccionario se ve como su propio código
+                          en vez de desaparecer, y hay un test que lo caza. */}
+                      {attentionLabel(a.kind, a.params)}
                     </Link>
                   </li>
                 ))}
@@ -258,13 +261,17 @@ export default async function HomePage() {
                   <li key={e.id} className="flex items-center justify-between gap-3 rounded-lg border border-line px-3 py-2 text-sm">
                     <span className="min-w-0 truncate">
                       {e.href ? (
-                        <a className="hover:underline" href={e.href} target="_blank" rel="noreferrer noopener">{e.title}</a>
+                        <a className="hover:underline" href={e.href} target="_blank" rel="noreferrer noopener">
+                          {e.title ?? t('common.untitled')}
+                        </a>
                       ) : (
-                        e.title
+                        (e.title ?? t('common.untitled'))
                       )}
                       {e.location && <span className="text-xs text-fg-subtle"> · {e.location}</span>}
                     </span>
-                    <span className="shrink-0 text-xs tabular-nums text-fg-muted">{e.time}</span>
+                    <span className="shrink-0 text-xs tabular-nums text-fg-muted">
+                      {e.isAllDay ? t('home.allDay') : e.time}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -407,4 +414,17 @@ function MoneyStrip({ pending, overdue }: { pending: MoneyTotal[]; overdue: Mone
       )}
     </section>
   );
+}
+
+/**
+ * Texto de un aviso de «Requiere atención» a partir de su código y sus datos (F-40). La capa de aplicación ya no
+ * escribe frases: manda `kind` + `params`, y el diccionario decide cómo se lee. Un código sin clave se muestra tal
+ * cual —feo pero visible— en vez de dejar el aviso en blanco.
+ */
+function attentionLabel(kind: string, params?: Record<string, string | number>): string {
+  const n = typeof params?.n === 'number' ? params.n : null;
+  const key = (n !== null ? `attention.${kind}.${n === 1 ? 'one' : 'other'}` : `attention.${kind}`) as MessageKey;
+  const vars = params ? Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)])) : undefined;
+  const label = t(key, vars);
+  return label === key ? kind : label;
 }

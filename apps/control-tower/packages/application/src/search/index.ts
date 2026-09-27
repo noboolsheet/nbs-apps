@@ -33,7 +33,8 @@ import { orgEq, type OrgContext } from '../auth/index';
 export interface SearchHit {
   type: string;
   id: string;
-  title: string;
+  /** `null` si el registro no tiene título: el relleno visible («(sin título)») lo pone la interfaz. */
+  title: string | null;
   href: string;
 }
 export interface SearchGroup {
@@ -146,7 +147,8 @@ export async function globalSearch(
         .map((r) => ({
           type: cfg.type,
           id: r.id as string,
-          title: (r.title as string) || '(sin título)',
+          // Sin relleno en español aquí (F-40): un registro sin título viaja como `null` y el texto lo pone la vista.
+          title: (r.title as string) || null,
           href: cfg.href(r.id as string),
         }));
       return { type: cfg.type, label: cfg.label, items };

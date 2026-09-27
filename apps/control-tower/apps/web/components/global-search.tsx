@@ -8,7 +8,7 @@ import { t, type MessageKey } from '@/lib/i18n';
 interface Hit {
   type: string;
   id: string;
-  title: string;
+  title: string | null;
   href: string;
 }
 interface Group {
@@ -156,7 +156,7 @@ export function GlobalSearch() {
                       onClick={() => go(it.href)}
                       className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-neutral-soft"
                     >
-                      {it.title}
+                      {it.title ?? t('common.untitled')}
                     </button>
                   ))}
                 </div>

@@ -45,7 +45,7 @@ export default async function DocumentDetailPage({ params }: { params: Promise<{
       {/* Referencia de solo lectura: el contenido vive en Drive/Notion, nunca en CT. */}
       <div className="rounded border border-line bg-surface-muted px-4 py-3 text-sm/40">
         <p className="mb-2 text-fg-muted">
-          Este documento es una <strong>referencia</strong>. Para ver o editar su contenido, ábrelo en su origen.
+          {t('knowledge.documentIsReference')}
         </p>
         <SourceBadge source={doc.externalProvider} url={doc.externalUrl} linkLabel={t('knowledge.openSourceLink')} />
       </div>

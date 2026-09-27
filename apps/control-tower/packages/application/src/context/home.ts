@@ -36,9 +36,15 @@ import { checkDbHealth } from '@ct/db';
  *  · «Requiere atención» se queda sólo con lo que no aparece en ningún otro bloque.
  */
 
+/**
+ * Un aviso de «Requiere atención». Lleva **código y datos, no texto** (F-40, 2026-09-27): antes traía el `label` ya
+ * escrito en español, o sea que esta capa decidía cómo se lee algo en pantalla y el diccionario dejaba de ser la
+ * fuente única. Ahora la vista traduce `kind` con `params`.
+ */
 export interface AttentionItem {
   kind: string;
-  label: string;
+  /** Datos para el texto: `{ name }` del proyecto en riesgo, `{ n }` de los entregables en revisión. */
+  params?: Record<string, string | number>;
   href: string;
   severity: 'high' | 'medium';
 }
@@ -218,11 +224,15 @@ export async function getHomeDashboard(db: Database, ctx: OrgContext) {
   const atRisk = allProjects.filter((p) => p.health === 'AT_RISK');
   const activeProjects = allProjects.filter((p) => p.status === 'ACTIVE').slice(0, 6);
 
+  // Ni el título de relleno ni «Todo el día» se deciden aquí (F-40): se devuelve el dato —`title` puede ser null,
+  // `isAllDay` es un booleano— y la vista pone el texto. La HORA sí se formatea aquí porque depende de la zona
+  // horaria de la organización, que es dato del servidor, no de la interfaz.
   const todaysEvents = todaysEventsRaw.map((e) => ({
     id: e.id,
-    title: e.title ?? '(sin título)',
+    title: e.title,
     href: e.htmlLink ?? null,
-    time: e.isAllDay ? 'Todo el día' : e.startAt ? timeFmt.format(e.startAt) : '',
+    isAllDay: e.isAllDay,
+    time: e.isAllDay || !e.startAt ? null : timeFmt.format(e.startAt),
     location: e.location ?? null,
   }));
 
@@ -286,18 +296,18 @@ export async function getHomeDashboard(db: Database, ctx: OrgContext) {
    */
   const attention: AttentionItem[] = [];
   for (const p of atRisk) {
-    attention.push({ kind: 'project_at_risk', label: `Proyecto en riesgo: ${p.name}`, href: `/projects/${p.id}`, severity: 'high' });
+    attention.push({ kind: 'project_at_risk', params: { name: p.name }, href: `/projects/${p.id}`, severity: 'high' });
   }
   for (const o of wonWithoutProject) {
     attention.push({
       kind: 'opportunity_won_no_project',
-      label: `Oportunidad ganada sin proyecto: ${o.name}`,
+      params: { name: o.name },
       href: `/crm/opportunities/${o.id}`,
       severity: 'medium',
     });
   }
   if (deliverablesReview > 0) {
-    attention.push({ kind: 'deliverables_review', label: `${deliverablesReview} entregable(s) en revisión`, href: '/projects', severity: 'medium' });
+    attention.push({ kind: 'deliverables_review', params: { n: deliverablesReview }, href: '/projects', severity: 'medium' });
   }
 
   // El PROYECTO de cada tarea de Home: sin él, con varios proyectos activos no se sabe de cuál es cada tarea
