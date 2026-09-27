@@ -71,3 +71,4 @@ IDs internos UUID; identidad externa vía `external_identities (provider, extern
 - [ADR-007](./adr/ADR-007-project-assets.md) — enlace proyecto ↔ reutilizable: tabla puente `project_assets` (A-3)
 - [ADR-008](./adr/ADR-008-opportunity-state-machine.md) — CT es **sólo la máquina de estados** de las oportunidades (se crean y se editan en Twenty)
 - [ADR-009](./adr/ADR-009-twenty-owns-the-crm.md) — **Twenty es el dueño del CRM**: CT no escribe nada en Twenty salvo el `stage` (generaliza ADR-008 a cliente, contacto y task)
+- [ADR-010](./adr/ADR-010-individual-clients.md) — una **Person con `INDIVIDUAL_CLIENT`** se sincroniza como **cliente** de CT (no como contacto); empresa vs particular se deriva del `external_type` de su identidad

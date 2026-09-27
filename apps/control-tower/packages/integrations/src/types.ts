@@ -26,6 +26,18 @@ export interface NormalizedPerson {
   phone?: string;
   jobTitle?: string;
   companyExternalId?: string;
+  /**
+   * Roles de relación (multi-select de Twenty), ya normalizados a los códigos del dominio. Con
+   * `INDIVIDUAL_CLIENT` la persona se sincroniza como **cliente** de CT, no como contacto.
+   */
+  relationshipRoles?: string[];
+  /**
+   * ¿VENÍA el campo de roles en el registro? Si no venía —porque en ese Twenty se llama de otra forma— **no se
+   * reclasifica a nadie** y el sync lo avisa: el handoff prohíbe inferir identificadores de API en silencio.
+   */
+  rolesFieldPresent?: boolean;
+  /** Etiquetas de rol que Twenty trae y CT no conoce. Se informan en el historial del sync. */
+  unknownRoles?: string[];
 }
 export interface NormalizedOpportunity {
   externalId: string;

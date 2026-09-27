@@ -836,6 +836,11 @@ export const es = {
   'crm.opportunitiesFromTwentyHint': 'Las oportunidades se crean en Twenty y llegan aquí con el sync. Conecta la integración o lanza «Sync now» en Automatización › Integraciones.',
   'crm.stageOnlyEditableHint': 'Lo único que se cambia desde Control Tower. El resto de datos se editan en Twenty.',
   // Oportunidad ganada → proyecto: la automatización está suspendida y se pregunta cada vez (owner 2026-09-27).
+  // Empresa o particular: se DERIVA del origen del cliente (una `company` de Twenty o una `person` con el rol
+  // INDIVIDUAL_CLIENT — ADR-010). No hay columna que lo guarde.
+  'crm.kindCompany': 'Empresa',
+  'crm.kindIndividual': 'Particular',
+  'crm.individualClientHint': 'Cliente particular: llega de una persona de Twenty marcada como cliente individual. Su email y teléfono se consultan en Twenty.',
   'crm.createProject': 'Crear su proyecto',
   'crm.createProjectHint': 'Esta oportunidad está ganada y todavía no tiene proyecto. Se crea cuando tú lo digas: hereda el cliente y queda enlazado a la oportunidad.',
   'crm.confirmCreateProject': '¿Crear el proyecto de «{name}»? Heredará su cliente y quedará enlazado a esta oportunidad.',

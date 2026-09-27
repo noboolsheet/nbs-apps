@@ -5,6 +5,52 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-09-27 — ADR-010 · Una Person con `INDIVIDUAL_CLIENT` es un cliente, no un contacto ✅
+
+**El problema, en una frase del owner:** en Twenty cada persona lleva un multi-select `Relationship Roles`, y quien
+tiene **`INDIVIDUAL_CLIENT`** es alguien para quien trabajas y a quien facturas —sin empresa detrás—; en CT aparecía
+como **contacto**. Consecuencia real: no se le podía asignar un proyecto (`projects.client_id` apunta a `clients`), ni
+un pago de cliente, ni recursos, ni salía en «Clientes». La mitad de la aplicación no servía para esa mitad de los
+clientes.
+
+El dominio ya tenía media decisión tomada: `classifyBillingSubject` (§2.2 del handoff) usa **ese mismo rol** para
+decir que el sujeto de facturación es la persona, y el handoff prohíbe inventar una Company de relleno. Faltaba
+aplicarlo a qué entidad representa a la persona.
+
+**Qué entra (ADR-010).**
+- **La regla, en el dominio:** `person-roles.ts` (`parsePersonRoles` + `crmTargetForPerson`), pura y con 6 tests. El
+  parseo es defensivo porque la forma del multi-select no la controlamos: array o cadena con comas, con espacios,
+  guiones o minúsculas («Individual Client» → `INDIVIDUAL_CLIENT`). Una etiqueta que CT no conoce **se informa**, no
+  se traga.
+- **Empresa o particular se DERIVA, no se guarda:** se sabe por el `external_type` de su identidad (`company` vs
+  `person`). Guardarlo sería un tercer valor que podría quedarse viejo respecto a Twenty y que CT no puede corregir
+  (ADR-009). La lista de Clientes lo muestra como columna **Tipo** (con faceta) y la ficha con una insignia.
+- **Si la persona cambia de rol, su registro se mueve:** se crea en la familia nueva, el viejo **se archiva** —nunca se
+  borra: un proyecto, una oportunidad o un pago pueden estar apuntándolo— y la identidad se re-apunta. Tres tests de
+  integración atan el movimiento, la idempotencia después de moverlo y que el contacto viejo queda archivado.
+- **El nombre del campo es configuración, no adivinanza:** `configuration.fields.personRelationshipRoles` (por
+  defecto `relationshipRoles`). Si el campo **no viene** en el pull, **no se reclasifica a nadie** y el run queda «con
+  advertencias» diciendo qué configurar: el handoff prohíbe inferir identificadores de API en silencio, y mantener a la
+  gente donde está es reversible mientras moverla por una suposición no lo es.
+- **Un cliente-particular no lleva empresa:** su `clients.name` es su nombre, `industry`/`websiteUrl` quedan vacíos y
+  su email/teléfono **siguen en Twenty** (la ficha enlaza). No se añadieron columnas a `clients` para no dejar dos
+  campos vacíos y bloqueados en el panel de todos los clientes-empresa; si en el uso molesta, es una migración aditiva.
+
+**Dos defectos que salieron y que habrían duplicado registros** (la familia de M40, en otra tabla):
+1. **`upsertIdentity` no actualizaba `internal_type`** en el conflicto, sólo `internal_id`. Mover a alguien de contacto
+   a cliente habría dejado el puntero diciendo `contact` mientras apuntaba a un `client`.
+2. **La reconciliación de borrados era por tipo externo**, así que reconciliar «person» contra `contacts` habría visto
+   la identidad de una persona-cliente como **huérfana**, habría borrado su puntero y el sync siguiente habría creado
+   un duplicado. Ahora `reconcileMissing` filtra por **tipo interno** y las personas se reconcilian dos veces, una por
+   familia.
+
+**Nota sobre el canal del aviso:** el warning de configuración va por `skipped` con `entity: 'config'` — es el único
+canal que llega al historial de syncs y marca el run como «con advertencias», que es justo lo que es. El `entity` lo
+distingue de un registro que no se sincronizó, y el test de resiliencia F-13 ahora filtra por eso.
+
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (168, 6 nuevos) · `pnpm build` · `pnpm test:integration`
+(191, 3 nuevos) · e2e (69/69).
+
 ## 2026-09-27 — Filtros de lista: facetas por valor en las 19 listas ✅
 
 Encargo del owner: *«poder filtrar las listas por estados o tipos según lo que tenga cada cual, porque cuando
@@ -605,7 +651,13 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-09-27): filtros de lista.** Toda lista tiene ya **facetas por valor** (49 en 19 listas) además del
+> **⚑ ÚLTIMO (2026-09-27): ADR-010 — los clientes particulares ya son clientes.** Una Person de Twenty con el rol
+> `INDIVIDUAL_CLIENT` se sincroniza como **cliente** (antes era un contacto, y por eso no podía tener proyectos ni
+> pagos); si cambia de rol, su registro se mueve y el viejo se archiva. El campo de roles es **configurable** y, si no
+> viene, no se reclasifica a nadie. De paso: `upsertIdentity` no actualizaba `internal_type` y la reconciliación no
+> distinguía tipo interno — dos formas de duplicar registros de la familia de M40.
+>
+> **⚑ ANTES (2026-09-27): filtros de lista.** Toda lista tiene ya **facetas por valor** (49 en 19 listas) además del
 > buscador: opciones derivadas de los datos, con recuento, combinables entre sí. Las **cinco listas que no tenían ni
 > orden ni buscador** ahora lo tienen, y Biblioteca y Aprendizaje dejan sus desplegables a medida por el mecanismo
 > común. De paso: Reutilizables pintaba «nativo» para repos de GitHub, y la salud se indexaba en crudo.

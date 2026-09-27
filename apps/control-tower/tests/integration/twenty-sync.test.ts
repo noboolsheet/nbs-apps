@@ -167,8 +167,11 @@ describe('twenty sync (fixture)', () => {
       (data.companies[1] as { industry?: string }).industry = 'x'.repeat(200);
       const summary = await syncTwenty(tx, sync(ctx), new TwentyAdapter(new FixtureSource(data)));
       expect(summary.companies.created).toBe(1); // sólo Acme
-      expect(summary.skipped).toHaveLength(1);
-      expect(summary.skipped[0]).toMatchObject({ entity: 'company', externalId: 'c2' });
+      // Los saltados de REGISTROS se cuentan aparte de los avisos de configuración (`entity: 'config'`), que en
+      // esta fixture incluyen «el campo de roles de relación no viene».
+      const registros = summary.skipped.filter((k) => k.entity !== 'config');
+      expect(registros).toHaveLength(1);
+      expect(registros[0]).toMatchObject({ entity: 'company', externalId: 'c2' });
       const clients = await tx.select().from(s.clients).where(eq(s.clients.organizationId, ctx.organizationId));
       expect(clients.map((c) => c.name)).toContain('Acme');
       expect(clients.map((c) => c.name)).not.toContain('Globex');
@@ -209,6 +212,92 @@ describe('twenty sync (fixture)', () => {
       const [after] = await tx.select().from(s.tasks).where(eq(s.tasks.id, task!.id));
       expect(after!.title).toBe('Llamar a Acme (act.)');
       expect(after!.dueDate).toBe('2027-05-05');
+    });
+  });
+
+  /**
+   * ADR-010 — una Person con el rol `INDIVIDUAL_CLIENT` es un **cliente** de CT, no un contacto. Lo que hay que atar
+   * no es el caso feliz, sino el **movimiento**: cuando alguien cambia de rol, su registro pasa de una familia a la
+   * otra sin perder el enlace con Twenty y sin borrar nada (un proyecto o un pago pueden estar apuntando a la fila
+   * vieja). Y que **sin el campo de roles no se reclasifique a nadie**.
+   */
+  it('una persona con INDIVIDUAL_CLIENT entra como CLIENTE, no como contacto', async () => {
+    await inRollback(async (tx) => {
+      const ctx = await makeOrg(tx);
+      const data = {
+        ...fixture(),
+        people: [
+          { id: 'p1', name: { firstName: 'Jane', lastName: 'Doe' }, emails: { primaryEmail: 'jane@acme.com' }, companyId: 'c1' },
+          { id: 'p2', name: { firstName: 'Luis', lastName: 'Particular' }, emails: { primaryEmail: 'luis@ex.com' }, relationshipRoles: ['INDIVIDUAL_CLIENT'] },
+        ],
+      };
+      await syncTwenty(tx, sync(ctx), new TwentyAdapter(new FixtureSource(data)));
+
+      // Luis es cliente y NO contacto.
+      const cl = await tx.select().from(s.clients).where(eq(s.clients.organizationId, ctx.organizationId));
+      expect(cl.map((c) => c.name)).toContain('Luis Particular');
+      const co = await tx.select().from(s.contacts).where(eq(s.contacts.organizationId, ctx.organizationId));
+      expect(co.map((c) => c.email)).toEqual(['jane@acme.com']);
+
+      // Su identidad apunta al CLIENTE, con el tipo interno correcto (si mintiera, la reconciliación lo borraría).
+      const [ident] = await tx
+        .select()
+        .from(s.externalIdentities)
+        .where(and(eq(s.externalIdentities.organizationId, ctx.organizationId), eq(s.externalIdentities.externalId, 'p2')));
+      expect(ident!.internalType).toBe('client');
+      expect(ident!.externalType).toBe('person');
+      const luis = cl.find((c) => c.name === 'Luis Particular')!;
+      expect(ident!.internalId).toBe(luis.id);
+    });
+  });
+
+  it('si la persona cambia de rol, su registro se MUEVE y el viejo se archiva (no se borra)', async () => {
+    await inRollback(async (tx) => {
+      const ctx = await makeOrg(tx);
+      const asContact = {
+        ...fixture(),
+        people: [{ id: 'p9', name: { firstName: 'Mar', lastName: 'Cambia' }, emails: { primaryEmail: 'mar@ex.com' }, relationshipRoles: ['COLLABORATOR'] }],
+      };
+      await syncTwenty(tx, sync(ctx), new TwentyAdapter(new FixtureSource(asContact)));
+      const [contacto] = await tx.select().from(s.contacts).where(eq(s.contacts.email, 'mar@ex.com'));
+      expect(contacto).toBeDefined();
+
+      // En Twenty la marcan como cliente individual.
+      const asClient = {
+        ...fixture(),
+        people: [{ id: 'p9', name: { firstName: 'Mar', lastName: 'Cambia' }, emails: { primaryEmail: 'mar@ex.com' }, relationshipRoles: ['INDIVIDUAL_CLIENT'] }],
+      };
+      await syncTwenty(tx, sync(ctx), new TwentyAdapter(new FixtureSource(asClient)));
+
+      // Ahora es cliente…
+      const [clienteNuevo] = await tx.select().from(s.clients).where(eq(s.clients.name, 'Mar Cambia'));
+      expect(clienteNuevo).toBeDefined();
+      // …el contacto viejo sigue EXISTIENDO pero archivado (puede haber un proyecto o un pago apuntándolo)…
+      const [contactoDespues] = await tx.select().from(s.contacts).where(eq(s.contacts.id, contacto!.id));
+      expect(contactoDespues!.archivedAt).not.toBeNull();
+      // …y la identidad apunta al cliente, con su tipo actualizado.
+      const [ident] = await tx
+        .select()
+        .from(s.externalIdentities)
+        .where(and(eq(s.externalIdentities.organizationId, ctx.organizationId), eq(s.externalIdentities.externalId, 'p9')));
+      expect(ident!.internalType).toBe('client');
+      expect(ident!.internalId).toBe(clienteNuevo!.id);
+
+      // Un tercer sync no debe duplicar nada (idempotencia con la identidad re-apuntada).
+      await syncTwenty(tx, sync(ctx), new TwentyAdapter(new FixtureSource(asClient)));
+      const clientes = await tx.select().from(s.clients).where(eq(s.clients.name, 'Mar Cambia'));
+      expect(clientes).toHaveLength(1);
+    });
+  });
+
+  it('sin el campo de roles NO se reclasifica a nadie, y el sync lo dice', async () => {
+    await inRollback(async (tx) => {
+      const ctx = await makeOrg(tx);
+      // `fixture()` no trae el campo: en un Twenty donde se llame de otra forma, esto es lo que se ve.
+      const summary = await syncTwenty(tx, sync(ctx), new TwentyAdapter(new FixtureSource(fixture())));
+      const co = await tx.select().from(s.contacts).where(eq(s.contacts.organizationId, ctx.organizationId));
+      expect(co).toHaveLength(1); // Jane sigue siendo contacto
+      expect(summary.skipped.some((k) => k.entity === 'config' && k.error.includes('roles de relación'))).toBe(true);
     });
   });
 

@@ -1,15 +1,24 @@
 import { and, eq } from 'drizzle-orm';
 import type { Database } from '@ct/db';
 import { clients, contacts, opportunities, tasks } from '@ct/db/schema';
-import { slugify, deriveOpportunityStatus, type OpportunityStage, type TaskStatus } from '@ct/domain';
+import {
+  slugify,
+  deriveOpportunityStatus,
+  crmTargetForPerson,
+  type ParsedPersonRoles,
+  type OpportunityStage,
+  type TaskStatus,
+} from '@ct/domain';
 import type { IntegrationAdapter } from '@ct/integrations';
 import { orgEq, type OrgContext } from '../auth/index';
 import { createClient, createContact, createOpportunity } from '../crm/index';
 import { createTask } from '../projects/index';
-import { resolveInternalId, upsertIdentity } from './identity';
+import { findIdentityByExternal, resolveInternalId, upsertIdentity } from './identity';
 import { reconcileMissing } from './reconcile';
+import { archiveRecords } from '../maintenance/archive';
 import { pendingPushTargets } from '../outbox/index';
 import { errMsg, type SyncSkip } from './sync-common';
+import { logger } from '@ct/shared';
 
 /**
  * Sync idempotente de Twenty → Control Tower (proyección/contexto; Twenty sigue siendo SoT del CRM).
@@ -61,6 +70,7 @@ export async function syncTwenty(
   adapter: IntegrationAdapter,
   opts: SyncTwentyOptions = {},
 ): Promise<SyncSummary> {
+  const log = logger.child({ task: 'sync-twenty' });
   const data = await adapter.pull();
   // Cambios locales que aún NO han llegado a Twenty (write-back pendiente o fallido). El pull NO los pisa: si el
   // push falló (p. ej. Twenty rechaza el valor de `stage`), reescribir la fila con el dato viejo haría desaparecer
@@ -86,9 +96,12 @@ export async function syncTwenty(
 
   // Reconciliación de borrados, ANTES de los bucles (necesita ver las identidades como las dejó el sync
   // anterior). `seen` sale del pull crudo, así que un registro que luego falle al procesarse NO se archiva.
-  const RECONCILE: { key: keyof Omit<SyncSummary, 'skipped'>; externalType: string; entityType: string; ids: string[] }[] = [
+  const RECONCILE: { key: keyof Omit<SyncSummary, 'skipped'>; externalType: string; entityType: string; internalType?: string; ids: string[] }[] = [
     { key: 'companies', externalType: 'company', entityType: 'client', ids: data.companies.map((c) => c.externalId) },
-    { key: 'people', externalType: 'person', entityType: 'contact', ids: data.people.map((p) => p.externalId) },
+    // Las personas se reconcilian DOS veces, una por familia: desde 2026-09-27 una Person puede estar en CT como
+    // contacto o como cliente (rol `INDIVIDUAL_CLIENT`), y cada identidad hay que buscarla en su propia tabla.
+    { key: 'people', externalType: 'person', entityType: 'contact', internalType: 'contact', ids: data.people.map((p) => p.externalId) },
+    { key: 'people', externalType: 'person', entityType: 'client', internalType: 'client', ids: data.people.map((p) => p.externalId) },
     { key: 'opportunities', externalType: 'opportunity', entityType: 'opportunity', ids: data.opportunities.map((o) => o.externalId) },
     { key: 'tasks', externalType: 'task', entityType: 'task', ids: data.tasks.map((t) => t.externalId) },
   ];
@@ -97,10 +110,12 @@ export async function syncTwenty(
       provider: P,
       externalType: r.externalType,
       entityType: r.entityType,
+      internalType: r.internalType,
       seen: new Set(r.ids),
     });
-    summary[r.key].archived = recon.archived;
-    summary[r.key].restored = recon.restored;
+    // `+=`, no `=`: `people` se reconcilia en dos familias y los contadores se suman.
+    summary[r.key].archived += recon.archived;
+    summary[r.key].restored += recon.restored;
   }
 
   // --- Companies → clients --- (por-registro: un registro inválido no aborta el resto, F-13)
@@ -129,20 +144,83 @@ export async function syncTwenty(
     }
   }
 
-  // --- People → contacts ---
+  /**
+   * --- People → contactos **o clientes** ---
+   *
+   * Owner 2026-09-27: una Person con el rol **`INDIVIDUAL_CLIENT`** es un CLIENTE de Control Tower, no un contacto
+   * (es a quien se factura y para quien se trabaja, aunque no haya empresa detrás). El resto de roles —contacto de
+   * una empresa, colaborador, proveedor, prescriptor— siguen siendo contactos. Coincide con lo que ya hacía
+   * `classifyBillingSubject` para la facturación (§2.2 del handoff): el mismo rol, aplicado aquí a qué entidad
+   * representa a la persona.
+   *
+   * Tres cosas que esto tiene que hacer bien:
+   *  1. **Si la persona cambia de rol, su registro se MUEVE** (contacto→cliente o al revés). El nuevo se crea, el
+   *     viejo se **archiva** —nunca se borra: un proyecto, una oportunidad o un pago pueden estar apuntándolo— y la
+   *     identidad se re-apunta al nuevo.
+   *  2. **Si el campo de roles no viene** en el pull, no se reclasifica a nadie y se avisa una vez: el campo puede
+   *     llamarse distinto en este Twenty (`configuration.fields.personRelationshipRoles`) y el handoff prohíbe
+   *     adivinar identificadores de API. Mantener a la gente donde está es reversible; moverla por una suposición no.
+   *  3. Un cliente-persona **no lleva empresa**: su `clients.name` es su nombre. El email y el teléfono siguen en
+   *     Twenty (CT enlaza), porque `clients` no tiene esas columnas y no se inventan datos aquí.
+   */
+  let rolesFieldMissing = 0;
+  const unknownRoleLabels = new Set<string>();
   for (const p of data.people) {
     if (!p.firstName && !p.lastName && !p.email) continue; // sin datos identificables
     try {
+      const parsed: ParsedPersonRoles = {
+        roles: (p.relationshipRoles ?? []) as ParsedPersonRoles['roles'],
+        present: p.rolesFieldPresent ?? false,
+        unknown: p.unknownRoles ?? [],
+      };
+      if (!parsed.present) rolesFieldMissing++;
+      for (const u of parsed.unknown) unknownRoleLabels.add(u);
+      const target = crmTargetForPerson(parsed);
+      const fullName = [p.firstName, p.lastName].filter(Boolean).join(' ').trim() || p.email || '(sin nombre)';
+      const identity = await findIdentityByExternal(db, ctx, P, 'person', p.externalId);
+      const url = twentyRecordUrl(opts.crmBaseUrl, 'person', p.externalId);
+
+      // La persona cambió de familia: se crea en la nueva y la fila vieja se archiva (no se borra).
+      if (identity && identity.internalType !== target) {
+        await archiveRecords(db, ctx, { entityType: identity.internalType, ids: [identity.internalId] });
+        summary.people.archived++;
+        log.info('persona reclasificada', {
+          externalId: p.externalId,
+          from: identity.internalType,
+          to: target,
+        });
+      }
+      const existing = identity && identity.internalType === target ? identity.internalId : null;
+
+      if (target === 'client') {
+        if (existing) {
+          await db
+            .update(clients)
+            .set({ name: fullName, updatedAt: new Date() })
+            .where(and(eq(clients.id, existing), orgEq(clients.organizationId, ctx)));
+          summary.people.updated++;
+        } else {
+          const client = await createClient(db, ctx, {
+            name: fullName,
+            slug: `${slugify(fullName) || 'client'}-${p.externalId.slice(0, 8)}`,
+          });
+          await upsertIdentity(db, ctx, { provider: P, externalType: 'person', externalId: p.externalId, internalType: 'client', internalId: client.id, metadata: { url } });
+          summary.people.created++;
+          continue;
+        }
+        await upsertIdentity(db, ctx, { provider: P, externalType: 'person', externalId: p.externalId, internalType: 'client', internalId: existing, metadata: { url } });
+        continue;
+      }
+
       const clientId = p.companyExternalId
         ? (await resolveInternalId(db, ctx, P, 'company', p.companyExternalId)) ?? undefined
         : undefined;
-      const existing = await resolveInternalId(db, ctx, P, 'person', p.externalId);
       if (existing) {
         await db
           .update(contacts)
           .set({ firstName: p.firstName, lastName: p.lastName, email: p.email, phone: p.phone, jobTitle: p.jobTitle, clientId, updatedAt: new Date() })
           .where(and(eq(contacts.id, existing), orgEq(contacts.organizationId, ctx)));
-        await upsertIdentity(db, ctx, { provider: P, externalType: 'person', externalId: p.externalId, internalType: 'contact', internalId: existing, metadata: { url: twentyRecordUrl(opts.crmBaseUrl, 'person', p.externalId) } });
+        await upsertIdentity(db, ctx, { provider: P, externalType: 'person', externalId: p.externalId, internalType: 'contact', internalId: existing, metadata: { url } });
         summary.people.updated++;
       } else {
         const contact = await createContact(db, ctx, {
@@ -153,12 +231,34 @@ export async function syncTwenty(
           jobTitle: p.jobTitle,
           clientId,
         });
-        await upsertIdentity(db, ctx, { provider: P, externalType: 'person', externalId: p.externalId, internalType: 'contact', internalId: contact.id, metadata: { url: twentyRecordUrl(opts.crmBaseUrl, 'person', p.externalId) } });
+        await upsertIdentity(db, ctx, { provider: P, externalType: 'person', externalId: p.externalId, internalType: 'contact', internalId: contact.id, metadata: { url } });
         summary.people.created++;
       }
     } catch (e) {
       summary.skipped.push({ entity: 'person', externalId: p.externalId, error: errMsg(e) });
     }
+  }
+  // Se avisa UNA vez por sync, no por persona: si el campo de roles no existe en este Twenty, el problema es de
+  // configuración y repetirlo 200 veces en los saltados sólo taparía lo demás.
+  if (rolesFieldMissing > 0) {
+    summary.skipped.push({
+      // `entity: 'config'` a propósito: no es un registro que no se haya sincronizado, es un aviso de
+      // CONFIGURACIÓN. Va por el canal de saltados porque es el único que llega al historial de syncs y marca el
+      // run como «con advertencias», que es exactamente lo que es; el `entity` lo distingue de un registro real.
+      entity: 'config',
+      externalId: `${rolesFieldMissing} persona(s)`,
+      error:
+        'No se encontró el campo de roles de relación en Twenty, así que NADIE se ha reclasificado como cliente ' +
+        'individual. Si en tu Twenty ese campo se llama de otra forma, ponlo en la configuración de la integración ' +
+        '(`fields.personRelationshipRoles`).',
+    });
+  }
+  if (unknownRoleLabels.size > 0) {
+    summary.skipped.push({
+      entity: 'config',
+      externalId: [...unknownRoleLabels].join(', '),
+      error: 'Roles de relación que Twenty trae y Control Tower no conoce: se han ignorado al clasificar.',
+    });
   }
 
   // --- Opportunities ---

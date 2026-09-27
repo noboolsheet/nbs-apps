@@ -37,6 +37,12 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   const rows = active.status ? allClients.filter((c) => c.status === active.status) : allClients;
   // Un cliente es nativo salvo que exista una identidad externa (p. ej. sincronizado desde Twenty).
   const providerByClient = new Map(identities.map((i) => [i.internalId, i.provider]));
+  // **Empresa o particular**, DERIVADO de la identidad: un cliente que llega de una `company` de Twenty es una
+  // empresa; el que llega de una `person` con el rol `INDIVIDUAL_CLIENT` es un particular (ADR-010). No se guarda en
+  // ninguna columna a propósito: sería un tercer valor que podría quedarse viejo respecto a Twenty, que es su dueño.
+  const externalTypeByClient = new Map(identities.map((i) => [i.internalId, i.externalType]));
+  const clientKind = (id: string) =>
+    externalTypeByClient.get(id) === 'person' ? t('crm.kindIndividual') : t('crm.kindCompany');
 
   const columns: Column<Client>[] = [
     {
@@ -47,6 +53,13 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
           {r.name}
         </RecordLink>
       ),
+    },
+    {
+      header: t('field.kind'),
+      className: 'w-28',
+      value: (r) => clientKind(r.id),
+      facet: true,
+      cell: (r) => <span className="text-xs text-fg-muted">{clientKind(r.id)}</span>,
     },
     { header: t('field.status'), value: (r) => enumLabel(r.status), facet: true, cell: (r) => <ClientStatusControl id={r.id} current={r.status} /> },
     { header: t('field.industry'), value: (r) => r.industry, facet: true, cell: (r) => r.industry ?? '—' },

@@ -216,7 +216,10 @@ guarda `metadata.url` para "Open external"). Config por integración en `integra
 IDs de las DBs de Notion en `configuration.databases.<key>` y el `folderId` de Drive.
 
 - **Twenty (⚑ ADR-009, 2026-09-26): Twenty es el dueño del CRM y CT NO le escribe nada salvo el `stage`.** Pull
-  (company→client, person→contact, opportunity→opportunity, task) y **un único write-back**: al mover el **stage** de
+  (company→client, **person→contact _o_ client** —⚑ ADR-010: una Person con el rol `INDIVIDUAL_CLIENT` se sincroniza
+  como **CLIENTE**; empresa vs particular se **deriva** del `external_type` de su identidad, no hay columna; el nombre
+  del campo de roles es configuración: `configuration.fields.personRelationshipRoles`, y si no viene **no se
+  reclasifica a nadie** y el run queda «con advertencias»—, opportunity→opportunity, task) y **un único write-back**: al mover el **stage** de
   una oportunidad (UPDATE de un USER), `recordAudit` encola `twenty.push` → `runTwentyEntityPush` →
   `PATCH /rest/opportunities/{id}` con `{ stage }`. Solo actualiza existentes (id por `external_identities`).
   **Todo lo demás que llega de Twenty es inmutable en CT** (`FIELD_OWNERSHIP` en `@ct/domain/ownership`, bloqueo **por
@@ -231,7 +234,9 @@ IDs de las DBs de Notion en `configuration.databases.<key>` y el `folderId` de D
 - **Notion**: bidireccional con **propiedad por campo** — CT es dueño de las propiedades estructuradas (push CT→Notion),
   Notion es dueño del cuerpo de la página. Motor genérico `syncNotionEntity` + `notion-specs.ts` (una spec por entidad).
   Specs **push-only** (sin `importFromNotion`, p. ej. `resources`): CT único dueño, nunca importa → sin ciclos.
-- **Reconciliación de borrados (M40):** lo que deja de venir en el pull se **archiva** (no se borra) y, si vuelve al
+- **Reconciliación de borrados (M40):** *(desde ADR-010 es por **tipo interno**: las personas se reconcilian dos veces,
+  contra `contacts` y contra `clients`, porque una Person puede estar en cualquiera de las dos. `upsertIdentity`
+  actualiza también `internal_type` al re-apuntar: si no, el puntero mentiría y la reconciliación lo borraría.)* lo que deja de venir en el pull se **archiva** (no se borra) y, si vuelve al
   origen, se **restaura** solo. Núcleo compartido en `integrations/reconcile.ts` (`reconcileMissing`), que además
   purga identidades huérfanas — un puntero a una fila borrada hacía que el sync actualizara 0 filas en silencio y el
   registro no volviera jamás. **Al escribir un sync nuevo:** llama a `reconcileMissing` **antes** del bucle de

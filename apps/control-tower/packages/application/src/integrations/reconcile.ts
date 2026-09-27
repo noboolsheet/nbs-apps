@@ -58,6 +58,12 @@ export interface ReconcileInput {
    * existencia de ese registro responde su proveedor de origen, que tiene su propia reconciliación.
    */
   onlyIfSoleIdentity?: boolean;
+  /**
+   * Tipo interno de las identidades a reconciliar. Por defecto, `entityType` (que es lo que era hasta ahora). Se
+   * separa porque una Person de Twenty puede estar como **contacto** o como **cliente**: hay que reconciliar las dos
+   * familias por separado, cada una contra su tabla.
+   */
+  internalType?: string;
 }
 
 export interface ReconcileResult {
@@ -100,6 +106,10 @@ export async function reconcileMissing(
         orgEq(externalIdentities.organizationId, ctx),
         eq(externalIdentities.provider, input.provider),
         eq(externalIdentities.externalType, input.externalType),
+        // Filtrado por tipo INTERNO: un mismo tipo externo puede representarse con dos entidades de CT (una Person
+        // de Twenty es contacto o cliente según sus roles). Sin esto, reconciliar «person» contra `contacts` vería
+        // la identidad de una persona-cliente como huérfana, borraría su puntero y el sync crearía un duplicado.
+        eq(externalIdentities.internalType, input.internalType ?? input.entityType),
       ),
     );
   if (identities.length === 0) return result;

@@ -133,7 +133,14 @@ const jobRegistry: JobRegistry = {
       const baseUrl = process.env.TWENTY_API_URL;
       const apiKey = process.env.TWENTY_API_KEY;
       if (!baseUrl || !apiKey) throw new Error('integration.twenty.sync: faltan TWENTY_API_URL/TWENTY_API_KEY');
-      const adapter = new TwentyAdapter(new HttpTwentyDataSource({ baseUrl, apiKey }));
+      // Nombre del campo de ROLES DE RELACIÓN en este Twenty. Determina quién entra en CT como cliente (rol
+      // `INDIVIDUAL_CLIENT`) y quién como contacto. Es configuración, no adivinanza: el handoff prohíbe inferir
+      // identificadores de API, así que si aquí no hay nada se usa el nombre estándar y, si tampoco existe, el
+      // sync avisa de que no ha reclasificado a nadie en vez de suponerlo.
+      const integ = await getIntegrationByProvider(db, ctx, 'TWENTY');
+      const rolesField = (integ?.configuration as { fields?: { personRelationshipRoles?: string } } | null)?.fields
+        ?.personRelationshipRoles;
+      const adapter = new TwentyAdapter(new HttpTwentyDataSource({ baseUrl, apiKey }), rolesField);
       // TWENTY_CRM_URL = URL del navegador (Tailscale/LAN), para el enlace "Open in CRM" (F-1).
       const summary = await syncTwenty(db, ctx, adapter, { crmBaseUrl: process.env.TWENTY_CRM_URL ?? null });
       log.info('twenty sync done', { summary });

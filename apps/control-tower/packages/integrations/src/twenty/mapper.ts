@@ -1,5 +1,6 @@
 import { OPPORTUNITY_STAGE, type OpportunityStage, type TaskStatus } from '@ct/domain';
 import type { TwentyRawRecord } from './client';
+import { parsePersonRoles } from '@ct/domain';
 import type { NormalizedCompany, NormalizedPerson, NormalizedOpportunity, NormalizedTask } from '../types';
 
 /**
@@ -61,7 +62,16 @@ export function mapCompany(raw: TwentyRawRecord): NormalizedCompany {
   };
 }
 
-export function mapPerson(raw: TwentyRawRecord): NormalizedPerson {
+/**
+ * Nombre POR DEFECTO del campo de roles de relación en la API de Twenty. Es configurable por integración
+ * (`configuration.fields.personRelationshipRoles`) porque **no se puede inferir**: el handoff prohíbe adivinar
+ * identificadores de API, y en un Twenty self-hosted un campo personalizado puede llamarse de otra forma. Si con
+ * este nombre no viene nada, el pull lo dice (`rolesFieldPresent: false`) y CT no reclasifica a nadie.
+ */
+export const DEFAULT_PERSON_ROLES_FIELD = 'relationshipRoles';
+
+export function mapPerson(raw: TwentyRawRecord, rolesField = DEFAULT_PERSON_ROLES_FIELD): NormalizedPerson {
+  const parsed = parsePersonRoles((raw as Record<string, unknown>)[rolesField]);
   return {
     externalId: raw.id,
     firstName: str(raw.firstName) ?? nested(raw, 'name', 'firstName'),
@@ -70,6 +80,9 @@ export function mapPerson(raw: TwentyRawRecord): NormalizedPerson {
     phone: str(raw.phone) ?? nested(raw, 'phones', 'primaryPhoneNumber'),
     jobTitle: str(raw.jobTitle),
     companyExternalId: str(raw.companyId),
+    relationshipRoles: parsed.roles,
+    rolesFieldPresent: parsed.present,
+    unknownRoles: parsed.unknown,
   };
 }
 

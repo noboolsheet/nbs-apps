@@ -31,6 +31,33 @@ export async function resolveInternalId(
   return row?.internalId ?? null;
 }
 
+/**
+ * Identidad por referencia EXTERNA, devolviendo también a qué tipo interno apunta. Hace falta cuando un mismo
+ * registro externo puede representarse con dos entidades distintas de CT: una Person de Twenty es un **contacto** o
+ * un **cliente** según sus roles de relación (owner 2026-09-27), y hay que saber dónde está hoy para moverla si el
+ * rol cambia. `resolveInternalId` no sirve: da por sabido el tipo interno.
+ */
+export async function findIdentityByExternal(
+  db: Database,
+  ctx: OrgContext,
+  provider: string,
+  externalType: string,
+  externalId: string,
+): Promise<{ internalType: string; internalId: string } | null> {
+  const [row] = await db
+    .select({ internalType: externalIdentities.internalType, internalId: externalIdentities.internalId })
+    .from(externalIdentities)
+    .where(
+      and(
+        orgEq(externalIdentities.organizationId, ctx),
+        eq(externalIdentities.provider, provider),
+        eq(externalIdentities.externalType, externalType),
+        eq(externalIdentities.externalId, externalId),
+      ),
+    );
+  return row ?? null;
+}
+
 export interface ExternalIdentityRef {
   provider: string;
   externalType: string;
@@ -209,6 +236,10 @@ export async function upsertIdentity(
       target: [externalIdentities.provider, externalIdentities.externalType, externalIdentities.externalId],
       set: {
         internalId: input.internalId,
+        // También el TIPO: una Person que pasa de contacto a cliente re-apunta su identidad, y si el tipo se
+        // quedara viejo la reconciliación buscaría la fila en la tabla equivocada, la daría por huérfana, borraría
+        // el puntero y el sync siguiente crearía un duplicado (la trampa de M40, en otra tabla).
+        internalType: input.internalType,
         lastSyncedAt: new Date(),
         updatedAt: new Date(),
         // Verlo en el pull es la definición de "no ha desaparecido" (M40): se limpia la marca de la

@@ -82,6 +82,17 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         <StatusBadge status={client.status} />
         <ClientStatusControl id={client.id} current={client.status} />
         <SourceBadge source={identity?.provider ?? 'NATIVE'} url={crmUrl} linkLabel={t('crm.openInCrm')} />
+        {/* Particular vs empresa, derivado del origen (ADR-010): un cliente que llega de una `person` de Twenty es
+            una persona marcada allí como cliente individual. Se dice porque cambia lo que puedes esperar del
+            registro (no hay industria ni web, y su email/teléfono están en Twenty). */}
+        {identity?.externalType === 'person' && (
+          <span
+            title={t('crm.individualClientHint')}
+            className="rounded-full bg-neutral-soft px-2 py-0.5 text-xs font-medium text-neutral-soft-fg"
+          >
+            {t('crm.kindIndividual')}
+          </span>
+        )}
       </div>
 
       <Tabs
