@@ -11,6 +11,9 @@ import {
   archiveTerminalRecords,
   purgeArchivedByIds,
   purgeArchivedRecords,
+  runArchivedPurgeSweep,
+  getAutomation,
+  updateOrganization,
   purgeReviewedItems,
   createClient,
   createContact,
@@ -61,6 +64,11 @@ async function makeOrg(): Promise<OrgContext> {
 async function dropOrg(ctx: OrgContext) {
   const org = ctx.organizationId;
   await db.execute(sql`delete from notes where organization_id = ${org}`);
+  // Tablas con FK a la organización que no son entidades archivables: si falta una, el `delete from organizations`
+  // del final falla con un error de FK y el test se cae al limpiar, no al probar (pasó al añadir `automation_runs`).
+  await db.execute(sql`delete from automation_runs where organization_id = ${org}`);
+  await db.execute(sql`delete from quick_notes where organization_id = ${org}`);
+  await db.execute(sql`delete from sync_runs where organization_id = ${org}`);
   await db.execute(sql`delete from change_events where organization_id = ${org}`);
   await db.execute(sql`delete from audit_logs where organization_id = ${org}`);
   await db.execute(sql`delete from outbox_events where organization_id = ${org}`);
@@ -562,6 +570,33 @@ describe('autoarchivado por estado terminal', () => {
       expect(res.byEntity.task).toBeUndefined();
       const [t] = await db.select().from(s.tasks).where(eq(s.tasks.id, tarea.id));
       expect(t!.archivedAt).toBeNull();
+    } finally {
+      await dropOrg(ctx);
+    }
+  });
+});
+
+/**
+ * E-8 — la huella del barrido tiene que decir también cuando algo **no** se pudo hacer. Va en este fichero y no en
+ * `automations-state.test.ts` porque necesita el arnés SIN transacción: la purga captura el error de FK por fila y,
+ * dentro de una transacción, ese error dejaría la del test abortada.
+ */
+describe('huella de la purga (E-8)', () => {
+  it('lo que se conserva porque algo vivo lo usa deja el run «con advertencias», no en verde', async () => {
+    const ctx = await makeOrg();
+    try {
+      const pr = await createProject(db, ctx, { name: 'Con documento vivo' });
+      await createDocument(db, ctx, { name: 'Documento', projectId: pr.id });
+      await archiveRecords(db, ctx, { entityType: 'project', ids: [pr.id] });
+      await db.execute(sql`update projects set archived_at = now() - interval '30 days' where id = ${pr.id}`);
+      await db.execute(sql`update tasks set archived_at = now() - interval '30 days' where project_id = ${pr.id}`);
+      await updateOrganization(db, ctx, { archivedRetentionDays: 1 });
+
+      await runArchivedPurgeSweep(db);
+
+      const detail = await getAutomation(db, ctx, 'sweep.archived_purge');
+      expect(detail.lastRunStatus).toBe('COMPLETED_WITH_WARNINGS');
+      expect(detail.lastRunResult).toMatchObject({ skipped: 1 });
     } finally {
       await dropOrg(ctx);
     }

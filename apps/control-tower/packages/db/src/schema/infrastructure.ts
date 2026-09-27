@@ -121,6 +121,39 @@ export const logArchives = pgTable(
  * consultarlo desde la app ("última sync: N creados, M actualizados, K saltados" + el motivo de cada fallo).
  * Retención: el barrido del worker conserva los últimos N runs por integración (no crece sin límite).
  */
+/**
+ * E-8 (M45) — **huella de las automatizaciones que no son jobs**: una fila por ejecución de cada barrido, con lo que
+ * hizo. Sin esto, de los siete barridos diarios —dos de los cuales archivan y borran datos— no se sabía desde la app
+ * si habían corrido; «última ejecución» sólo existía para los `sync.*`, que sí pasan por la cola `jobs`.
+ *
+ * `automation_key` es la clave del catálogo (`sweep.terminal_archive`…) y no es FK: el catálogo vive en el código.
+ * `result` es jsonb porque cada barrido cuenta cosas distintas, y un contador por barrido significaría una migración
+ * cada vez que se añade uno.
+ */
+export const automationRuns = pgTable(
+  'automation_runs',
+  {
+    id: pk(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id),
+    automationKey: varchar('automation_key').notNull(),
+    status: varchar('status').notNull(), // COMPLETED · COMPLETED_WITH_WARNINGS · FAILED
+    /** Lo que hizo, tal cual lo devuelve el barrido: `{ archived: 3 }`, `{ deleted: 0, skipped: 2 }`. */
+    result: jsonb('result'),
+    /** Mensaje del error, sólo en FAILED. Un barrido que falla en una organización no para las demás. */
+    error: text('error'),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
+    finishedAt: timestamp('finished_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('automation_runs_key_idx').on(t.organizationId, t.automationKey, t.startedAt),
+    // Mismos tres estados que un sync: el concepto «cómo acabó una ejecución» es el mismo.
+    inValues('automation_runs_status_check', t.status, SYNC_RUN_STATUS),
+  ],
+);
+
 export const syncRuns = pgTable(
   'sync_runs',
   {

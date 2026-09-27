@@ -7,6 +7,7 @@ import { createProject } from '../projects/commands';
 export * from './catalog';
 export * from './state';
 export * from './run';
+export * from './runs';
 
 /**
  * Automatizaciones por evento (Fase 6, 2ª parte). ERRATA-009: NO hay constructor visual; son handlers de código

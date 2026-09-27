@@ -238,7 +238,14 @@ describe('automatización por evento: oportunidad ganada → proyecto (Fase 6)',
         .select()
         .from(s.jobs)
         .where(and(eq(s.jobs.jobType, 'demo.export.org'), eq(s.jobs.organizationId, ctx.organizationId)));
-      await db.update(s.jobs).set({ jobType: 'demo.export.fail', maxAttempts: 1 }).where(eq(s.jobs.id, job!.id));
+      // F-41 — `processNextJob` reclama el job PENDING **más antiguo de toda la base**, no el de esta organización:
+      // si otro fichero de tests dejó uno pendiente, procesaba el ajeno y este test fallaba según el orden de
+      // ejecución (pasó una vez el 2026-09-27 y pasaba solo al repetirlo). Se le da a ESTE una antigüedad imposible
+      // de superar, así que es el que se reclama. El worker real hace bien en coger cualquiera: el fallo era del test.
+      await db
+        .update(s.jobs)
+        .set({ jobType: 'demo.export.fail', maxAttempts: 1, createdAt: new Date('2000-01-01T00:00:00Z') })
+        .where(eq(s.jobs.id, job!.id));
       await processNextJob(db, failing, WORKER);
 
       const errors = await listRecentJobErrors(db);

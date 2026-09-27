@@ -9,7 +9,7 @@ import { DescriptionList, type DLItem } from '@/components/ui/description-list';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { buttonCls } from '@/components/ui/button';
 import { enumLabel } from '@/lib/labels';
-import { t } from '@/lib/i18n';
+import { t, type MessageKey } from '@/lib/i18n';
 import { formatDateTime } from '@/lib/i18n/format';
 
 /**
@@ -35,6 +35,7 @@ interface AutomationDetail {
   status: string; // 'CORE' | 'ACTIVE' | 'PAUSED'
   lastRunAt: string | null;
   lastRunStatus: string | null;
+  lastRunResult: Record<string, unknown> | null;
 }
 
 const KIND_LABEL: Record<AutomationDetail['kind'], string> = {
@@ -144,13 +145,17 @@ export function AutomationPanel() {
           ),
         },
         { label: t('automation.panelPauseEffect'), value: detail.pauseEffect },
-        ...(detail.kind === 'sync'
+        // «Última ejecución» para los syncs **y los barridos** (E-8, 2026-09-27): antes los barridos no decían nada
+        // aquí, ni aunque hubieran archivado o borrado datos esa mañana. En los barridos se añade QUÉ hizo.
+        ...(detail.kind === 'sync' || detail.kind === 'sweep'
           ? [
               {
                 label: t('automation.panelLastRun'),
                 value: detail.lastRunAt
-                  ? `${fmtDate(detail.lastRunAt)}${detail.lastRunStatus ? ` · ${enumLabel(detail.lastRunStatus)}` : ''}`
-                  : 'Nunca',
+                  ? `${fmtDate(detail.lastRunAt)}${detail.lastRunStatus ? ` · ${enumLabel(detail.lastRunStatus)}` : ''}${
+                      runSummary(detail.lastRunResult) ? ` · ${runSummary(detail.lastRunResult)}` : ''
+                    }`
+                  : t('automation.panelNeverRun'),
               } as DLItem,
             ]
           : []),
@@ -160,7 +165,7 @@ export function AutomationPanel() {
               {
                 label: t('automation.panelIntegration'),
                 value: (
-                  <Link href="/automation/integrations" className="text-blue-600 underline dark:text-blue-400">
+                  <Link href="/automation/integrations" className="text-link underline underline-offset-2">
                     {t('automation.panelIntegrationsLink')}
                   </Link>
                 ),
@@ -204,4 +209,22 @@ export function AutomationPanel() {
       )}
     </Drawer>
   );
+}
+
+/**
+ * Resumen legible de lo que hizo un barrido: `{ archived: 3, skipped: 0 }` → «archivados: 3». Se ocultan los ceros
+ * («borrados: 0, conservados: 0» es ruido) y se traduce cada contador; uno desconocido se muestra con su nombre, que
+ * es mejor que esconderlo cuando se añada un barrido nuevo.
+ */
+function runSummary(result: Record<string, unknown> | null): string | null {
+  if (!result) return null;
+  if (typeof result.error === 'string') return result.error;
+  const partes = Object.entries(result)
+    .filter(([, v]) => typeof v === 'number' && v > 0)
+    .map(([k, v]) => {
+      const key = `automation.count.${k}` as MessageKey;
+      const label = t(key);
+      return `${label === key ? k : label}: ${v as number}`;
+    });
+  return partes.length > 0 ? partes.join(' · ') : t('automation.countNothing');
 }

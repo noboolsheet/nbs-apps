@@ -402,7 +402,8 @@ async function tick(): Promise<void> {
         log.error('archived purge sweep failed', { error: error instanceof Error ? error.message : String(error) });
       }
       try {
-        // F-16: el historial de syncs se recorta (últimos 50 runs por proveedor).
+        // F-16: el historial de syncs se recorta (últimos 50 runs por proveedor) y, con él, el de las ejecuciones
+        // de los barridos (E-8, mismos 50 por automatización).
         const runs = await runSyncRunsPurgeSweep(db);
         if (runs.deleted > 0) log.info('sync runs purge sweep', runs);
       } catch (error) {

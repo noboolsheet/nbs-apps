@@ -56,6 +56,10 @@ Lo que ya corre sobre los motores de §0. Úsalo para no duplicar.
 | ACT-13 | **Purga de la bandeja procesada** | 1×/día | Borra las capturas ya procesadas/descartadas según la política | `runInboxPurgeSweep` |
 | ACT-14 | **Purga de archivados** | 1×/día | Borra definitivamente lo archivado que supera `settings.archivedRetentionDays` (por defecto «conservar siempre» ⇒ no borra nada). Desde 2026-09-27 hay además **borrado a mano por selección** en Ajustes › Archivados, que no espera a ninguna política | `runArchivedPurgeSweep` · `purgeArchivedByIds` |
 | ACT-15 | **Purga del historial de syncs** (F-16) | 1×/día | Conserva los 50 runs más recientes por proveedor | `runSyncRunsPurgeSweep` |
+> **Huella (E-8, 2026-09-27):** cada ejecución de un barrido escribe una fila en **`automation_runs`** (clave de la
+> automatización + estado + qué hizo). El panel de Automatización lo muestra como «última ejecución»; antes eso sólo
+> existía para los `sync.*`, que pasan por la cola `jobs`. Se conservan las 50 últimas por automatización.
+
 | ACT-16 | **Autoarchivado de lo cerrado** (owner 2026-09-27) | 1×/día · ventana de 7 días | Archiva lo que lleva una semana en un estado terminal (proyecto CLOSED, servicio/capacidad/recurso RETIRED, decisión SUPERSEDED, reutilizable DEPRECATED y todo lo que quedó en `ARCHIVED`) y **arrastra a sus hijos** (tareas y entregables del proyecto). La edad se mide con `updated_at`. **No** toca tareas (tienen su retención) ni el CRM (lo gobierna Twenty) | `runTerminalArchiveSweep` → `archiveTerminalRecords` |
 
 > **Gancho listo pero sin usar:** `project.status_changed` **se emite** en cada cambio de estado de proyecto pero

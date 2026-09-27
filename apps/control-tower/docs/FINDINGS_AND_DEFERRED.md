@@ -1241,7 +1241,7 @@ hay que volver a medir antes de dar por bueno el síntoma.
   existe en el diccionario para casi todas); y llevar los cuatro literales de vistas a `es.ts`. Al hacerlo, añadir un
   test que **falle** si vuelve a aparecer texto visible fuera del diccionario, que es lo único que lo sostiene.
 
-### F-41 · Un test de integración depende del orden de los ficheros y falla de forma intermitente 🟢 ABIERTO (2026-09-27)
+### F-41 · Un test de integración depende del orden de los ficheros y falla de forma intermitente ✅ RESUELTO (2026-09-27)
 
 - **Hallado en:** una pasada completa de `pnpm test:integration` durante la sesión del 2026-09-27. El test
   «el histórico de procesos incluye los de la org y los globales, con el error de los fallidos»
@@ -1249,8 +1249,11 @@ hay que volver a medir antes de dar por bueno el síntoma.
 - **Causa:** `processNextJob` reclama **el job PENDING más antiguo de TODA la base**, no el de la organización del
   test. Si otro fichero de tests deja un job pendiente cuando ese test corre, procesa el ajeno y el suyo se queda sin
   `last_error`, así que la aserción falla. No es un fallo de la app: el worker real hace bien en coger cualquier job.
-- **Qué haría falta:** que el test procese **su** job (pasar el id, o filtrar por `jobType` propio del test) en vez de
-  «el siguiente». Mientras no se arregle, un rojo en ese test se verifica volviendo a correr el fichero solo.
+- **Cómo se resolvió:** el test le pone a **su** job un `created_at` del año 2000, así que es el más antiguo de la
+  base y `processNextJob` reclama ése y no el de otro fichero. No se toca la función de producción: el worker hace
+  bien en coger cualquier job pendiente; el fallo era del test. De paso se documentó en el nuevo test de E-8 la regla
+  que este caso enseña: **en un test, nunca asertar los totales globales de un barrido** —recorre todas las
+  organizaciones de la base, incluidas las de otros ficheros— sino lo de su propia organización.
 
 ### F-39 · El Inicio repetía la misma información hasta tres veces, y no tenía ni dinero ni dónde apuntar una idea ✅ RESUELTO (2026-09-27)
 

@@ -6,6 +6,7 @@ import { AppError } from '@ct/shared';
 import { orgEq, requireCan, type OrgContext } from '../auth/index';
 import { recordAudit } from '../audit/index';
 import { mapDbError, notFound } from '../errors';
+import { getLastAutomationRun } from './runs';
 import { AUTOMATION_CATALOG, getAutomationSpec, type AutomationSpec } from './catalog';
 
 /**
@@ -83,8 +84,10 @@ export async function listAutomations(db: Database, ctx: OrgContext): Promise<Au
 
 export interface AutomationDetail extends AutomationSpec {
   status: string; // 'CORE' | 'ACTIVE' | 'PAUSED'
-  lastRunAt: string | null; // sólo sync.* (último job de ese tipo)
+  lastRunAt: string | null; // sync.* → último job de ese tipo · sweep.* → última fila de `automation_runs`
   lastRunStatus: string | null;
+  /** Resultado de la última ejecución (sólo barridos): `{ archived: 3 }`, `{ deleted: 0, skipped: 2 }`, `{ error }`. */
+  lastRunResult: Record<string, unknown> | null;
 }
 
 /** Detalle de una automatización para el panel lateral. Incluye última ejecución para las `sync.*`. */
@@ -100,7 +103,18 @@ export async function getAutomation(
 
   let lastRunAt: string | null = null;
   let lastRunStatus: string | null = null;
-  if (spec.kind === 'sync' && spec.provider) {
+  /** Qué hizo la última vez («archivados: 3»), sólo en los barridos: es lo que responde «¿y qué borró?» (E-8). */
+  let lastRunResult: Record<string, unknown> | null = null;
+  if (spec.kind === 'sweep') {
+    // Los barridos no pasan por la cola `jobs`: su huella está en `automation_runs` (E-8, 2026-09-27). Antes de eso
+    // esta rama no existía y el panel no decía NADA de ellos, ni aunque hubieran borrado datos esa mañana.
+    const run = await getLastAutomationRun(db, ctx, key);
+    if (run) {
+      lastRunAt = run.startedAt.toISOString();
+      lastRunStatus = run.status;
+      lastRunResult = run.error ? { error: run.error } : run.result;
+    }
+  } else if (spec.kind === 'sync' && spec.provider) {
     const jobType = `integration.${spec.provider.toLowerCase()}.sync`;
     const [last] = await db
       .select({ at: jobs.updatedAt, status: jobs.status })
@@ -114,7 +128,7 @@ export async function getAutomation(
     }
   }
 
-  return { ...spec, status: effectiveStatus(spec, overrides), lastRunAt, lastRunStatus };
+  return { ...spec, status: effectiveStatus(spec, overrides), lastRunAt, lastRunStatus, lastRunResult };
 }
 
 /**

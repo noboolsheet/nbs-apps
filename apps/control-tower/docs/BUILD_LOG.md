@@ -5,6 +5,45 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-09-27 — E-8: los barridos ya dejan huella (y F-41, el test que dependía del orden) ✅
+
+**El problema.** Siete barridos corren solos cada día y **dos de ellos archivan y borran datos**; de ninguno se sabía
+desde la app si había corrido ni qué había hecho. El panel de Automatización calculaba «última ejecución» **sólo** para
+los `sync.*`, leyendo la tabla `jobs` — y los barridos no pasan por la cola: se ejecutan en el tick del worker y lo
+único que dejaban era una línea en el log del contenedor. Un borrado automático sin rastro visible no se podía quedar
+así, y con el autoarchivado nuevo (ACT-16) pesaba más todavía.
+
+**Lo que se ha hecho.** Tabla **`automation_runs`** (M45): una fila por ejecución, con `automation_key`, estado,
+`result` en jsonb y el error si lo hubo. Por qué no reutilizar `sync_runs`: esa es de los syncs hasta en los huesos
+(provider NOT NULL, FK a la integración, contadores created/updated/deleted/archived) y un barrido no tiene proveedor.
+Por qué no convertir los barridos en jobs: eso cambiaría su **ejecución** (cola, reintentos, reaper) para resolver un
+problema de **observabilidad**.
+
+**El bucle de los seis barridos, una sola vez.** Estaban copiados: leer organizaciones, saltar las pausadas, montar el
+contexto SYSTEM, acumular contadores. Ahora hay un `sweepEachOrg(db, key, fn)` que además anota. Dos matices que no son
+detalles: **«sin política configurada» no se anota** (si no, el historial se llenaría de ejecuciones vacías y
+esconderían las de verdad) y **un fallo en una organización se anota como FAILED y no para las demás**.
+
+**En el panel** aparece «última ejecución» para los barridos, con **qué hicieron** («archivados: 3») y, si la purga
+conservó algo porque una fila viva lo usa, el run queda **«con advertencias»** en vez de en verde. De paso caían dos
+cosas que estaban ahí: el literal `'Nunca'` fuera del diccionario y un enlace con `text-blue-600 dark:text-blue-400` a
+mano, que `DESIGN_TOKENS` prohíbe. El historial se recorta con los demás (50 por automatización, junto a `sync_runs`).
+
+**F-41, arreglado:** el test del histórico de procesos le pone a **su** job un `created_at` del año 2000 para que
+`processNextJob` reclame ése y no el que otro fichero dejó pendiente. La función de producción no se toca: el worker
+hace bien en coger cualquiera.
+
+**Tres cosas que aprendí escribiendo los tests, anotadas donde toca:**
+- Un test que asierta los **totales** de un barrido falla según el orden: el barrido recorre **todas** las
+  organizaciones de la base. Sólo se comprueba lo de la organización del test. (Caí en ello y es el mismo fallo F-41.)
+- El caso «la purga conserva algo» **no puede** ir en un test con `inRollback`: la FK que falla aborta la transacción
+  del test. Va en `retention.test.ts`, que usa el arnés sin transacción justo por eso.
+- Una tabla nueva con FK a `organizations` hay que añadirla a la limpieza del arnés (`dropOrg`), o el test se cae al
+  limpiar y no al probar. Le faltaban `automation_runs`, `quick_notes` y `sync_runs`.
+
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (198) · `pnpm build` · `pnpm test:integration` (**219**, 4
+nuevos) · `e2e-journeys` (todos OK).
+
 ## 2026-09-27 — Repaso de estados: el backlog contra el código ✅
 
 Segundo repaso completo de lo anotado (el primero fue el 2026-09-01), verificando **con el código** si lo que figura
@@ -915,7 +954,12 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-09-27): repaso de estados.** El backlog, verificado contra el código: **cuatro** ítems estaban
+> **⚑ ÚLTIMO (2026-09-27): E-8 — los barridos dejan huella.** Tabla `automation_runs` (M45): cada ejecución de cada
+> barrido queda anotada con **lo que hizo**, y el panel de Automatización lo muestra («archivados: 3», o «con
+> advertencias» si la purga conservó algo). El bucle de los seis barridos pasa a estar **una sola vez**. Arreglado
+> también **F-41** (el test que dependía del orden de los ficheros). Siguen **F-40** (i18n) y **F-28** (topes).
+>
+> **⚑ ANTES (2026-09-27): repaso de estados.** El backlog, verificado contra el código: **cuatro** ítems estaban
 > hechos y seguían anotados (over-fetch de la ficha de proyecto, healthcheck del worker, autoguardado frágil, login sin
 > primitivas), **dos** se recortan a lo que queda de verdad (F-28: 23 consultas sin tope · E-8: los barridos no dejan
 > huella consultable) y hay **dos nuevos**: **F-40** (hay texto de interfaz en español fuera del diccionario, incluida

@@ -9,6 +9,9 @@ import {
   listAutomations,
   getAutomation,
   runAutomationNow,
+  runTerminalArchiveSweep,
+  runArchivedPurgeSweep,
+  createProject,
   type OrgContext,
 } from '@ct/application';
 
@@ -161,6 +164,63 @@ describe('ejecutar automatización ahora', () => {
     await inRollback(async (tx) => {
       const ctx = await makeOrg(tx);
       await expect(runAutomationNow(tx, ctx, 'event.opportunity_won')).rejects.toThrow();
+    });
+  });
+});
+
+/**
+ * E-8 — **huella de los barridos**. De los siete barridos diarios (dos de ellos archivan y borran datos) no se sabía
+ * desde la app si habían corrido ni qué habían hecho: «última ejecución» existía sólo para los `sync.*`, que sí pasan
+ * por la cola `jobs`. Esto comprueba que ahora dejan constancia y que el panel la ve.
+ */
+describe('huella de los barridos (E-8)', () => {
+  it('un barrido deja su ejecución con lo que hizo, y `getAutomation` la devuelve', async () => {
+    await inRollback(async (tx) => {
+      const ctx = await makeOrg(tx);
+      // Un proyecto cerrado hace un mes: el autoarchivado se lo lleva.
+      const pr = await createProject(tx, ctx, { name: 'Cerrado hace un mes' });
+      await tx.update(s.projects).set({ status: 'CLOSED' }).where(eq(s.projects.id, pr.id));
+      await tx.execute(sql`update projects set updated_at = now() - interval '30 days' where id = ${pr.id}`);
+
+      // Ojo: el total que devuelve el barrido es de TODAS las organizaciones (las recorre todas), así que aquí se
+      // mira el run de ESTA, que es lo que además ve el panel.
+      await runTerminalArchiveSweep(tx);
+
+      const detail = await getAutomation(tx, ctx, 'sweep.terminal_archive');
+      expect(detail.lastRunAt).toBeTruthy();
+      expect(detail.lastRunStatus).toBe('COMPLETED');
+      expect(detail.lastRunResult).toEqual({ archived: 1 });
+    });
+  });
+
+  it('un barrido PAUSADO no corre ni deja huella', async () => {
+    await inRollback(async (tx) => {
+      const ctx = await makeOrg(tx);
+      await setAutomationStatus(tx, ctx, 'sweep.terminal_archive', 'PAUSED');
+      await runTerminalArchiveSweep(tx);
+      expect((await getAutomation(tx, ctx, 'sweep.terminal_archive')).lastRunAt).toBeNull();
+    });
+  });
+
+  it('sin política configurada NO cuenta como ejecución (o el historial se llenaría de nada)', async () => {
+    await inRollback(async (tx) => {
+      const ctx = await makeOrg(tx);
+      // `archivedRetentionDays` sin configurar = «conservar siempre».
+      await runArchivedPurgeSweep(tx);
+      // **Sólo se comprueba ESTA organización.** Los totales que devuelve un barrido son de todas las que haya en la
+      // base —incluidas las de otros ficheros de test y la sembrada—, así que asertar sobre ellos es un test que
+      // falla según el orden (es justo el fallo F-41 que había que arreglar; no lo repitamos aquí).
+      expect((await getAutomation(tx, ctx, 'sweep.archived_purge')).lastRunAt).toBeNull();
+    });
+  });
+
+  it('«Ejecutar ahora» también deja huella (si no, el panel mentiría justo después de pulsarlo)', async () => {
+    await inRollback(async (tx) => {
+      const ctx = await makeOrg(tx);
+      await runAutomationNow(tx, ctx, 'sweep.terminal_archive');
+      const detail = await getAutomation(tx, ctx, 'sweep.terminal_archive');
+      expect(detail.lastRunAt).toBeTruthy();
+      expect(detail.lastRunResult).toEqual({ archived: 0 });
     });
   });
 });

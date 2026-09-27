@@ -204,6 +204,13 @@
       "when": 1790700000000,
       "tag": "0028_m44_quick_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1790800000000,
+      "tag": "0029_m45_automation_runs",
+      "breakpoints": true
     }
   ]
 }
