@@ -9,7 +9,7 @@ import { NewRecordButton } from '@/components/ui/new-record-button';
 import { RecordLink } from '@/components/ui/record-link';
 import { PaymentStatusControl } from '@/components/payments/forms';
 import { enumLabel } from '@/lib/labels';
-import { formatDate } from '@/lib/i18n/format';
+import { formatMoney, formatDate } from '@/lib/i18n/format';
 import { t } from '@/lib/i18n';
 
 export const dynamic = 'force-dynamic';
@@ -21,11 +21,6 @@ type Payment = Awaited<ReturnType<typeof listPayments>>[number];
  * bolsillo del owner, no un cálculo fiscal — si algún día depende del régimen o del país, pasará a Ajustes.
  */
 const TAX_RESERVE_PCT = 30;
-
-/** Importe con su moneda, alineado a la derecha para poder compararlos de un vistazo. */
-function money(amount: string, currency: string): string {
-  return `${Number(amount).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
-}
 
 export default async function PaymentsPage({ searchParams }: { searchParams: Promise<{ ver?: string }> }) {
   const ctx = await getCurrentContext();
@@ -78,7 +73,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
       className: 'w-36 text-right tabular-nums',
       // Ordena por NÚMERO, no por el texto formateado: «1.000 €» iría antes que «9 €» alfabéticamente.
       value: (p) => Number(p.amount),
-      cell: (p) => money(p.amount, p.currencyCode),
+      cell: (p) => formatMoney(p.amount, p.currencyCode),
     },
     {
       header: t('field.paymentDueDate'),
@@ -125,7 +120,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                 <span className="text-fg-muted">
                   {tot.direction === 'IN' ? t('payments.pendingIn') : t('payments.pendingOut')}:{' '}
                 </span>
-                <span className="font-medium tabular-nums">{money(String(tot.total), tot.currencyCode)}</span>
+                <span className="font-medium tabular-nums">{formatMoney(String(tot.total), tot.currencyCode)}</span>
                 <span className="text-fg-subtle"> ({tot.count})</span>
               </span>
               {tot.direction === 'IN' && (
@@ -135,7 +130,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                 >
                   <span>{t('payments.taxReserve', { pct: TAX_RESERVE_PCT })}: </span>
                   <span className="font-medium tabular-nums">
-                    {money(String(tot.total * (TAX_RESERVE_PCT / 100)), tot.currencyCode)}
+                    {formatMoney(String(tot.total * (TAX_RESERVE_PCT / 100)), tot.currencyCode)}
                   </span>
                 </span>
               )}

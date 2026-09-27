@@ -1,7 +1,6 @@
-import { and, eq, count, desc, lt, gte, or, inArray, notInArray, isNotNull, isNull } from 'drizzle-orm';
+import { and, eq, count, sum, desc, lt, lte, gt, gte, or, inArray, notInArray, isNotNull, isNull } from 'drizzle-orm';
 import type { Database } from '@ct/db';
 import {
-  clients,
   opportunities,
   tasks,
   deliverables,
@@ -26,6 +25,14 @@ import { checkDbHealth } from '@ct/db';
 /**
  * Context Service para Home (doc 3 §3A.3 / doc old_9 §12). Home es una PROYECCIÓN: todo es
  * derivado de las entidades existentes y cada item enlaza a su fuente. No es fuente de verdad.
+ *
+ * **Criterio de la vista (owner 2026-09-27):** un dato sólo está en Inicio si (a) pide una acción, (b) es una señal
+ * de salud, y (c) **no está ya desplegado más abajo en la misma página**. Antes se incumplía lo tercero de forma
+ * sistemática: la misma cosa aparecía como contador, como alerta de «Requiere atención» y como lista completa —
+ * tareas vencidas, tareas de hoy, decisiones y proyectos, las cuatro—. Ahora cada dato vive en UN sitio:
+ *  · lo que tiene lista en Home (tareas, proyectos, decisiones en revisión) **no** tiene contador ni alerta;
+ *  · lo que NO tiene lista (carga de tareas abiertas, embudo, capturas) es un contador;
+ *  · «Requiere atención» se queda sólo con lo que no aparece en ningún otro bloque.
  */
 
 export interface AttentionItem {
@@ -67,34 +74,36 @@ export async function getHomeDashboard(db: Database, ctx: OrgContext) {
     and(notInArray(projects.status, [...CLOSED_PROJECT_STATUSES]), isNull(projects.archivedAt)),
   );
 
+  // Ventana de «lo que viene»: de mañana a +7 días. Home mostraba sólo vencidas y HOY, así que una tarea para
+  // mañana —o sin fecha— era invisible desde aquí, que es la mejor forma de olvidarse de algo (owner 2026-09-27).
+  const weekEnd = new Date(`${today}T00:00:00Z`);
+  weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
+  const weekEndStr = weekEnd.toISOString().slice(0, 10);
+
   const [
-    clientsN,
-    projectsActiveN,
     oppsOpenN,
     tasksOpenN,
-    decisionsN,
     allProjects,
     todaysWork,
+    upcoming,
+    tasksNoDueN,
     todaysEventsRaw,
     overdue,
     overdueN,
     deliverablesReview,
     inboxPending,
-    decisionsReview,
-    recentDecisions,
+    decisionsInReview,
     wonWithoutProject,
-    paymentsOverdueN,
+    paymentsPending,
+    paymentsOverdue,
     integrationsAll,
     jobsPending,
     outboxPending,
     dbHealth,
     recentAudit,
   ] = await Promise.all([
-    toCount(db.select({ n: count() }).from(clients).where(orgEq(clients.organizationId, ctx))),
-    toCount(db.select({ n: count() }).from(projects).where(and(orgEq(projects.organizationId, ctx), eq(projects.status, 'ACTIVE')))),
     toCount(db.select({ n: count() }).from(opportunities).where(and(orgEq(opportunities.organizationId, ctx), eq(opportunities.status, 'OPEN')))),
     toCount(db.select({ n: count() }).from(tasks).leftJoin(projects, eq(projects.id, tasks.projectId)).where(and(orgEq(tasks.organizationId, ctx), inArray(tasks.status, [...ACTIVE_TASK_STATUSES]), notInClosedProject))),
-    toCount(db.select({ n: count() }).from(decisions).where(orgEq(decisions.organizationId, ctx))),
     listProjects(db, ctx),
     // Today's Work: sólo tareas activas de nivel superior con fecha == hoy (sin subtareas, vencidas ni completadas).
     // Las subtareas solo asoman fuera de su tarea madre cuando están VENCIDAS (bloque Overdue de abajo).
@@ -105,6 +114,22 @@ export async function getHomeDashboard(db: Database, ctx: OrgContext) {
       .where(and(orgEq(tasks.organizationId, ctx), isNull(tasks.archivedAt), isNull(tasks.parentTaskId), inArray(tasks.status, [...ACTIVE_TASK_STATUSES]), eq(tasks.dueDate, today), notInClosedProject))
       .orderBy(tasks.dueDate)
       .limit(10),
+    // Próximos 7 días (de mañana en adelante): lo que viene, que antes no se veía hasta el día mismo.
+    db
+      .select({ id: tasks.id, title: tasks.title, status: tasks.status, dueDate: tasks.dueDate, projectId: tasks.projectId })
+      .from(tasks)
+      .leftJoin(projects, eq(projects.id, tasks.projectId))
+      .where(and(orgEq(tasks.organizationId, ctx), isNull(tasks.archivedAt), isNull(tasks.parentTaskId), inArray(tasks.status, [...ACTIVE_TASK_STATUSES]), gt(tasks.dueDate, today), lte(tasks.dueDate, weekEndStr), notInClosedProject))
+      .orderBy(tasks.dueDate)
+      .limit(10),
+    // Tareas activas SIN fecha: no se listan (serían un cajón de sastre), pero se dice cuántas hay y se enlaza.
+    toCount(
+      db
+        .select({ n: count() })
+        .from(tasks)
+        .leftJoin(projects, eq(projects.id, tasks.projectId))
+        .where(and(orgEq(tasks.organizationId, ctx), isNull(tasks.archivedAt), isNull(tasks.parentTaskId), inArray(tasks.status, [...ACTIVE_TASK_STATUSES]), isNull(tasks.dueDate), notInClosedProject)),
+    ),
     // Today's Events: eventos de calendario SÓLO de hoy (con hora dentro del día en tz de la org, o de día completo).
     db
       .select({ id: calendarEvents.id, title: calendarEvents.title, htmlLink: calendarEvents.htmlLink, startAt: calendarEvents.startAt, isAllDay: calendarEvents.isAllDay, location: calendarEvents.location })
@@ -132,8 +157,14 @@ export async function getHomeDashboard(db: Database, ctx: OrgContext) {
     toCount(db.select({ n: count() }).from(tasks).leftJoin(projects, eq(projects.id, tasks.projectId)).where(and(orgEq(tasks.organizationId, ctx), inArray(tasks.status, [...ACTIVE_TASK_STATUSES]), isNotNull(tasks.dueDate), lt(tasks.dueDate, today), notInClosedProject))),
     toCount(db.select({ n: count() }).from(deliverables).where(and(orgEq(deliverables.organizationId, ctx), eq(deliverables.status, 'REVIEW')))),
     toCount(db.select({ n: count() }).from(knowledgeInbox).where(and(orgEq(knowledgeInbox.organizationId, ctx), inArray(knowledgeInbox.status, ['NEW', 'PROCESSING'])))),
-    toCount(db.select({ n: count() }).from(decisions).where(and(orgEq(decisions.organizationId, ctx), eq(decisions.status, 'REVIEW')))),
-    db.select({ id: decisions.id, title: decisions.title, status: decisions.status }).from(decisions).where(and(orgEq(decisions.organizationId, ctx), isNull(decisions.archivedAt))).orderBy(desc(decisions.createdAt)).limit(5),
+    // Decisiones EN REVISIÓN, no «las últimas»: una decisión ya aprobada es lectura y su sitio es su sección; lo que
+    // pide algo de ti es lo que está esperando que la cierres (owner 2026-09-27).
+    db
+      .select({ id: decisions.id, title: decisions.title, status: decisions.status, createdAt: decisions.createdAt })
+      .from(decisions)
+      .where(and(orgEq(decisions.organizationId, ctx), isNull(decisions.archivedAt), eq(decisions.status, 'REVIEW')))
+      .orderBy(desc(decisions.createdAt))
+      .limit(5),
     // Ganadas SIN proyecto: desde que la automatización del ganado está suspendida (el owner confirma cada vez),
     // este estado es normal y hay que PROPONERLO aquí; si no, una oportunidad ganada se queda sin proyecto y sin
     // que nada lo diga hasta que alguien entra en su ficha.
@@ -150,26 +181,34 @@ export async function getHomeDashboard(db: Database, ctx: OrgContext) {
         ),
       )
       .limit(10),
-    // Pagos retrasados: pendientes cuya fecha prevista ya pasó (mismo criterio que las tareas vencidas).
-    toCount(
-      db
-        .select({ n: count() })
-        .from(payments)
-        .where(
-          and(
-            orgEq(payments.organizationId, ctx),
-            isNull(payments.archivedAt),
-            eq(payments.status, 'PENDING'),
-            isNotNull(payments.dueDate),
-            lt(payments.dueDate, today),
-          ),
+    // DINERO (owner 2026-09-27: «cuánto debo o me deben»). Pendiente por dirección y moneda: IN = te deben,
+    // OUT = debes. Sumar euros con dólares no significa nada, así que se agrupa por moneda y la vista pinta una
+    // línea por cada una. Es la misma consulta que ya usa la página de Pagos.
+    db
+      .select({ direction: payments.direction, currencyCode: payments.currencyCode, total: sum(payments.amount), n: count() })
+      .from(payments)
+      .where(and(orgEq(payments.organizationId, ctx), isNull(payments.archivedAt), eq(payments.status, 'PENDING')))
+      .groupBy(payments.direction, payments.currencyCode),
+    // Y lo RETRASADO (pendiente con fecha pasada), que es lo que de verdad hay que mirar hoy. Antes sólo existía
+    // como aviso con el número de pagos, sin importe: «2 pagos retrasados» no dice si son 40 € o 4.000 €.
+    db
+      .select({ direction: payments.direction, currencyCode: payments.currencyCode, total: sum(payments.amount), n: count() })
+      .from(payments)
+      .where(
+        and(
+          orgEq(payments.organizationId, ctx),
+          isNull(payments.archivedAt),
+          eq(payments.status, 'PENDING'),
+          isNotNull(payments.dueDate),
+          lt(payments.dueDate, today),
         ),
-    ),
+      )
+      .groupBy(payments.direction, payments.currencyCode),
     toCount(db.select({ n: count() }).from(integrations).where(orgEq(integrations.organizationId, ctx))),
     toCount(db.select({ n: count() }).from(jobs).where(eq(jobs.status, 'PENDING'))),
     toCount(db.select({ n: count() }).from(outboxEvents).where(eq(outboxEvents.status, 'PENDING'))),
     checkDbHealth(),
-    listRecentAudit(db, ctx, 8),
+    listRecentAudit(db, ctx, 5),
   ]);
 
   const atRisk = allProjects.filter((p) => p.health === 'AT_RISK');
@@ -236,6 +275,11 @@ export async function getHomeDashboard(db: Database, ctx: OrgContext) {
     };
   });
 
+  /**
+   * «Requiere atención» = **triaje de lo que no aparece en ningún otro bloque de esta página**. Se le quitaron las
+   * cuatro alertas que repetían una lista de más abajo (tareas vencidas, tareas de hoy, decisiones en revisión y
+   * capturas por procesar) y la de pagos retrasados, que ahora vive en el bloque de dinero **con su importe**.
+   */
   const attention: AttentionItem[] = [];
   for (const p of atRisk) {
     attention.push({ kind: 'project_at_risk', label: `Proyecto en riesgo: ${p.name}`, href: `/projects/${p.id}`, severity: 'high' });
@@ -243,34 +287,13 @@ export async function getHomeDashboard(db: Database, ctx: OrgContext) {
   for (const o of wonWithoutProject) {
     attention.push({
       kind: 'opportunity_won_no_project',
-      label: `Oportunidad ganada sin proyecto: ${o.name} — créalo cuando quieras`,
+      label: `Oportunidad ganada sin proyecto: ${o.name}`,
       href: `/crm/opportunities/${o.id}`,
       severity: 'medium',
     });
   }
-  if (overdueN > 0) {
-    attention.push({ kind: 'tasks_overdue', label: `${overdueN} tarea(s) vencida(s) — reprograma su fecha`, href: '/tasks', severity: 'high' });
-  }
-  if (todaysWork.length > 0) {
-    attention.push({ kind: 'tasks_due', label: `${todaysWork.length} tarea(s) para hoy`, href: '/tasks', severity: 'medium' });
-  }
   if (deliverablesReview > 0) {
     attention.push({ kind: 'deliverables_review', label: `${deliverablesReview} entregable(s) en revisión`, href: '/projects', severity: 'medium' });
-  }
-  if (inboxPending > 0) {
-    attention.push({ kind: 'inbox_pending', label: `${inboxPending} captura(s) por procesar`, href: '/knowledge/inbox', severity: 'medium' });
-  }
-  if (decisionsReview > 0) {
-    attention.push({ kind: 'decisions_review', label: `${decisionsReview} decisión(es) en revisión`, href: '/knowledge/decisions', severity: 'medium' });
-  }
-  if (paymentsOverdueN > 0) {
-    // Alta severidad: un cobro o un pago fuera de plazo cuesta dinero o credibilidad.
-    attention.push({
-      kind: 'payments_overdue',
-      label: `${paymentsOverdueN} pago(s) retrasado(s)`,
-      href: '/payments?ver=retrasados',
-      severity: 'high',
-    });
   }
 
   // El PROYECTO de cada tarea de Home: sin él, con varios proyectos activos no se sabe de cuál es cada tarea
@@ -282,21 +305,37 @@ export async function getHomeDashboard(db: Database, ctx: OrgContext) {
       projectName: r.projectId ? (projectNameById.get(r.projectId) ?? null) : null,
     }));
 
+  /** Totales de dinero ya normalizados (la consulta devuelve `sum` como string). */
+  const money = (rows: { direction: string; currencyCode: string; total: string | null; n: number }[]) =>
+    rows.map((r) => ({
+      direction: r.direction,
+      currencyCode: r.currencyCode,
+      total: Number(r.total ?? 0),
+      count: Number(r.n),
+    }));
+
   return {
+    /**
+     * Las tres cifras de arriba. Son las únicas que **no** tienen su lista en esta página: la carga de trabajo, el
+     * embudo y la bandeja. Se fueron «Clientes» y «Decisiones» (no pedían ninguna acción: para navegar está el menú)
+     * y «Proyectos activos», que era el ejemplo del owner — la lista de abajo dice lo mismo y además dice cuáles.
+     */
     snapshot: {
-      clients: clientsN,
-      projectsActive: projectsActiveN,
-      opportunitiesOpen: oppsOpenN,
       tasksOpen: tasksOpenN,
-      decisions: decisionsN,
+      opportunitiesOpen: oppsOpenN,
+      inboxPending,
     },
     today,
+    money: { pending: money(paymentsPending), overdue: money(paymentsOverdue) },
     attention,
     activeProjects,
     todaysWork: withProject(todaysWork),
+    upcoming: withProject(upcoming),
     overdue: withProject(overdue),
+    tasksNoDue: tasksNoDueN,
+    overdueTasks: overdueN,
     todaysEvents,
-    recentDecisions,
+    decisionsInReview,
     recentActivity,
     inboxPending,
     systemHealth: {

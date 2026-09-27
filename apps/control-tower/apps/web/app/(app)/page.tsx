@@ -11,8 +11,8 @@ import { RecordLink } from '@/components/ui/record-link';
 import { auditEntityTarget } from '@/lib/record-registry';
 import { TaskCompleteButton, TaskDueDateControl } from '@/components/projects/forms';
 import { enumLabel } from '@/lib/labels';
-import { t } from '@/lib/i18n';
-import { formatDateTime } from '@/lib/i18n/format';
+import { t, tPlural } from '@/lib/i18n';
+import { formatDate, formatDateTime, formatMoney } from '@/lib/i18n/format';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,13 +34,15 @@ export default async function HomePage() {
         <h1 className="text-2xl font-semibold tracking-tight">{t('nav.home')}</h1>
       </div>
 
-      {/* Executive Snapshot */}
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-        <MetricCard label={t('home.metricClients')} value={d.snapshot.clients} href="/crm/clients?status=ACTIVE" />
-        <MetricCard label={t('home.activeProjects')} value={d.snapshot.projectsActive} href="/projects?tab=Active" />
-        <MetricCard label={t('home.metricOpenOpportunities')} value={d.snapshot.opportunitiesOpen} href="/crm/opportunities" />
+      {/* DINERO — lo primero, porque es lo que no estaba en ninguna parte: cuánto te deben y cuánto debes. */}
+      <MoneyStrip pending={d.money.pending} overdue={d.money.overdue} />
+
+      {/* Las tres cifras que NO tienen su lista en esta página (carga, embudo y bandeja). Se fueron «Clientes» y
+          «Decisiones» —no pedían ninguna acción— y «Proyectos activos», que repetía la lista de abajo. */}
+      <section className="grid grid-cols-3 gap-3">
         <MetricCard label={t('home.metricOpenTasks')} value={d.snapshot.tasksOpen} href="/tasks" />
-        <MetricCard label={t('decisions.title')} value={d.snapshot.decisions} href="/knowledge/decisions" />
+        <MetricCard label={t('home.metricOpenOpportunities')} value={d.snapshot.opportunitiesOpen} href="/crm/opportunities" />
+        <MetricCard label={t('home.metricInboxPending')} value={d.snapshot.inboxPending} href="/knowledge/inbox" />
       </section>
 
       {/* DOS columnas continuas (no una rejilla por fila): así cada columna fluye con el alto de su contenido y no
@@ -95,14 +97,14 @@ export default async function HomePage() {
             )}
           </section>
 
-          {/* Recent Decisions */}
+          {/* Decisiones EN REVISIÓN (antes eran «las últimas», que era lectura y no pedía nada). */}
           <section className="flex flex-col gap-3">
-            <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">{t('home.recentDecisions')}</h2>
-            {d.recentDecisions.length === 0 ? (
-              <EmptyState title={t('decisions.empty')} />
+            <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">{t('home.decisionsInReview')}</h2>
+            {d.decisionsInReview.length === 0 ? (
+              <EmptyState title={t('home.decisionsInReviewEmpty')} hint={t('home.decisionsInReviewHint')} />
             ) : (
               <ul className="flex flex-col gap-2">
-                {d.recentDecisions.map((dec) => (
+                {d.decisionsInReview.map((dec) => (
                   <li key={dec.id} className="flex items-center justify-between gap-3 rounded-lg border border-line px-3 py-2 text-sm">
                     {/* `decision` es panel-only en el registro: su ficha ES el panel lateral, así que se entra con
                         `RecordLink` (abre el drawer sobre Home) en vez de navegar a una página que no existe. */}
@@ -116,28 +118,28 @@ export default async function HomePage() {
             )}
           </section>
 
-          {/* System Health */}
-          <section className="flex flex-col gap-3">
+          {/* Estado del sistema en UNA línea: es una señal de salud, no un panel. Deja de ocupar cuatro cajas y sigue
+              llevando a donde se mira/arregla cada cosa. Si algo va mal, el punto se pone en rojo y el texto lo dice. */}
+          <section className="flex flex-col gap-2">
             <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">{t('home.systemHealth')}</h2>
-            {/* Las cuatro cajas llevan a donde se mira/arregla cada cosa: eran texto muerto, y cuando la salida
-                pendiente crece lo que quieres es llegar allí de un clic, no buscarlo en el menú. */}
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <Link href="/automation/health" className={healthBox}>
-                DB {d.systemHealth.db ? <StatusBadge status="ACTIVE" /> : <StatusBadge status="ERROR" />}
-                {d.systemHealth.dbLatencyMs != null && (
-                  <span className="text-xs text-fg-muted"> · {d.systemHealth.dbLatencyMs}ms</span>
-                )}
-              </Link>
-              <Link href="/automation/integrations" className={healthBox}>
-                {t('home.integrations')}: {d.systemHealth.integrations}
-              </Link>
-              <Link href="/automation/health" className={healthBox}>
-                {t('home.jobsPending')}: {d.systemHealth.jobsPending}
-              </Link>
-              <Link href="/automation/health" className={healthBox}>
-                {t('home.outboxPending')}: {d.systemHealth.outboxPending}
-              </Link>
-            </div>
+            <Link
+              href="/automation/health"
+              className={`flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border px-3 py-2 text-sm hover:bg-surface-muted ${
+                d.systemHealth.db ? 'border-line' : 'border-danger-border'
+              }`}
+            >
+              <span className={d.systemHealth.db ? 'text-success' : 'text-danger'} aria-hidden>
+                ●
+              </span>
+              <span className="font-medium">{d.systemHealth.db ? t('home.healthOk') : t('home.healthDbDown')}</span>
+              {d.systemHealth.dbLatencyMs != null && (
+                <span className="text-xs text-fg-muted">{d.systemHealth.dbLatencyMs}ms</span>
+              )}
+              <span className="text-xs text-fg-muted">
+                {t('home.jobsPending')}: {d.systemHealth.jobsPending} · {t('home.outboxPending')}:{' '}
+                {d.systemHealth.outboxPending} · {t('home.integrations')}: {d.systemHealth.integrations}
+              </span>
+            </Link>
           </section>
         </div>
 
@@ -184,6 +186,32 @@ export default async function HomePage() {
                   </li>
                 ))}
               </ul>
+            )}
+          </section>
+
+          {/* Próximos 7 días: «lo que viene». Sin esto, Inicio sólo enseñaba vencidas y HOY, así que una tarea para
+              mañana no existía desde aquí. Y al final, cuántas hay SIN fecha, que era el otro agujero. */}
+          <section className="flex flex-col gap-3">
+            <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">{t('home.upcoming')}</h2>
+            {d.upcoming.length === 0 ? (
+              <EmptyState title={t('home.upcomingEmpty')} />
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {d.upcoming.map((task) => (
+                  <li key={task.id} className="flex items-center justify-between gap-3 rounded-lg border border-line px-3 py-2 text-sm">
+                    <span className="min-w-0">
+                      <Link className="hover:underline" href={`/tasks/${task.id}`}>{task.title}</Link>
+                      <TaskProject task={task} />
+                    </span>
+                    <span className="shrink-0 text-xs text-fg-muted">{formatDate(task.dueDate)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {d.tasksNoDue > 0 && (
+              <Link className="text-xs text-fg-muted underline-offset-2 hover:underline" href="/tasks">
+                {tPlural('home.tasksNoDue', d.tasksNoDue)}
+              </Link>
             )}
           </section>
 
@@ -262,7 +290,6 @@ function TaskProject({ task }: { task: { projectId: string | null; projectName: 
 }
 
 /** Caja de «Estado del sistema»: ahora es un enlace, con el mismo aspecto que tenía como `div`. */
-const healthBox = 'rounded border border-line px-3 py-2 hover:bg-surface-muted';
 
 /**
  * Nombre del registro de una entrada de «Actividad reciente», **abrible** cuando se puede.
@@ -298,5 +325,78 @@ function ActivityTarget({
         </Link>
       )}
     </>
+  );
+}
+
+/** Una fila de totales de dinero (los devuelve `getHomeDashboard` ya agrupados por dirección y moneda). */
+interface MoneyTotal {
+  direction: string;
+  currencyCode: string;
+  total: number;
+  count: number;
+}
+
+/**
+ * **Dinero** (owner 2026-09-27: «cuánto dinero debo o me deben»). Una línea por moneda: lo que te deben (cobros
+ * pendientes, IN), lo que debes (gastos pendientes, OUT) y el **neto**. Si hay algo fuera de plazo, se dice aparte y
+ * en rojo con su importe — antes esto sólo existía como aviso con el número de pagos, y «2 pagos retrasados» no dice
+ * si son 40 € o 4.000 €.
+ *
+ * NO se suman monedas distintas: cada una va en su fila. Sumar euros con dólares no significaría nada.
+ */
+function MoneyStrip({ pending, overdue }: { pending: MoneyTotal[]; overdue: MoneyTotal[] }) {
+  const currencies = [...new Set([...pending, ...overdue].map((r) => r.currencyCode))].sort();
+  const pick = (rows: MoneyTotal[], currency: string, direction: string) =>
+    rows.find((r) => r.currencyCode === currency && r.direction === direction);
+
+  return (
+    <section className="flex flex-col gap-2">
+      <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">{t('home.moneyTitle')}</h2>
+      {currencies.length === 0 ? (
+        <Link href="/payments" className="rounded-lg border border-line px-3 py-2 text-sm text-fg-muted hover:bg-surface-muted">
+          {t('home.moneyEmpty')}
+        </Link>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {currencies.map((currency) => {
+            const inn = pick(pending, currency, 'IN');
+            const out = pick(pending, currency, 'OUT');
+            const lateIn = pick(overdue, currency, 'IN');
+            const lateOut = pick(overdue, currency, 'OUT');
+            const net = (inn?.total ?? 0) - (out?.total ?? 0);
+            return (
+              <div key={currency} className="flex flex-wrap items-baseline gap-x-6 gap-y-1 rounded-lg border border-line px-3 py-2 text-sm">
+                <Link className="hover:underline" href="/payments">
+                  <span className="text-fg-muted">{t('home.moneyOwedToYou')}: </span>
+                  <span className="font-medium tabular-nums">{formatMoney(inn?.total ?? 0, currency)}</span>
+                  {!!inn?.count && <span className="text-xs text-fg-subtle"> ({inn.count})</span>}
+                </Link>
+                <Link className="hover:underline" href="/payments">
+                  <span className="text-fg-muted">{t('home.moneyYouOwe')}: </span>
+                  <span className="font-medium tabular-nums">{formatMoney(out?.total ?? 0, currency)}</span>
+                  {!!out?.count && <span className="text-xs text-fg-subtle"> ({out.count})</span>}
+                </Link>
+                <span>
+                  <span className="text-fg-muted">{t('home.moneyNet')}: </span>
+                  <span className={`font-medium tabular-nums ${net < 0 ? 'text-danger' : ''}`}>
+                    {net > 0 ? '+' : ''}
+                    {formatMoney(net, currency)}
+                  </span>
+                </span>
+                {(lateIn || lateOut) && (
+                  <Link className="text-danger hover:underline" href="/payments?ver=retrasados">
+                    ⚠ {t('home.moneyOverdue')}:{' '}
+                    <span className="font-medium tabular-nums">
+                      {formatMoney((lateIn?.total ?? 0) + (lateOut?.total ?? 0), currency)}
+                    </span>
+                    <span className="text-xs"> ({(lateIn?.count ?? 0) + (lateOut?.count ?? 0)})</span>
+                  </Link>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
   );
 }

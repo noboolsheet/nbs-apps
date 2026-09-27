@@ -11,6 +11,8 @@ import {
   createOpportunity,
   captureKnowledge,
   createPayment,
+  createDecision,
+  updateDecisionStatus,
   type OrgContext,
 } from '@ct/application';
 
@@ -59,9 +61,10 @@ describe('home dashboard', () => {
       await createOpportunity(tx, sync(ctx), { name: 'Opp', stage: 'LEAD' });
 
       const d = await getHomeDashboard(tx, ctx);
-      expect(d.snapshot.clients).toBe(1);
-      expect(d.snapshot.projectsActive).toBe(1);
+      // Las tres cifras que quedan son las que NO tienen lista en Home (owner 2026-09-27): carga, embudo y bandeja.
+      // «Clientes», «Decisiones» y «Proyectos activos» se retiraron — el último repetía la lista de abajo.
       expect(d.snapshot.opportunitiesOpen).toBe(1);
+      expect(d.snapshot.tasksOpen).toBe(0);
       expect(d.activeProjects.map((x) => x.id)).toContain(p.id);
     });
   });
@@ -76,27 +79,39 @@ describe('home dashboard', () => {
       const atRisk = d.attention.find((a) => a.kind === 'project_at_risk');
       expect(atRisk).toBeTruthy();
       expect(atRisk!.href).toBe(`/projects/${p.id}`);
-      expect(d.attention.some((a) => a.kind === 'inbox_pending')).toBe(true);
-      expect(d.inboxPending).toBe(1);
+      // La bandeja pendiente es una CIFRA, no una alerta: «Requiere atención» se quedó sólo con lo que no aparece en
+      // ningún otro bloque de la página. Si vuelve a colarse como alerta, esto falla.
+      expect(d.attention.some((a) => a.kind === 'inbox_pending')).toBe(false);
+      expect(d.snapshot.inboxPending).toBe(1);
     });
   });
 
-  it("today's work sólo incluye tareas de hoy; las vencidas van al aviso (Fase 4)", async () => {
+  it('cada tarea cae en su cubo: vencidas · hoy · próximos 7 días · sin fecha', async () => {
     await inRollback(async (tx) => {
       const ctx = await makeOrg(tx);
       const p = await createProject(tx, ctx, { name: 'P' });
-      const today = new Date().toISOString().slice(0, 10);
-      await createTask(tx, ctx, { title: 'hoy', projectId: p.id, dueDate: today as unknown as Date });
-      await createTask(tx, ctx, { title: 'vencida', projectId: p.id, dueDate: '2000-01-01' as unknown as Date });
-      await createTask(tx, ctx, { title: 'futura', projectId: p.id, dueDate: '2999-01-01' as unknown as Date });
+      const day = (offset: number) => {
+        const d = new Date();
+        d.setUTCDate(d.getUTCDate() + offset);
+        return d.toISOString().slice(0, 10) as unknown as Date;
+      };
+      await createTask(tx, ctx, { title: 'hoy', projectId: p.id, dueDate: day(0) });
+      await createTask(tx, ctx, { title: 'vencida', projectId: p.id, dueDate: day(-30) });
+      await createTask(tx, ctx, { title: 'en tres días', projectId: p.id, dueDate: day(3) });
+      await createTask(tx, ctx, { title: 'lejana', projectId: p.id, dueDate: day(60) });
+      await createTask(tx, ctx, { title: 'sin fecha', projectId: p.id });
 
       const d = await getHomeDashboard(tx, ctx);
-      const titles = d.todaysWork.map((t) => t.title);
-      expect(titles).toContain('hoy');
-      expect(titles).not.toContain('vencida'); // vencidas fuera de la vista principal
-      expect(titles).not.toContain('futura');
-      // Las vencidas se surfacean como aviso, no como lista.
-      expect(d.attention.some((a) => a.kind === 'tasks_overdue')).toBe(true);
+      expect(d.todaysWork.map((t) => t.title)).toEqual(['hoy']);
+      expect(d.overdue.map((t) => t.title)).toEqual(['vencida']);
+      // «Próximos 7 días»: el agujero que había — una tarea para mañana no se veía desde Inicio hasta el día mismo.
+      expect(d.upcoming.map((t) => t.title)).toEqual(['en tres días']);
+      // Y las que no tienen fecha se cuentan (no se listan, serían un cajón de sastre).
+      expect(d.tasksNoDue).toBe(1);
+      expect(d.overdueTasks).toBe(1);
+      // Las vencidas YA NO son un aviso: tienen su propia lista, con acciones, en la misma página.
+      expect(d.attention.some((a) => a.kind === 'tasks_overdue')).toBe(false);
+      expect(d.attention.some((a) => a.kind === 'tasks_due')).toBe(false);
     });
   });
 
@@ -105,8 +120,11 @@ describe('home dashboard', () => {
       const a = await makeOrg(tx);
       const b = await makeOrg(tx);
       await createClient(tx, b, { name: 'B client' });
+      await createOpportunity(tx, sync(b), { name: 'Opp de B', stage: 'LEAD' });
+      await createPayment(tx, b, { concept: 'Cobro de B', amount: 500 });
       const d = await getHomeDashboard(tx, a);
-      expect(d.snapshot.clients).toBe(0);
+      expect(d.snapshot.opportunitiesOpen).toBe(0);
+      expect(d.money.pending).toEqual([]);
     });
   });
 
@@ -124,17 +142,35 @@ describe('home dashboard', () => {
     });
   });
 
-  it('los pagos retrasados avisan en «Requiere atención»', async () => {
+  it('el dinero sale con importes: te deben, debes y lo retrasado', async () => {
     await inRollback(async (tx) => {
       const ctx = await makeOrg(tx);
       await createPayment(tx, ctx, { concept: 'Factura vencida', amount: 500, dueDate: new Date('2020-01-01') });
       await createPayment(tx, ctx, { concept: 'Factura futura', amount: 100, dueDate: new Date('2999-01-01') });
+      await createPayment(tx, ctx, { concept: 'Hosting', amount: 40, direction: 'OUT', payeeLabel: 'Proveedor' });
 
       const home = await getHomeDashboard(tx, ctx);
-      const aviso = home.attention.find((a) => a.kind === 'payments_overdue');
-      expect(aviso).toBeDefined();
-      expect(aviso!.label).toContain('1'); // sólo la vencida
-      expect(aviso!.severity).toBe('high');
+      const pendIn = home.money.pending.find((r) => r.direction === 'IN');
+      const pendOut = home.money.pending.find((r) => r.direction === 'OUT');
+      expect(pendIn).toMatchObject({ total: 600, count: 2 });
+      expect(pendOut).toMatchObject({ total: 40, count: 1 });
+      // Lo retrasado, con IMPORTE: antes era un aviso con el número de pagos, que no dice si son 40 € o 4.000 €.
+      expect(home.money.overdue).toMatchObject([{ direction: 'IN', total: 500, count: 1 }]);
+      // Y ya no se duplica como alerta.
+      expect(home.attention.some((a) => a.kind === 'payments_overdue')).toBe(false);
+    });
+  });
+
+  it('las decisiones de Home son las que están EN REVISIÓN, no las últimas', async () => {
+    await inRollback(async (tx) => {
+      const ctx = await makeOrg(tx);
+      const borrador = await createDecision(tx, ctx, { title: 'Sin decidir', decision: 'X' });
+      const enRevision = await createDecision(tx, ctx, { title: 'Esperando cierre', decision: 'Y' });
+      await updateDecisionStatus(tx, ctx, enRevision.id, 'REVIEW');
+
+      const home = await getHomeDashboard(tx, ctx);
+      expect(home.decisionsInReview.map((x) => x.id)).toEqual([enRevision.id]);
+      expect(home.decisionsInReview.map((x) => x.id)).not.toContain(borrador.id);
     });
   });
 });

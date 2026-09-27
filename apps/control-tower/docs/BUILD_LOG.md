@@ -5,6 +5,43 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-09-27 — Inicio: fuera lo repetido, dentro el dinero ✅ (1/2)
+
+Revisión de la vista pedida por el owner, empezando por su ejemplo: «no tiene sentido una ficha que diga 4 proyectos
+abiertos y debajo la lista de cada proyecto». No era un caso aislado: **la misma cosa aparecía hasta tres veces** —como
+contador, como alerta de «Requiere atención» y como lista completa— con tareas vencidas, tareas de hoy, decisiones y
+proyectos. De las siete alertas de atención, **cuatro** eran el recuento de una lista que estaba en la misma página.
+
+**La regla con la que se ha reordenado:** un dato está en Inicio si pide una acción o es una señal de salud, y **si
+tiene lista aquí, no tiene además contador ni alerta**.
+
+- **Dinero, arriba y nuevo** (lo que pidió el owner): por moneda, **te deben · debes · neto**, y lo **retrasado** en
+  rojo con su importe. Antes el dinero sólo existía como aviso «2 pagos retrasados», que no dice si son 40 € o 4.000 €.
+  Reutiliza la misma agrupación que ya usaba la página de Pagos y el formateador de importes pasa a `lib/i18n/format`
+  (estaba local en Pagos; ahora lo comparten las dos vistas).
+- **De cinco contadores a tres**: se van «Clientes» y «Decisiones» (no pedían ninguna acción: para navegar está el
+  menú) y «Proyectos activos», el ejemplo del owner. Quedan los tres que **no** tienen lista en Home: tareas abiertas,
+  oportunidades abiertas y capturas por procesar.
+- **«Requiere atención» pasa a ser sólo triaje**: proyecto en riesgo, oportunidad ganada sin proyecto y entregables en
+  revisión. Las cinco alertas que repetían algo de la página (vencidas, hoy, decisiones, bandeja, pagos) se retiran.
+- **Decisiones: «en revisión» en vez de «recientes»** (decisión del owner). Una decisión ya aprobada es lectura y su
+  sitio es su sección; lo que pide algo de ti es la que está esperando que la cierres.
+- **Tareas en tres cubos: vencidas · hoy · próximos 7 días**, más «N tareas activas sin fecha» con enlace. Esto tapa un
+  agujero de verdad: Home miraba `dueDate = hoy` **exacto**, así que una tarea para mañana —o sin fecha— no existía
+  desde aquí hasta que ya era tarde.
+- **Estado del sistema en una línea** (semáforo + jobs/salida/integraciones) en vez de cuatro cajas: es una señal, no
+  un panel. Y la actividad reciente baja a 5 entradas.
+
+Los tests de Home documentaban el comportamiento viejo (`snapshot.clients`, alertas `tasks_overdue`/`inbox_pending`/
+`payments_overdue`), así que se reescribieron contra el contrato nuevo y **pinchan la regla**: comprueban que la
+bandeja y los pagos ya **no** generan alerta, que cada tarea cae en su cubo y que el dinero sale con importes. Dos
+tests nuevos: los cubos de tareas y las decisiones en revisión.
+
+Falta la segunda mitad de la propuesta —el **bloc de notas rápidas** con destino final o descarte—, que lleva
+migración y va en su propio paso.
+
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (191) · `pnpm build` · `pnpm test:integration` (204).
+
 ## 2026-09-27 — Las políticas de archivado, en un solo mecanismo ✅
 
 Auditoría pedida por el owner («controla todas las políticas de archivar… y encuentra posibles fallas») y los cinco
@@ -793,7 +830,13 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-09-27): el archivado, en un solo mecanismo.** `archived_at` es el único archivado: el **estado**
+> **⚑ ÚLTIMO (2026-09-27): Inicio, sin nada repetido y con el dinero arriba.** La misma cosa aparecía hasta tres veces
+> (contador + alerta + lista); ahora cada dato vive en un sitio. Nuevo bloque de **Dinero** (te deben · debes · neto ·
+> retrasado, por moneda), tres contadores en vez de cinco, decisiones **en revisión** en vez de «recientes», tareas en
+> **vencidas · hoy · próximos 7 días** (+ las que no tienen fecha) y estado del sistema en una línea. Queda la segunda
+> mitad: el **bloc de notas rápidas**.
+>
+> **⚑ ANTES (2026-09-27): el archivado, en un solo mecanismo.** `archived_at` es el único archivado: el **estado**
 > «Archivado» que ocho entidades ofrecían —y que no archivaba nada— se retira, lo que lleva **7 días cerrado se archiva
 > solo**, archivar un proyecto **se lleva sus tareas y entregables** (sin eso su purga no avanzaba nunca) y en *Ajustes ›
 > Archivados* ya se puede **eliminar definitivamente** por selección, con el motivo de cada archivado a la vista. El

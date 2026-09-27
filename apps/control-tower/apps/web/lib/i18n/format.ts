@@ -53,3 +53,12 @@ export function formatTime(value: Date | string | null | undefined): string {
   if (Number.isNaN(d.getTime())) return '—';
   return new Intl.DateTimeFormat(LOCALE_TAG[resolveLocale()], { hour: '2-digit', minute: '2-digit' }).format(d);
 }
+
+/**
+ * Importe con su moneda, con dos decimales y separadores españoles. Vivía en la página de Pagos; lo comparte ahora
+ * con Inicio, que muestra los totales pendientes. **No convierte**: cada moneda se enseña por separado, porque sumar
+ * euros con dólares no significa nada.
+ */
+export function formatMoney(amount: string | number, currency: string): string {
+  return `${Number(amount).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
+}
