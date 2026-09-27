@@ -1,6 +1,3 @@
-'use client';
-
-import { useMemo, useState } from 'react';
 import { SourceBadge } from '@/components/ui/source-badge';
 import { ExternalSourceLink } from '@/components/ui/external-source-link';
 import { RecordLink } from '@/components/ui/record-link';
@@ -9,8 +6,6 @@ import { type Column } from '@/components/ui/entity-table';
 import { singleExternalUrl } from '@/lib/external-url';
 import { KnowledgeItemStatusControl } from '@/components/knowledge/forms';
 import { enumLabel } from '@/lib/labels';
-import { fieldCls } from '@/components/ui/input';
-import { btnLink } from '@/components/ui/button';
 import { t } from '@/lib/i18n';
 
 export interface LibraryRow {
@@ -25,27 +20,18 @@ export interface LibraryRow {
   notionUrl?: string | null;
 }
 
-const selCls = fieldCls;
-
 /**
- * Library con filtros por sector y tipo (cliente, sobre las filas ya cargadas).
+ * Biblioteca de conocimiento.
  *
- * La tabla es **`RecordTable`**, la misma que las otras 19 vistas. Antes esta lista pintaba su propio `<table>`
- * a mano y, por eso, se quedó fuera de F-28: no tenía ordenación por columna, ni filtro rápido, ni aviso de tope.
- * Los desplegables de sector/tipo se conservan porque hacen algo distinto del filtro de texto: acotan por un
- * valor exacto de un conjunto cerrado.
+ * Filtra con las **facetas** de `RecordTable` (Sector, Tipo, Estado), como el resto de las listas. Antes tenía sus
+ * propios desplegables y su propio `<table>`: eso la dejó fuera de la ordenación por columna y del buscador de F-28,
+ * y era una segunda forma de filtrar que había que mantener aparte. Al ser ya un componente de servidor, además
+ * desaparece el `'use client'` que sólo existía para el estado de esos desplegables.
  *
- * `lockedType` = la lista ya viene acotada a un tipo desde el servidor (**Negocio › Procesos**): se oculta el
- * desplegable de tipo, que ahí sólo tendría una opción, y se conserva el de sector.
+ * `lockedType` = la lista ya viene acotada a un tipo desde el servidor (**Negocio › Procesos**): ahí la columna de
+ * tipo no se muestra, porque tendría un único valor.
  */
 export function LibraryList({ items, lockedType = false }: { items: LibraryRow[]; lockedType?: boolean }) {
-  const [sector, setSector] = useState('');
-  const [type, setType] = useState('');
-
-  const sectors = useMemo(() => [...new Set(items.map((i) => i.sector).filter(Boolean) as string[])].sort(), [items]);
-  const types = useMemo(() => [...new Set(items.map((i) => i.knowledgeType))].sort(), [items]);
-  const rows = items.filter((i) => (!sector || i.sector === sector) && (!type || i.knowledgeType === type));
-
   const columns: Column<LibraryRow>[] = [
     {
       header: t('entity.knowledge_item'),
@@ -58,42 +44,35 @@ export function LibraryList({ items, lockedType = false }: { items: LibraryRow[]
     },
     ...(lockedType
       ? []
-      : [{ header: t('field.kind'), value: (r: LibraryRow) => enumLabel(r.knowledgeType), cell: (r: LibraryRow) => enumLabel(r.knowledgeType) }]),
-    { header: t('field.sector'), value: (r) => r.sector, cell: (r) => r.sector ?? <span className="text-fg-subtle">—</span> },
+      : [
+          {
+            header: t('field.kind'),
+            value: (r: LibraryRow) => enumLabel(r.knowledgeType),
+            facet: true,
+            cell: (r: LibraryRow) => enumLabel(r.knowledgeType),
+          },
+        ]),
+    { header: t('field.sector'), value: (r) => r.sector, facet: true, cell: (r) => r.sector ?? <span className="text-fg-subtle">—</span> },
     // Fuente = SÓLO la procedencia. El enlace vive en su propia columna: el badge decía «Notion» y llevaba a
     // Drive, que es justo lo contrario de lo que promete.
-    { header: t('field.sourceType'), value: (r) => r.sourceType, cell: (r) => <SourceBadge source={r.sourceType} /> },
+    { header: t('field.sourceType'), value: (r) => r.sourceType, facet: true, cell: (r) => <SourceBadge source={r.sourceType} /> },
     { header: t('field.link'), cell: (r) => <RowLink row={r} /> },
-    // Control interactivo: sin `value`, así no es ordenable ni entra en el filtro (que es lo correcto).
-    { header: t('field.status'), cell: (r) => <KnowledgeItemStatusControl id={r.id} current={r.status} /> },
+    // Control interactivo, pero con `value` para que se pueda ordenar y **facetar** por estado.
+    {
+      header: t('field.status'),
+      value: (r) => enumLabel(r.status),
+      facet: true,
+      cell: (r) => <KnowledgeItemStatusControl id={r.id} current={r.status} />,
+    },
   ];
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap gap-2">
-        <select className={selCls} value={sector} onChange={(e) => setSector(e.target.value)}>
-          <option value="">{t('filter.allSectors')}</option>
-          {sectors.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-        {!lockedType && (
-          <select className={selCls} value={type} onChange={(e) => setType(e.target.value)}>
-            <option value="">{t('filter.allTypes')}</option>
-            {types.map((task) => <option key={task} value={task}>{enumLabel(task)}</option>)}
-          </select>
-        )}
-        {(sector || type) && (
-          <button type="button" onClick={() => { setSector(''); setType(''); }} className={btnLink}>{t('filter.clear')}</button>
-        )}
-        <span className="ml-auto self-center text-xs text-fg-subtle">{rows.length} de {items.length}</span>
-      </div>
-
-      <RecordTable
-        columns={columns}
-        rows={rows}
-        getKey={(r) => r.id}
-        empty={{ title: t('table.noMatches') }}
-      />
-    </div>
+    <RecordTable
+      columns={columns}
+      rows={items}
+      getKey={(r) => r.id}
+      empty={{ title: t('knowledge.libraryEmpty'), hint: t('knowledge.libraryEmptyHint') }}
+    />
   );
 }
 

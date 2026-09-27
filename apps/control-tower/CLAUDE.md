@@ -287,6 +287,11 @@ crea nada; CT lo **propone** (aviso en Inicio + botón en la ficha de la oportun
   que darle su sitio en `PURGE_ORDER` (hijo→padre, según las FKs reales) y, si tiene hijas NO archivables con FK hacia
   ella, borrarlas en `deleteDependents`. Si no, se archiva y **no se purga nunca**, sin error. Lo vigila
   `archive.test.ts` (`purgeOrderMissingEntities()` debe devolver `[]`).
+- **Filtros de lista:** el buscador de texto y las **facetas** viven una sola vez en `DataTable` (lógica pura en
+  `apps/web/lib/facets.ts`). Para que una columna se pueda filtrar por valor basta `facet: true` **junto a `value`**,
+  y el `value` debe ser ya la **etiqueta legible** (`enumLabel(...)`), porque es lo que se ve en el desplegable y lo
+  que busca el texto. Sólo en conjuntos cerrados o de baja cardinalidad: en nombres, fechas, importes o enlaces no
+  aporta nada. Las opciones se derivan de las filas cargadas, así que no hay que declarar ningún enum.
 - **Lista reordenable nueva** (E-12) ⇒ tres cosas o no funciona: columna `sort_order` en su tabla (migración
   aditiva), entrada en **`REORDERABLE`** (`packages/application/src/ordering/`) declarando su `parent` si es una lista
   hija **y** cómo se acota por organización (`org`, o `parentScope` si la tabla no tiene `organization_id`, como

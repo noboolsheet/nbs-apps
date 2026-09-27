@@ -1,14 +1,9 @@
-'use client';
-
-import { useMemo, useState } from 'react';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { RecordLink } from '@/components/ui/record-link';
 import { RecordTable } from '@/components/ui/record-table';
 import { ExternalSourceLink } from '@/components/ui/external-source-link';
 import { type Column } from '@/components/ui/entity-table';
 import { enumLabel } from '@/lib/labels';
-import { fieldCls } from '@/components/ui/input';
-import { btnLink } from '@/components/ui/button';
 import { t } from '@/lib/i18n';
 
 export interface LearningRow {
@@ -20,28 +15,12 @@ export interface LearningRow {
   url: string | null;
 }
 
-const selCls = fieldCls;
-
 /**
- * Lista de Learning Path con filtros por sector, tipo y estado (cliente, sobre las filas ya cargadas).
- *
- * La tabla es **`RecordTable`**, como las demás vistas: antes pintaba su propio `<table>` y por eso se había
- * quedado sin la ordenación por columna ni el filtro rápido de F-28. Los desplegables se conservan: acotan por un
- * valor exacto, que es otra cosa que buscar texto.
+ * Ruta de aprendizaje. Filtra con las **facetas** de `RecordTable` (Sector, Tipo, Estado) como el resto de las
+ * listas; antes tenía tres desplegables propios y su propio `<table>`, y por eso se había quedado sin ordenación ni
+ * buscador. Al no necesitar estado de cliente, vuelve a ser un componente de servidor.
  */
 export function LearningList({ items }: { items: LearningRow[] }) {
-  const [sector, setSector] = useState('');
-  const [kind, setKind] = useState('');
-  const [status, setStatus] = useState('');
-
-  const sectors = useMemo(() => [...new Set(items.map((i) => i.sector).filter(Boolean) as string[])].sort(), [items]);
-  const kinds = useMemo(() => [...new Set(items.map((i) => i.kind))].sort(), [items]);
-  const statuses = useMemo(() => [...new Set(items.map((i) => i.status))].sort(), [items]);
-
-  const rows = items.filter(
-    (i) => (!sector || i.sector === sector) && (!kind || i.kind === kind) && (!status || i.status === status),
-  );
-
   const columns: Column<LearningRow>[] = [
     {
       header: t('field.title'),
@@ -52,11 +31,9 @@ export function LearningList({ items }: { items: LearningRow[] }) {
         </RecordLink>
       ),
     },
-    { header: t('field.kind'), value: (r) => r.kind, cell: (r) => r.kind },
-    { header: t('field.sector'), value: (r) => r.sector, cell: (r) => r.sector ?? <span className="text-fg-subtle">—</span> },
-    { header: t('field.status'), value: (r) => r.status, cell: (r) => <StatusBadge status={r.status} /> },
-    // Columna «Progreso» retirada (owner 2026-09-27): un porcentaje a mano en una ruta de aprendizaje no se
-    // mantiene actualizado, así que informaba menos que el propio estado (Pendiente/En curso/Completado).
+    { header: t('field.kind'), value: (r) => r.kind, facet: true, cell: (r) => r.kind },
+    { header: t('field.sector'), value: (r) => r.sector, facet: true, cell: (r) => r.sector ?? <span className="text-fg-subtle">—</span> },
+    { header: t('field.status'), value: (r) => enumLabel(r.status), facet: true, cell: (r) => <StatusBadge status={r.status} /> },
     {
       header: t('entity.resource'),
       // El enlace usa `ExternalSourceLink`: aquí estaba escrito a mano con `text-blue-600 dark:text-blue-400`,
@@ -66,34 +43,11 @@ export function LearningList({ items }: { items: LearningRow[] }) {
   ];
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap gap-2">
-        <select className={selCls} value={sector} onChange={(e) => setSector(e.target.value)}>
-          <option value="">{t('filter.allSectors')}</option>
-          {sectors.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <select className={selCls} value={kind} onChange={(e) => setKind(e.target.value)}>
-          <option value="">{t('filter.allTypes')}</option>
-          {kinds.map((k) => <option key={k} value={k}>{k}</option>)}
-        </select>
-        <select className={selCls} value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="">{t('filter.allStatuses')}</option>
-          {statuses.map((s) => <option key={s} value={s}>{enumLabel(s)}</option>)}
-        </select>
-        {(sector || kind || status) && (
-          <button type="button" onClick={() => { setSector(''); setKind(''); setStatus(''); }} className={btnLink}>
-            {t('filter.clear')}
-          </button>
-        )}
-        <span className="ml-auto self-center text-xs text-fg-subtle">{rows.length} de {items.length}</span>
-      </div>
-
-      <RecordTable
-        columns={columns}
-        rows={rows}
-        getKey={(r) => r.id}
-        empty={{ title: t('table.noMatches') }}
-      />
-    </div>
+    <RecordTable
+      columns={columns}
+      rows={items}
+      getKey={(r) => r.id}
+      empty={{ title: t('knowledge.learningEmpty'), hint: t('knowledge.learningEmptyHint') }}
+    />
   );
 }

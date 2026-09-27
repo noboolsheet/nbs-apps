@@ -5,6 +5,52 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-09-27 — Filtros de lista: facetas por valor en las 19 listas ✅
+
+Encargo del owner: *«poder filtrar las listas por estados o tipos según lo que tenga cada cual, porque cuando
+empiecen a crecer será difícil encontrar algo a vista»*, con una propuesta antes de tocar nada. La propuesta aceptada
+fue: **facetas declarativas, no un filtro por columna** — de las ~122 columnas de la app sólo unas 45 son conjuntos
+cerrados, y seis desplegables sobre una tabla de seis columnas empujan la tabla fuera de la pantalla. Cuatro pasos:
+
+**1. El mecanismo.** Lógica pura en `apps/web/lib/facets.ts` (8 tests) + render **una sola vez** en `DataTable`, así
+que lo heredan todas las listas con sólo marcar la columna. Tres reglas que importan:
+- las **opciones se derivan de las filas cargadas**, no de un enum declarado: vale igual para texto libre de baja
+  cardinalidad (sector, industria) y nunca se ofrece un valor que no está en la lista;
+- los **contadores** se cuentan sobre las filas que pasan las OTRAS facetas y el texto, así que el número de cada
+  opción es el que vas a obtener al elegirla;
+- una columna con **un solo valor** no se ofrece, y el hueco («sin valor») no es opción: filtrar por un hueco no
+  quiere decir nada. Una faceta cuyo valor desaparece tras un refresco **se descarta sola**, o la lista se quedaría
+  vacía sin motivo visible.
+
+**2. Las cinco listas que no tenían NADA.** Sin `value` en sus columnas, `RecordTable` no da ni orden ni buscador ni
+facetas: oportunidades archivadas, documentos, bandeja, archivados y procesos recientes estaban fuera de todo lo que
+se hizo en F-28. Bandeja y Procesos usaban `EntityTable` (que no tiene nada de eso) → `RecordTable`; la tabla de
+archivadas montaba `DataTable` a mano con las celdas pintadas → columnas tipadas. Y **dos estados se indexaban en
+crudo** (fases de proyecto, objetivos de un área): escribir «planificado» no encontraba nada porque se comparaba
+contra `PLANNED`.
+
+**3. 49 facetas en 19 listas.** Estado en todas, más Prioridad, Tipo, Origen, Salud, Visibilidad, Madurez, Etapa,
+Sector, Industria y las relaciones de baja cardinalidad (Proyecto en Tareas, Cliente en Contactos, Oportunidad en las
+tareas de preventa). **Nada** en nombres, fechas, importes, enlaces, slugs ni versiones. **Ninguna en las secciones de
+una ficha** —son los hijos de UN padre, listas cortas— salvo las tareas de un proyecto, que sí crecen.
+
+**4. Unificadas Biblioteca y Aprendizaje.** Tenían sus propios desplegables y su propio `<table>`: ahora usan las
+facetas comunes y, al no necesitar estado de cliente, **vuelven a ser componentes de servidor** (fuera dos
+`'use client'`). Con ellas se van tres claves de i18n que ya no usa nadie.
+
+**Dos cosas que salieron al marcar las facetas:** la lista de **Reutilizables pintaba `NATIVE` para todos**, así que
+un repo importado de GitHub se presentaba como nativo de CT (ahora resuelve la procedencia de verdad, como clientes y
+tareas); y la **salud del proyecto se indexaba con el código crudo** (`AT_RISK`) — se expone `healthLabel` y se indexa
+la etiqueta.
+
+**Decisiones de diseño, para no rediscutirlas:** el filtrado es en **cliente** sobre lo cargado (tope de 500 filas,
+como decidió F-28: sin viaje al servidor por clic), **no se persiste** entre navegaciones (un filtro invisible es cómo
+se pierde media lista sin darse cuenta) y las **pestañas se quedan** como el eje que cambia la consulta del servidor
+(lo archivado no se trae) — mezclarlas con las facetas habría hecho parecer «Archivadas» un filtro más.
+
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (162, 8 nuevos) · `pnpm build` ·
+`pnpm test:integration` (188) · e2e (69/69).
+
 ## 2026-09-27 — El panel del recurso, el progreso de aprendizaje y «Más usados» ✅
 
 **1. El recurso de un proyecto ya no pide ni cliente ni proyecto.** Lo que faltaba del arreglo anterior: `contextCreate`
@@ -559,7 +605,12 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-09-27, tercera tanda):** el **recurso de un proyecto** ya no pide cliente ni proyecto (la regla es
+> **⚑ ÚLTIMO (2026-09-27): filtros de lista.** Toda lista tiene ya **facetas por valor** (49 en 19 listas) además del
+> buscador: opciones derivadas de los datos, con recuento, combinables entre sí. Las **cinco listas que no tenían ni
+> orden ni buscador** ahora lo tienen, y Biblioteca y Aprendizaje dejan sus desplegables a medida por el mecanismo
+> común. De paso: Reutilizables pintaba «nativo» para repos de GitHub, y la salud se indexaba en crudo.
+>
+> **⚑ ANTES (2026-09-27, tercera tanda):** el **recurso de un proyecto** ya no pide cliente ni proyecto (la regla es
 > de datos, así que también vale editando, y en un proyecto personal el cliente no aparece) · fuera el **progreso** de
 > las rutas de aprendizaje · y **«Más usados» arreglado**: la etiqueta se leía a ciegas a los 600 ms y se guardaba el
 > título de la página ANTERIOR, no había decaimiento y no se olvidaba nada. Lógica a `lib/frequent.ts` con 6 tests.
