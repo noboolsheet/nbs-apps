@@ -105,8 +105,10 @@ echo "J9: Tareas (vencidas/hoy, reprogramar) + retención de completadas"
 # Tarea vencida (2020) en el proyecto de J2.
 OVER=$(curl -s -b $JAR -X POST "$B/api/v1/projects/$PRJID/tasks" -H 'Content-Type: application/json' -d '{"title":"Tarea vencida J","dueDate":"2020-01-01"}'); OVERID=$(echo "$OVER" | uuid)
 check "$([ -n "$OVERID" ] && echo ok)" "ok" "tarea vencida creada"
-# Home avisa de vencidas (no las lista, sólo el aviso con enlace a /tasks).
-check "$(curl -s -b $JAR "$B/api/v1/context/home" | grep -oE '"kind":"tasks_overdue"' | head -1)" '"kind":"tasks_overdue"' "Home: aviso de tareas vencidas"
+# Home LISTA las vencidas (con acciones) y ya NO las duplica como aviso de «Requiere atención» (owner 2026-09-27).
+HOME=$(curl -s -b $JAR "$B/api/v1/context/home")
+check "$(echo "$HOME" | grep -c 'Tarea vencida J')" "1" "Home: la vencida sale en su lista"
+check "$(echo "$HOME" | grep -oE '"kind":"tasks_overdue"' | head -1)" "" "Home: y no se repite como aviso"
 # Vista global de tareas renderiza y muestra el bucket "Vencidas".
 check "$(curl -s -b $JAR "$B/tasks" | grep -c 'Vencidas')" "1" "GET /tasks muestra bucket Vencidas"
 # Reprogramar la fecha de la vencida (reasignar fecha nueva).
@@ -228,13 +230,33 @@ check "$(curl -s -b $JAR -X POST "$B/api/v1/purge" -H 'Content-Type: application
 check "$(psql_t "select count(*) from projects where id='$APRJID';")" "0" "el proyecto ya no existe"
 check "$(psql_t "select count(*) from tasks where id='$ATSKID';")" "0" "sus hijos se van con él"
 
+echo "J18: Bloc de notas rápidas (destino final o descarte)"
+QN1=$(curl -s -b $JAR -X POST "$B/api/v1/quick-notes" -H 'Content-Type: application/json' -d '{"body":"Llamar al banco\nPreguntar por la comisión"}'); QN1ID=$(echo "$QN1" | uuid)
+check "$([ -n "$QN1ID" ] && echo ok)" "ok" "nota anotada"
+check "$(curl -s -b $JAR "$B/api/v1/quick-notes" | grep -c 'Llamar al banco')" "1" "la nota se lee del bloc"
+check "$(curl -s -b $JAR -o /dev/null -w '%{http_code}' -X POST "$B/api/v1/quick-notes" -H 'Content-Type: application/json' -d '{"body":"   "}')" "400" "nota vacía rechazada"
+# Destino final: se crea la tarea PERSONAL con el título y el cuerpo, y la nota se va del bloc.
+FILED=$(curl -s -b $JAR -X POST "$B/api/v1/quick-notes/$QN1ID/file" -H 'Content-Type: application/json' -d '{"destination":"task"}')
+check "$(echo "$FILED" | grep -c '"destination":"task"')" "1" "nota convertida en tarea"
+# `uuid()` busca `"id":"…"`, y esta respuesta devuelve `entityId` (a dónde fue la nota): se extrae por su nombre.
+QNTASK=$(echo "$FILED" | grep -oE '"entityId":"[0-9a-f-]{36}"' | grep -oE '[0-9a-f-]{36}')
+check "$(psql_t "select personal from tasks where id='$QNTASK';")" "t" "la tarea creada es personal"
+check "$(psql_t "select title from tasks where id='$QNTASK';")" "Llamar al banco" "el título es la primera línea"
+check "$(psql_t "select count(*) from quick_notes where id='$QN1ID';")" "0" "la nota sale del bloc"
+# Un destino que no existe se rechaza y la nota se queda donde está.
+QN2=$(curl -s -b $JAR -X POST "$B/api/v1/quick-notes" -H 'Content-Type: application/json' -d '{"body":"Sigue aquí"}'); QN2ID=$(echo "$QN2" | uuid)
+check "$(curl -s -b $JAR -o /dev/null -w '%{http_code}' -X POST "$B/api/v1/quick-notes/$QN2ID/file" -H 'Content-Type: application/json' -d '{"destination":"payment"}')" "400" "destino inventado rechazado"
+check "$(psql_t "select count(*) from quick_notes where id='$QN2ID';")" "1" "y la nota no se pierde"
+check "$(curl -s -b $JAR -o /dev/null -w '%{http_code}' -X DELETE "$B/api/v1/quick-notes/$QN2ID")" "200" "nota descartada"
+check "$(psql_t "select count(*) from quick_notes where id='$QN2ID';")" "0" "descartar la borra"
+
 echo "Hardening:"
 check "$(curl -s -b $JAR -o /dev/null -w '%{http_code}' -X POST "$B/api/v1/clients" -H 'Origin: http://evil.example' -H 'Content-Type: application/json' -d '{"name":"x"}')" "403" "CSRF: Origin ajeno rechazado (403)"
 check "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/v1/clients" -H 'Content-Type: application/json' -d '{"name":"x"}')" "401" "sin sesión → 401"
 check "$(curl -s -D - -o /dev/null "$B/" | grep -qi 'x-content-type-options: nosniff' && echo present)" "present" "cabecera de seguridad presente"
 
 # --- cleanup ---
-for t in notes learning_items resources inbox_channels audit_logs change_events outbox_events portfolio_items tasks deliverables decisions documents knowledge_items knowledge_inbox external_identities integrations jobs projects contacts opportunities clients capabilities goals strategic_areas; do
+for t in quick_notes notes learning_items resources inbox_channels audit_logs change_events outbox_events portfolio_items tasks deliverables decisions documents knowledge_items knowledge_inbox external_identities integrations jobs projects contacts opportunities clients capabilities goals strategic_areas; do
   psql_t "delete from $t where organization_id='$ORGID';" >/dev/null
 done
 psql_t "delete from organization_members where organization_id='$ORGID'; delete from sessions where user_id='$USERID'; delete from accounts where user_id='$USERID'; delete from users where id='$USERID'; delete from organizations where id='$ORGID';" >/dev/null

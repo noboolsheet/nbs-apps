@@ -3,6 +3,7 @@ import { getDb } from '@ct/db';
 import { getHomeDashboard } from '@ct/application';
 import { getCurrentContext } from '@/lib/auth-context';
 import { MetricCard } from '@/components/ui/metric-card';
+import { QuickNotes } from '@/components/home/quick-notes';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { HealthBadge } from '@/components/ui/health-badge';
 import { ProgressBar } from '@/components/ui/progress-bar';
@@ -44,6 +45,10 @@ export default async function HomePage() {
         <MetricCard label={t('home.metricOpenOpportunities')} value={d.snapshot.opportunitiesOpen} href="/crm/opportunities" />
         <MetricCard label={t('home.metricInboxPending')} value={d.snapshot.inboxPending} href="/knowledge/inbox" />
       </section>
+
+      {/* Bloc de notas rápidas: el único bloque de Inicio que ESCRIBE. Va arriba porque se usa en el momento en que
+          se te ocurre algo, no cuando bajas a leer la actividad reciente. */}
+      <QuickNotes notes={d.quickNotes} />
 
       {/* DOS columnas continuas (no una rejilla por fila): así cada columna fluye con el alto de su contenido y no
           quedan huecos cuando una lista es más larga que la de al lado.

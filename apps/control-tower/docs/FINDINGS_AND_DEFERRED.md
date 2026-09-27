@@ -21,6 +21,8 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
 >   viajan a Twenty y están vacías; hay que decidir si se mapean, se quedan como datos propios de CT o se retiran.
 >   *(Con **ADR-009** el marco ya está: nada de CT viaja a Twenty salvo el `stage`, así que la pregunta se reduce a
 >   quedárselos como datos propios de CT o retirarlos.)*
+> - **Inicio (F-39, 2026-09-27):** cerrado. Sin datos repetidos, con bloque de dinero, tareas en tres cubos y bloc de
+>   notas rápidas con destino final o descarte.
 > - **Archivado (F-38, 2026-09-27):** cerrado. Un solo mecanismo (`archived_at`), autoarchivado de lo cerrado a los 7
 >   días, cascada padre→hijos y «Eliminar definitivamente» en Ajustes › Archivados. El CRM no se archiva desde CT.
 > - **Pendiente de una acción en vibox:** **F-37** — el acceso desde la red local ya está resuelto en código; falta
@@ -1194,6 +1196,30 @@ hay que volver a medir antes de dar por bueno el síntoma.
      —eso sí, se le quitó el `outline-none`, que se saltaba la regla de no matar el foco sin alternativa—.
 - **De paso:** `learning-list` pintaba su enlace externo con `text-blue-600 dark:text-blue-400`, saltándose los
   tokens del tema (DESIGN_TOKENS prohíbe `dark:` a mano); ahora usa `ExternalSourceLink`.
+
+### F-39 · El Inicio repetía la misma información hasta tres veces, y no tenía ni dinero ni dónde apuntar una idea ✅ RESUELTO (2026-09-27)
+
+- **Hallado en:** revisión pedida por el owner («revisa el dashboard del inicio… me resulta innecesario tener una ficha
+  que diga 4 proyectos abiertos y luego una lista de cada proyecto»).
+- **El patrón, que era general y no un caso suelto:** el mismo dato aparecía como **contador**, como **alerta** de
+  «Requiere atención» y como **lista completa**, con tareas vencidas, tareas de hoy, decisiones y proyectos. De las
+  siete alertas de atención, **cuatro** eran el recuento de una lista que estaba en la misma página.
+- **Regla con la que se reordenó:** un dato está en Inicio si pide una acción o es señal de salud, y **si tiene lista
+  aquí, no tiene además contador ni alerta**. Está escrita en la cabecera de `context/home.ts` y sostenida por los
+  tests (comprueban que la bandeja y los pagos ya **no** generan alerta).
+- **Qué cambió:** bloque de **Dinero** arriba (te deben · debes · neto · retrasado, por moneda y con importes — antes
+  el dinero sólo existía como «2 pagos retrasados», que no dice si son 40 € o 4.000 €) · **tres** contadores en vez de
+  cinco (fuera Clientes, Decisiones y Proyectos activos) · «Requiere atención» sólo con lo que no sale en otro bloque ·
+  decisiones **en revisión** en vez de «recientes» · tareas en **vencidas · hoy · próximos 7 días** más «N sin fecha» ·
+  estado del sistema en una línea · actividad reciente a 5.
+- **Agujero real que se tapó de paso:** Home mostraba `dueDate = hoy` **exacto**, así que una tarea para mañana —o sin
+  fecha— no se veía desde aquí hasta que ya era tarde.
+- **Bloc de notas rápidas (M44):** tabla `quick_notes` y dos salidas, convertir (tarea/decisión/conocimiento/por
+  revisar) o descartar; en los dos casos la nota se borra y queda el rastro en auditoría. El owner lo quiso **aparte**
+  de la bandeja de conocimiento, sabiendo que ésta ya hacía capturar → promover. Ver el detalle en el BUILD_LOG.
+- **Lo que queda fuera a propósito:** el bloc no se espeja a Notion, no tiene búsqueda ni paginación (tope de 50: si
+  crece tanto, lo que hay que hacer es vaciarlo) y no admite más destinos que esos cuatro — añadir uno es una línea en
+  `QUICK_NOTE_DESTINATIONS` y su caso en `fileQuickNote`.
 
 ### F-38 · Las políticas de archivado: dos «archivados» que no se hablaban, sin cascada y sin forma de borrar ✅ RESUELTO (2026-09-27)
 

@@ -13,3 +13,4 @@ export * from './knowledge';
 export * from './infrastructure';
 export * from './calendar';
 export * from './notes';
+export * from './quick-notes';

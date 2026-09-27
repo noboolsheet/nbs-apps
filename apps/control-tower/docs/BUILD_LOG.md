@@ -5,6 +5,43 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-09-27 — Inicio: el bloc de notas rápidas ✅ (2/2)
+
+La segunda mitad de la revisión de Inicio: **«una sección dinámica donde poner notas rápidas sobre ideas que me vengan
+a la mente y no sepa qué hacer con ellas, anotarlas aquí y luego decidir si persistirlas en alguna sección en
+específico»**. Le propuse reusar la Bandeja de conocimiento (que ya es capturar → promover → Biblioteca) y el owner
+eligió **tenerlo aparte, con destino final o descarte**. Así queda:
+
+- **Tabla propia `quick_notes`** (migración M44) con lo mínimo: cuerpo, autor y fechas. **Sin estado y sin
+  `archived_at`** a propósito: una nota se resuelve **yéndose**, así que no hay nada que archivar y la columna la
+  metería en el circuito de «Archivados», que es justo lo contrario de lo que es. `CHECK` en la base contra notas
+  vacías, como en `notes`.
+- **Dos salidas y ninguna más.** *Convertir* en **tarea** (personal), **decisión**, **conocimiento** o **por revisar**,
+  o *descartar*. En los dos casos la nota se borra: la idea acaba viviendo en un solo sitio. El rastro queda en
+  `audit_logs` — el descarte guarda **el texto** (es lo único que queda de ella) y la conversión guarda
+  `targetType`/`targetId`, que es justo lo que la Actividad reciente ya sabe enlazar.
+- **El reparto del texto es puro y tiene test** (`parseQuickNote`): primera línea → título (cortada por palabra si es
+  larguísima, y lo que sobra **no se pierde**: sigue en el cuerpo), resto → el campo largo de la entidad, y la primera
+  URL de la nota se aprovecha si el destino es «Por revisar», que es donde un enlace pegado tiene sentido.
+- **Convertir llama a los comandos de verdad** (`createTask`, `createDecision`…) para heredar sus reglas, su auditoría
+  y su empuje a Notion. Eso obliga a **no** envolverlo en una transacción (esos comandos abren la suya y no se pueden
+  anidar), así que el orden es deliberado: **primero crear, después borrar la nota**. El peor caso es una nota repetida
+  que borras a mano; al revés sería perder la idea, que es lo único que este cajón tiene que garantizar.
+- Es el **único bloque de Inicio que escribe** (el resto de la vista es una proyección de solo lectura), y va arriba:
+  se usa en el momento en que se te ocurre algo, no cuando bajas a leer la actividad reciente.
+
+**Lo que NO es, y está escrito donde toca para que no se confunda dentro de dos meses:** no es `notes` (cuelgan de un
+registro concreto), no es la **bandeja de conocimiento** (contenido capturado, con canales por webhook y promoción a la
+Biblioteca) y no se espeja a Notion.
+
+El journey **J18** encontró un fallo del propio script: la respuesta de «convertir» devuelve `entityId`, no `id`, y el
+extractor genérico de uuid del e2e busca `"id":`, así que se quedaba vacío y los dos checks de la tarea creada fallaban
+sin que la app tuviera nada que ver. Y de paso saltó el check de J9, que seguía esperando el aviso de vencidas que se
+retiró en el paso 1/2 — ahora comprueba lo contrario: que la vencida sale en su lista y **no** se repite como aviso.
+
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (198, 7 nuevos) · `pnpm build` · `pnpm test:integration`
+(**214**, 10 nuevos) · `e2e-journeys` (**J18 nuevo**, 11 checks; todos OK).
+
 ## 2026-09-27 — Inicio: fuera lo repetido, dentro el dinero ✅ (1/2)
 
 Revisión de la vista pedida por el owner, empezando por su ejemplo: «no tiene sentido una ficha que diga 4 proyectos
@@ -830,7 +867,13 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-09-27): Inicio, sin nada repetido y con el dinero arriba.** La misma cosa aparecía hasta tres veces
+> **⚑ ÚLTIMO (2026-09-27): Inicio, revisado entero.** Nada se repite (la misma cosa aparecía hasta tres veces: contador
+> + alerta + lista), arriba está el **dinero** (te deben · debes · neto · retrasado, por moneda) y hay un **bloc de
+> notas rápidas** donde apuntar una idea y luego convertirla en tarea, decisión, conocimiento o «por revisar» — o
+> descartarla. Tareas en **vencidas · hoy · próximos 7 días** (+ las que no tienen fecha), decisiones **en revisión** y
+> estado del sistema en una línea.
+>
+> **⚑ ANTES (2026-09-27): Inicio, sin nada repetido y con el dinero arriba.** La misma cosa aparecía hasta tres veces
 > (contador + alerta + lista); ahora cada dato vive en un sitio. Nuevo bloque de **Dinero** (te deben · debes · neto ·
 > retrasado, por moneda), tres contadores en vez de cinco, decisiones **en revisión** en vez de «recientes», tareas en
 > **vencidas · hoy · próximos 7 días** (+ las que no tienen fecha) y estado del sistema en una línea. Queda la segunda

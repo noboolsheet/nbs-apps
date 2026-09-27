@@ -18,6 +18,7 @@ import { ACTIVE_TASK_STATUSES, CLOSED_PROJECT_STATUSES } from '@ct/domain';
 import { orgEq, type OrgContext } from '../auth/index';
 import { listProjects } from '../projects/index';
 import { listRecentAudit } from '../audit/index';
+import { listQuickNotes } from '../quick-notes/index';
 import { resolveEntityNames } from '../maintenance/archive';
 import { zonedDayRange } from '../integrations/index';
 import { checkDbHealth } from '@ct/db';
@@ -101,6 +102,7 @@ export async function getHomeDashboard(db: Database, ctx: OrgContext) {
     outboxPending,
     dbHealth,
     recentAudit,
+    quickNotes,
   ] = await Promise.all([
     toCount(db.select({ n: count() }).from(opportunities).where(and(orgEq(opportunities.organizationId, ctx), eq(opportunities.status, 'OPEN')))),
     toCount(db.select({ n: count() }).from(tasks).leftJoin(projects, eq(projects.id, tasks.projectId)).where(and(orgEq(tasks.organizationId, ctx), inArray(tasks.status, [...ACTIVE_TASK_STATUSES]), notInClosedProject))),
@@ -209,6 +211,8 @@ export async function getHomeDashboard(db: Database, ctx: OrgContext) {
     toCount(db.select({ n: count() }).from(outboxEvents).where(eq(outboxEvents.status, 'PENDING'))),
     checkDbHealth(),
     listRecentAudit(db, ctx, 5),
+    // Bloc de notas rápidas (M44): lo único de Inicio que no es una proyección, sino contenido propio de la vista.
+    listQuickNotes(db, ctx),
   ]);
 
   const atRisk = allProjects.filter((p) => p.health === 'AT_RISK');
@@ -326,6 +330,7 @@ export async function getHomeDashboard(db: Database, ctx: OrgContext) {
       inboxPending,
     },
     today,
+    quickNotes,
     money: { pending: money(paymentsPending), overdue: money(paymentsOverdue) },
     attention,
     activeProjects,

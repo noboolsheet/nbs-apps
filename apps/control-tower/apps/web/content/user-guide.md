@@ -28,7 +28,8 @@ información tiene UNA fuente de verdad**. Según el dato, la relación es una d
 ## Las secciones de la app
 
 - **Inicio** — lo que hay que mirar hoy, en este orden: **Dinero** (cuánto te deben, cuánto debes y lo retrasado, por
-  moneda) · tres cifras sin lista propia (tareas abiertas, oportunidades abiertas, capturas por procesar) ·
+  moneda) · tres cifras sin lista propia (tareas abiertas, oportunidades abiertas, capturas por procesar) · el **bloc
+  de notas rápidas** ·
   **Requiere atención** (sólo lo que no aparece en ningún otro bloque) · proyectos activos con su progreso ·
   **decisiones en revisión** · tareas repartidas en **vencidas · hoy · próximos 7 días** (y cuántas hay sin fecha) ·
   eventos del día · estado del sistema en una línea · actividad reciente. Nada se repite: si algo tiene su lista
@@ -48,6 +49,17 @@ información tiene UNA fuente de verdad**. Según el dato, la relación es una d
 
 Los **Recursos** (resources) no tienen sección propia en el menú: se ven y se crean desde la pestaña **"Recursos"** de
 cada **Cliente** o **Proyecto**.
+
+> **El bloc de notas rápidas (Inicio).** Para una idea que se te ocurre y **no sabes todavía dónde va**: la escribes
+> ahí y sigues con lo tuyo (⌘/Ctrl + Enter para anotar). Cuando sepas qué es, la nota tiene dos salidas y ninguna más:
+> **convertirla** en **Tarea** (personal), **Decisión**, **Conocimiento** o **Por revisar** —la primera línea pasa a ser
+> el título, el resto el cuerpo, y si pegaste un enlace se aprovecha en «Por revisar»— o **descartarla**. En los dos
+> casos la nota **se va del bloc**: la idea acaba viviendo en un solo sitio, no en dos. Pulsa el texto para reescribirla
+> mientras siga ahí.
+>
+> No es la **Bandeja de conocimiento** (esa es para contenido capturado, tiene canales por webhook y acaba en la
+> Biblioteca) ni las **notas de un registro** (esas cuelgan de un cliente, un proyecto…). El bloc no se espeja a
+> Notion: es un pósit.
 
 > **Buscar en todo (⌘K / Ctrl+K).** La barra de arriba abre una búsqueda que mira **todas** las secciones a la vez:
 > clientes, contactos, oportunidades, proyectos, tareas, decisiones, biblioteca, reutilizables, servicios,

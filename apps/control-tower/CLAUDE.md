@@ -25,6 +25,13 @@ Raspberry Pi, y buena parte de la documentación antigua todavía la nombra.
   es una entidad**, es un `knowledge_item` de tipo proceso (el documento vive en Notion y sus anexos en Drive; ver
   `docs/INFORMATION_ORGANIZATION.md`). Antes de proponer una tabla nueva para algo documental, mira si encaja aquí. Pagos (migración 0019/m35) es CT-nativo: cobros (IN, con cliente/contacto) y gastos (OUT, con etiqueta
   libre), con estado pendiente/pagado y totales por moneda.
+- **Bloc de notas rápidas (M44, Inicio):** tabla `quick_notes` + `packages/application/src/quick-notes/`. Es un cajón de
+  **paso**: una nota sale por `fileQuickNote` (se convierte en tarea/decisión/conocimiento/«por revisar») o se descarta,
+  y en los dos casos **se borra** —el rastro queda en `audit_logs` con `targetType`/`targetId`—. Por eso **no** tiene
+  `archived_at` ni estado, no entra en `ARCHIVABLE` y no se espeja a Notion. Los destinos se declaran en
+  `QUICK_NOTE_DESTINATIONS` (dominio) y el reparto del texto (título/cuerpo/URL) en `parseQuickNote`, que es puro y
+  tiene test. No confundir con `notes` (cuelgan de un registro) ni con `knowledge_inbox` (contenido capturado, con
+  canales y promoción a la Biblioteca).
 - **`docs/FINDINGS_AND_DEFERRED.md`** = backlog vivo (hallazgos `F-*` y diferidos `E-*`, con estado 🔴/🟡/🟢).
 - **`docs/adr/`** + **`docs/DECISIONS_FROZEN.md`** = decisiones de arquitectura (por qué es como es). Hay **ADR-001..008**
   (005 tipo de proyecto · 006 cadena de decisiones · 007 activos reutilizables por proyecto · **008 CT es sólo la

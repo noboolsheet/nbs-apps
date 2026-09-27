@@ -369,6 +369,7 @@ export const es = {
   'entity.resource': 'Recurso',
   'entity.service': 'Servicio',
   'entity.strategic_area': 'Área estratégica',
+  'entity.review_item': 'Por revisar',
   'entity.task': 'Tarea',
 
   // ─── Etiquetas de campo del panel/formularios ───────────────────────────────────────────────────
@@ -438,6 +439,14 @@ export const es = {
   'home.decisionsInReview': 'Decisiones en revisión',
   'home.decisionsInReviewEmpty': 'Ninguna decisión esperando',
   'home.decisionsInReviewHint': 'Aquí aparecen las que están en revisión, para cerrarlas.',
+  'home.notesTitle': 'Notas rápidas',
+  'home.notesPlaceholder': 'Una idea que no sabes todavía dónde va…',
+  'home.notesAdd': 'Anotar',
+  'home.notesHint': '⌘/Ctrl + Enter para anotar. Luego decides su destino.',
+  'home.notesEmpty': 'El bloc está vacío.',
+  'home.notesFileAs': 'Convertir en:',
+  'home.notesDiscard': 'Descartar',
+  'home.notesConfirmDiscard': '¿Descartar la nota? No se guarda en ninguna parte.',
   'home.moneyTitle': 'Dinero',
   'home.moneyOwedToYou': 'Te deben',
   'home.moneyYouOwe': 'Debes',

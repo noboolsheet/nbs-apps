@@ -17,6 +17,7 @@ export * from './inbox-channels/index';
 export * from './resources/index';
 export * from './learning/index';
 export * from './automations/index';
+export * from './quick-notes/index';
 export * from './maintenance/index';
 export * from './audit/index';
 export * from './notes/index';

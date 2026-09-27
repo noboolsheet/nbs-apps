@@ -13,3 +13,4 @@ export { z } from 'zod';
 export * from './payments';
 export * from './review';
 export * from './notes';
+export * from './quick-notes';
