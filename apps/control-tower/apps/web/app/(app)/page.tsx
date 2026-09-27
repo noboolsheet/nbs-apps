@@ -52,7 +52,8 @@ export default async function HomePage() {
 
       {/* DOS columnas continuas (no una rejilla por fila): así cada columna fluye con el alto de su contenido y no
           quedan huecos cuando una lista es más larga que la de al lado.
-          Izquierda: atención → proyectos → decisiones → estado del sistema. Derecha: vencidas → hoy → eventos → actividad. */}
+          Izquierda: atención → proyectos → decisiones → estado del sistema → actividad reciente.
+          Derecha (sólo trabajo): vencidas → hoy → próximos 7 días → eventos del día. */}
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
         {/* Columna izquierda */}
         <div className="flex flex-col gap-6">
@@ -145,6 +146,32 @@ export default async function HomePage() {
                 {d.systemHealth.outboxPending} · {t('home.integrations')}: {d.systemHealth.integrations}
               </span>
             </Link>
+          </section>
+
+          {/* Actividad reciente, debajo del estado del sistema (owner 2026-09-27): las dos son «qué ha pasado», no «qué
+              tengo que hacer», así que van juntas al final de esta columna y la derecha se queda sólo con el trabajo. */}
+          <section className="flex flex-col gap-3">
+            <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">{t('home.recentActivity')}</h2>
+            {d.recentActivity.length === 0 ? (
+              <EmptyState title={t('home.recentActivityEmpty')} />
+            ) : (
+              <ul className="flex flex-col gap-1 text-sm">
+                {d.recentActivity.map((a, i) => (
+                  <li key={i} className="flex items-start justify-between gap-3 border-b border-line-subtle py-1">
+                    <span className="min-w-0">
+                      <span className="font-medium">{enumLabel(a.action)}</span> {enumLabel(a.entityType)}
+                      {/* El nombre es lo que convierte «Actualizó proyecto» en información útil, y ahora además
+                          se puede ABRIR (una nota lleva al registro del que habla; un DELETE no lleva a nada). */}
+                      <ActivityTarget entry={a} />
+                      {a.detail && <span className="text-fg-muted">{` → ${enumLabel(a.detail)}`}</span>}
+                    </span>
+                    <span className="text-xs text-fg-subtle">
+                      {enumLabel(a.actorType)} · {formatDateTime(a.at)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
         </div>
 
@@ -244,30 +271,6 @@ export default async function HomePage() {
             )}
           </section>
 
-          {/* Recent Activity */}
-          <section className="flex flex-col gap-3">
-            <h2 className="text-sm font-medium uppercase tracking-wide text-fg-muted">{t('home.recentActivity')}</h2>
-            {d.recentActivity.length === 0 ? (
-              <EmptyState title={t('home.recentActivityEmpty')} />
-            ) : (
-              <ul className="flex flex-col gap-1 text-sm">
-                {d.recentActivity.map((a, i) => (
-                  <li key={i} className="flex items-start justify-between gap-3 border-b border-line-subtle py-1">
-                    <span className="min-w-0">
-                      <span className="font-medium">{enumLabel(a.action)}</span> {enumLabel(a.entityType)}
-                      {/* El nombre es lo que convierte «Actualizó proyecto» en información útil, y ahora además
-                          se puede ABRIR (una nota lleva al registro del que habla; un DELETE no lleva a nada). */}
-                      <ActivityTarget entry={a} />
-                      {a.detail && <span className="text-fg-muted">{` → ${enumLabel(a.detail)}`}</span>}
-                    </span>
-                    <span className="text-xs text-fg-subtle">
-                      {enumLabel(a.actorType)} · {formatDateTime(a.at)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
         </div>
       </div>
     </div>

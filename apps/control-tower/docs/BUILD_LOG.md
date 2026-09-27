@@ -39,6 +39,12 @@ extractor genérico de uuid del e2e busca `"id":`, así que se quedaba vacío y 
 sin que la app tuviera nada que ver. Y de paso saltó el check de J9, que seguía esperando el aviso de vencidas que se
 retiró en el paso 1/2 — ahora comprueba lo contrario: que la vencida sale en su lista y **no** se repite como aviso.
 
+**Tras revisarlo en local (owner):** la **actividad reciente** pasa al final de la **columna izquierda**, debajo del
+estado del sistema. Las dos cosas responden a «qué ha pasado», así que van juntas, y la columna derecha se queda sólo
+con el trabajo (vencidas · hoy · próximos 7 días · eventos). De paso: `pnpm dev` abría el **3000** mientras
+`CLAUDE.md`, `PORTS.md` y el compose dicen que el dev de control-tower es el **4270** (el 3000 es el de Twenty); el
+script queda alineado al 4270.
+
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (198, 7 nuevos) · `pnpm build` · `pnpm test:integration`
 (**214**, 10 nuevos) · `e2e-journeys` (**J18 nuevo**, 11 checks; todos OK).
 

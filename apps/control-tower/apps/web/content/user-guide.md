@@ -30,10 +30,11 @@ información tiene UNA fuente de verdad**. Según el dato, la relación es una d
 - **Inicio** — lo que hay que mirar hoy, en este orden: **Dinero** (cuánto te deben, cuánto debes y lo retrasado, por
   moneda) · tres cifras sin lista propia (tareas abiertas, oportunidades abiertas, capturas por procesar) · el **bloc
   de notas rápidas** ·
-  **Requiere atención** (sólo lo que no aparece en ningún otro bloque) · proyectos activos con su progreso ·
-  **decisiones en revisión** · tareas repartidas en **vencidas · hoy · próximos 7 días** (y cuántas hay sin fecha) ·
-  eventos del día · estado del sistema en una línea · actividad reciente. Nada se repite: si algo tiene su lista
-  aquí, no tiene además un contador ni un aviso.
+  **Requiere atención** (sólo lo que no aparece en ningún otro bloque) y, en dos columnas: a la izquierda «qué ha
+  pasado» —proyectos activos con su progreso, **decisiones en revisión**, estado del sistema en una línea y la
+  **actividad reciente**— y a la derecha el trabajo: tareas en **vencidas · hoy · próximos 7 días** (más cuántas hay
+  sin fecha) y los eventos del día. Nada se repite: si algo tiene su lista aquí, no tiene además un contador ni un
+  aviso.
 - **Business** — gobernanza: áreas estratégicas, capacidades, servicios, objetivos (goals) y **Procesos (SOP)**.
 - **CRM** — clientes, contactos y oportunidades (pipeline de ventas). Se alimenta de Twenty.
 - **Projects** — proyectos y sus tareas. La vista global **Tasks** (`/tasks`) lista TODAS las tareas de todos los
