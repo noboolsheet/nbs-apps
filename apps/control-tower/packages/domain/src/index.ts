@@ -4,6 +4,7 @@ export * from './scheduling';
 export * from './project';
 export * from './slug';
 export * from './ownership';
+export * from './archiving';
 export * from './crm-classification';
 export * from './person-roles';
 export * from './billing-rules';

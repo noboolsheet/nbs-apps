@@ -7,6 +7,7 @@ import {
   dispatchOutboxOnce,
   runRetentionSweep,
   runOpportunityArchiveSweep,
+  runTerminalArchiveSweep,
   runInboxPurgeSweep,
   runReviewPurgeSweep,
   runArchivedPurgeSweep,
@@ -368,6 +369,13 @@ async function tick(): Promise<void> {
         if (swept.deleted > 0) log.info('retention sweep', swept);
       } catch (error) {
         log.error('retention sweep failed', { error: error instanceof Error ? error.message : String(error) });
+      }
+      try {
+        // Autoarchivado por estado terminal (owner 2026-09-27): lo cerrado hace una semana sale de las listas.
+        const term = await runTerminalArchiveSweep(db);
+        if (term.archived > 0) log.info('terminal archive sweep', term);
+      } catch (error) {
+        log.error('terminal archive sweep failed', { error: error instanceof Error ? error.message : String(error) });
       }
       try {
         const arch = await runOpportunityArchiveSweep(db);

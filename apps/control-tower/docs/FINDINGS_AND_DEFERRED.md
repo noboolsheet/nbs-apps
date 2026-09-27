@@ -21,6 +21,8 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
 >   viajan a Twenty y están vacías; hay que decidir si se mapean, se quedan como datos propios de CT o se retiran.
 >   *(Con **ADR-009** el marco ya está: nada de CT viaja a Twenty salvo el `stage`, así que la pregunta se reduce a
 >   quedárselos como datos propios de CT o retirarlos.)*
+> - **Archivado (F-38, 2026-09-27):** cerrado. Un solo mecanismo (`archived_at`), autoarchivado de lo cerrado a los 7
+>   días, cascada padre→hijos y «Eliminar definitivamente» en Ajustes › Archivados. El CRM no se archiva desde CT.
 > - **Pendiente de una acción en vibox:** **F-37** — el acceso desde la red local ya está resuelto en código; falta
 >   poner `BETTER_AUTH_ALLOWED_HOSTS` en el `.env.prod` del servidor y, si se quiere el mismo acceso a Twenty/n8n/
 >   Zammad, descomentar sus `*_PUBLIC_*` en `nbs-infra/envs/.env.prod` (requiere que `*.noboolsheet.local` resuelva
@@ -1192,6 +1194,63 @@ hay que volver a medir antes de dar por bueno el síntoma.
      —eso sí, se le quitó el `outline-none`, que se saltaba la regla de no matar el foco sin alternativa—.
 - **De paso:** `learning-list` pintaba su enlace externo con `text-blue-600 dark:text-blue-400`, saltándose los
   tokens del tema (DESIGN_TOKENS prohíbe `dark:` a mano); ahora usa `ExternalSourceLink`.
+
+### F-38 · Las políticas de archivado: dos «archivados» que no se hablaban, sin cascada y sin forma de borrar ✅ RESUELTO (2026-09-27)
+
+- **Hallado en:** repaso pedido por el owner («controla todas las políticas de archivar… y encuentra posibles fallas»).
+  Lo que él esperaba: que lo cerrado o marcado para archivar pase solo a una lista dedicada, salga de las vistas, y que
+  ahí se pueda **eliminar para siempre**.
+- **Lo que YA funcionaba (y no se ha tocado):** las 17 consultas de lista, la búsqueda global y las secciones de las
+  fichas filtran `archived_at`; el barrido corre **a diario** (no semanal: más a menudo que lo pedido); la purga por
+  retención recorre las 19 entidades en orden hijo→padre y reporta lo que una FK bloquea; la reconciliación del sync
+  archiva lo que desaparece del origen y lo restaura si vuelve.
+- **Las ocho fallas encontradas y qué se hizo con cada una:**
+  1. **🔴 `ARCHIVED` era un VALOR DE ESTADO en ocho entidades y no archivaba nada** (proyecto, entregable, decisión,
+     conocimiento, reutilizable, portafolio, objetivo, área). El registro seguía en su lista, no llegaba a Archivados y
+     la purga no lo veía. → El valor **se retira de los selectores** (`selectableStatus`, test que lo vigila) y pasa a
+     ser un **estado terminal** que el barrido archiva de verdad, incluidas las filas que ya lo tenían. `goal` y
+     `strategic_area` pierden el campo de estado: sus dos únicos valores eran ACTIVE/ARCHIVED, o sea el archivado.
+  2. **🟡 Sólo las oportunidades se archivaban solas.** → Barrido nuevo `sweep.terminal_archive` (ACT-16): 7 días en un
+     estado de cierre (proyecto CLOSED, servicio/capacidad/recurso RETIRED, decisión SUPERSEDED, reutilizable
+     DEPRECATED, y `ARCHIVED`). La edad se mide con `updated_at`, así que editar reinicia el reloj. **Las tareas no
+     entran**: tienen su propia retención (se borran, no se archivan) y meterlas sería doble circuito.
+  3. **🔴 En Archivados sólo se podía RESTAURAR.** El borrado definitivo existía únicamente como política global por
+     antigüedad, que por defecto es «conservar siempre». → `purgeArchivedByIds` + `POST /api/v1/purge` + acción
+     **«Eliminar definitivamente»** en la barra de selección (la barra ahora admite dos acciones a la vez).
+  4. **🟡 Archivar un padre no archivaba a sus hijos, y eso bloqueaba la purga para siempre** (la FK de una tarea viva
+     impide borrar su proyecto; el barrido lo contaba en `blocked` y lo reintentaba a diario sin avanzar nunca). →
+     `ARCHIVE_CASCADE`/`cascadeArchive`: proyecto → tareas y entregables, tarea → subtareas, oportunidad → tareas de
+     preventa (esta última ya existía inline y ahora comparte el mismo punto). Documentos, recursos, decisiones y
+     portafolio **no** se arrastran a propósito: existen por su cuenta. Al restaurar vuelven sólo los hijos con la
+     misma marca de tiempo que el padre, así que un hijo archivado aparte no revive.
+  5. **🟡 Dos fugas de archivados a la vista:** `listProjectAssets` (los reutilizables archivados seguían saliendo en la
+     ficha del proyecto — la más visible) y `listProjectTasks` (el endpoint devolvía tareas archivadas; el comentario de
+     `listOpportunityTasks` decía «mismo criterio que las de proyecto», que era falso). También `listSectors` contaba
+     sectores de archivados, `listAssetProjects` no filtraba proyectos archivados y **`taskCountsByProject` contaba
+     tareas archivadas**, así que la lista de proyectos y su ficha daban progresos distintos. → Los cinco filtrados.
+  6. **🟡 Tres entidades archivables sin forma de archivarlas:** Biblioteca/Procesos (`knowledge_item`), Aprendizaje
+     (`learning_item`) y `task`. → Botón «Archivar» en las dos primeras; en tareas convive con «Borrar» (que es
+     definitivo y sigue siendo el atajo de siempre).
+  7. **🟢 Lo que viene de fuera vuelve:** purgar un registro que sigue existiendo en Twenty/Notion/GitHub se lleva su
+     `external_identity` —toda la idempotencia— y el siguiente sync lo recrea. → No se puede evitar (CT no manda en el
+     origen), así que **se avisa en la confirmación** del borrado.
+  8. **🟢 Detalles de la pantalla:** los contactos se listaban por **email** (sin email, «(sin nombre)» aunque tuvieran
+     nombre) → `nameCol` pasa a ser una expresión nombre→email; no se decía **por qué** estaba archivado → columna
+     **Motivo** (del `metadata.reason` del audit, con faceta); y un archivado **seguía siendo editable por URL**
+     (`?rec=`, que es como enlaza la Actividad reciente) → el panel se abre congelado con un aviso.
+- **Decisión de producto que lo enmarca (owner):** clientes, contactos y oportunidades **no se archivan desde CT** en
+  ningún caso: aparecen o desaparecen según lo que viva en Twenty. Se retiran sus botones (dos listas, dos secciones de
+  la ficha de cliente y la pestaña de archivadas), `setArchived` rechaza al actor USER y lo deja pasar al SYSTEM (el
+  sync sigue archivando lo que desaparece del pull y moviendo una Person que cambia de rol), y en Archivados esos
+  grupos salen **sin «Restaurar»**, sólo con «Eliminar definitivamente».
+- **Lo que encontró el e2e nuevo (J17), ya arreglado:** el borrado por selección **no borraba** un proyecto con hijos
+  archivados —la FK del hijo bloqueaba al padre, el mismo fallo del punto 4 repetido en el camino nuevo—, así que
+  `purgeArchivedByIds` arrastra ahora a los hijos archivados (recursivo por las subtareas) con un registro de lo ya
+  procesado: una subtarea cuelga de **dos** padres (su tarea madre y el proyecto) y se contaba dos veces, porque
+  borrar una fila que ya no existe no da error.
+- **Lo que queda fuera a propósito:** editar por API un registro archivado sigue siendo posible (el bloqueo es de
+  panel; sólo `opportunity` lo rechaza en el comando desde antes) y `listArchived` sigue sin `LIMIT` — dos cosas que
+  sólo importan cuando el volumen crezca, anotadas aquí para no descubrirlas dos veces.
 
 ### F-37 · Entrar por la red local: el login rechazaba el origen (y las apps de vibox sólo se alcanzaban por el tailnet) ✅ RESUELTO (2026-09-27) · ⬜ queda el interruptor de Twenty/n8n/Zammad
 

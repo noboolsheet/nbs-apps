@@ -202,7 +202,12 @@ export const es = {
 
   // Genéricos compartidos (resolución de colisiones)
   'enum.INACTIVE': 'Inactivo',
-  'enum.ARCHIVED': 'Archivado',
+  'reason.manual': 'Archivado a mano',
+  'reason.cascade': 'Con su proyecto o su tarea',
+  'reason.terminal-status': 'Cerrado hace más de una semana',
+  'reason.auto-archive': 'Cerrado hace más de una semana',
+  'reason.sync-missing': 'Ya no existe en el origen',
+    'enum.ARCHIVED': 'Archivado',
   'enum.PAUSED': 'Pausado',
   'enum.RETIRED': 'Retirado',
   'enum.REVIEW': 'En revisión',
@@ -304,9 +309,11 @@ export const es = {
   'common.restore': 'Restaurar',
   'common.restoring': 'Restaurando…',
   'common.delete': 'Borrar',
+  'common.deleteForever': 'Eliminar definitivamente',
   'common.deleting': 'Borrando…',
   'common.openExternal': 'Abrir enlace externo',
   'panel.openFullRecord': 'Abrir ficha completa ↗',
+  'panel.archivedReadOnly': 'Archivado: está fuera de las listas y no se edita. Se ve en Ajustes › Archivados.',
   'panel.readOnly': 'Registro de solo lectura.',
   'panel.openInProvider': 'Abrir en {provider}',
   'panel.ownedByProvider': 'Lo gestiona {provider}; se edita en el origen.',
@@ -654,7 +661,7 @@ export const es = {
 
   // ─── settings ───────────────────────────────────────────────────────────────────────────────────────
   'settings.archivedEmpty': 'No hay nada archivado',
-  'settings.archivedEmptyHint': 'Lo que archives desde las listas aparecerá aquí.',
+  'settings.archivedEmptyHint': 'Aquí aparece lo que archives desde las listas y lo que se archive solo al cerrarse.',
   'settings.archivedTitle': 'Archivados',
   'settings.guideTitleLong': 'Guía de uso · Control Tower',
   'settings.organization': 'Organización',
@@ -822,7 +829,9 @@ export const es = {
   'enum.resource': 'activo',
 
   // ─── Párrafos de ayuda de las cabeceras de sección ──────────────────────────────────────────────────
-  'settings.archivedHint': 'Ocultos, no borrados: selecciónalos y pulsa «Restaurar» para devolverlos a su lista.',
+  'settings.archivedHint': 'Fuera de las listas, todavía en la base: selecciónalos para devolverlos a su lista o eliminarlos definitivamente.',
+  'settings.archivedReason': 'Motivo',
+  'settings.archivedNotRestorable': 'Lo trae el CRM: reaparece o desaparece según lo que exista en Twenty, así que aquí sólo se puede eliminar.',
   'knowledge.captureChannelsHint': 'Conecta herramientas externas (n8n, email, extensión…) para que envíen notas a este Inbox. Cada canal tiene su propio token; actívalo o regenéralo para conectar/desconectar.',
   'automation.listHint': 'Todo lo que Control Tower hace por su cuenta. Pulsa una para ver el detalle y activarla, desactivarla o ejecutarla ahora.',
   'settings.changePhotoHint': 'Sube una imagen desde tu ordenador (se recorta a un círculo).',
@@ -894,6 +903,10 @@ export const es = {
   'table.confirmRestore.other': '¿Restaurar {n} elementos? Volverán a aparecer en su lista.',
   'table.confirmDelete.one': '¿Borrar 1 elemento? Es DEFINITIVO (no se puede recuperar). Se borrarán también sus subtareas.',
   'table.confirmDelete.other': '¿Borrar {n} elementos? Es DEFINITIVO (no se puede recuperar). Se borrarán también sus subtareas.',
+  'table.confirmPurge.one': '¿Eliminar 1 elemento PARA SIEMPRE? No se puede recuperar. Si vino de Twenty, Notion o GitHub y allí sigue existiendo, el próximo sync lo traerá de nuevo.',
+  'table.confirmPurge.other': '¿Eliminar {n} elementos PARA SIEMPRE? No se pueden recuperar. Los que vinieran de Twenty, Notion o GitHub y allí sigan existiendo, el próximo sync los traerá de nuevo.',
+  'table.purgeBlocked.one': 'Se conservó 1 elemento: algo que sigue vivo lo usa. Archiva primero lo que está dentro.',
+  'table.purgeBlocked.other': 'Se conservaron {n} elementos: algo que sigue vivo los usa. Archiva primero lo que está dentro.',
   'table.selected.one': '1 seleccionado',
   'table.selected.other': '{n} seleccionados',
   'common.no': 'No',

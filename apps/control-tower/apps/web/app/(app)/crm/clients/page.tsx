@@ -101,6 +101,9 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
         />
       }
     >
+      {/* Sin «Archivar»: los clientes los gobierna Twenty y aparecen o desaparecen según lo que exista allí
+          (owner 2026-09-27, ADR-009/ADR-010). Lo que el sync archive por haber desaparecido del CRM se ve en
+          Ajustes › Archivados, y desde ahí sólo se puede eliminar. */}
       <RecordTable
         columns={columns}
         rows={rows}
@@ -110,8 +113,6 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
           title: t('crm.clientsEmptyView'),
           hint: active.key === 'ACTIVE' ? t('crm.clientsEmptyHint') : undefined,
         }}
-        selectable
-        archive={{ entityType: 'client' }}
       />
     </ListPage>
   );

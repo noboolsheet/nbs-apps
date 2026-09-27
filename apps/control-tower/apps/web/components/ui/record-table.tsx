@@ -34,6 +34,7 @@ export function RecordTable<T>({
   archive,
   restore,
   remove,
+  purge,
   fixedLayout,
   truncatedAt,
   reorder,
@@ -49,6 +50,8 @@ export function RecordTable<T>({
   archive?: { entityType: string };
   restore?: { entityType: string };
   remove?: { entityType: string };
+  /** «Eliminar definitivamente» para filas ya archivadas (vista de Archivados). Combinable con `restore`. */
+  purge?: { entityType: string };
   fixedLayout?: boolean;
   /** E-12 — orden manual de las filas (asa para arrastrar + ↑/↓). Sólo en las listas de `REORDERABLE`. */
   reorder?: { entityType: string };
@@ -77,6 +80,7 @@ export function RecordTable<T>({
       archive={archive}
       restore={restore}
       remove={remove}
+      purge={purge}
       fixedLayout={fixedLayout}
       filterable={anyValue}
       truncatedAt={truncatedAt}

@@ -1,4 +1,4 @@
-import { and, eq, lt, inArray, isNull, isNotNull, desc } from 'drizzle-orm';
+import { and, eq, lt, inArray, isNull, isNotNull, desc, sql, type SQL } from 'drizzle-orm';
 import type { AnyPgColumn, PgTable } from 'drizzle-orm/pg-core';
 import { z } from '@ct/validation';
 import type { Database, DbOrTx } from '@ct/db';
@@ -27,11 +27,13 @@ import {
   serviceCapabilities,
   externalIdentities,
   outboxEvents,
+  auditLogs,
 } from '@ct/db/schema';
+import { isExternallyArchived, TERMINAL_STATUS, TERMINAL_ARCHIVE_AFTER_DAYS } from '@ct/domain';
 import { requireCan, orgEq, type OrgContext } from '../auth/index';
-import { recordAudit } from '../audit/index';
+import { isSystemActor, recordAudit } from '../audit/index';
 import { deleteNotesFor } from '../notes/index';
-import { mapDbError, notFound } from '../errors';
+import { archivedByOrigin, mapDbError, notFound } from '../errors';
 import { logger } from '@ct/shared';
 
 /**
@@ -41,7 +43,12 @@ import { logger } from '@ct/shared';
  */
 interface ArchivableMeta {
   table: PgTable;
-  nameCol: AnyPgColumn;
+  /**
+   * Qué mostrar como «nombre» en «Archivados» y en la actividad reciente. Casi siempre es una columna; en los
+   * contactos es una expresión, porque su nombre está repartido en dos columnas y antes se listaban por **email**
+   * (los que no tenían salían como «(sin nombre)» aunque sí tuvieran nombre).
+   */
+  nameCol: AnyPgColumn | SQL<string>;
   label: string;
 }
 export const ARCHIVABLE: Record<string, ArchivableMeta> = {
@@ -50,7 +57,11 @@ export const ARCHIVABLE: Record<string, ArchivableMeta> = {
   deliverable: { table: deliverables, nameCol: deliverables.name, label: 'Entregables' },
   resource: { table: resources, nameCol: resources.name, label: 'Recursos' },
   client: { table: clients, nameCol: clients.name, label: 'Clientes' },
-  contact: { table: contacts, nameCol: contacts.email, label: 'Contactos' },
+  contact: {
+    table: contacts,
+    nameCol: sql<string>`coalesce(nullif(trim(concat_ws(' ', ${contacts.firstName}, ${contacts.lastName})), ''), ${contacts.email})`,
+    label: 'Contactos',
+  },
   opportunity: { table: opportunities, nameCol: opportunities.name, label: 'Oportunidades' },
   strategic_area: { table: strategicAreas, nameCol: strategicAreas.name, label: 'Áreas estratégicas' },
   goal: { table: goals, nameCol: goals.name, label: 'Objetivos' },
@@ -74,6 +85,84 @@ const idsSchema = z.object({
   ids: z.array(z.string().uuid()).min(1).max(200),
 });
 
+/**
+ * **Hijos que se archivan con su padre** (owner 2026-09-27). Sin esto, archivar un proyecto lo sacaba de la lista y
+ * dejaba sus tareas y entregables vivos: seguían contando en las vistas globales y —peor— **bloqueaban la purga para
+ * siempre**, porque su FK impide borrar el proyecto (el barrido lo contaba en `blocked` y lo reintentaba a diario sin
+ * avanzar nunca).
+ *
+ * Sólo van aquí los hijos que **no significan nada sin su padre**: las tareas y los entregables de un proyecto
+ * (`deliverables.project_id` es NOT NULL), las subtareas de una tarea y las tareas de preventa de una oportunidad.
+ * Documentos, recursos, decisiones y elementos de portafolio NO: apuntan a un proyecto pero existen por su cuenta
+ * (un recurso puede ser del cliente, una decisión de un servicio), así que se archivan aparte y, si aún referencian
+ * al padre, la purga lo dice.
+ */
+const ARCHIVE_CASCADE: Record<string, { table: PgTable; fk: AnyPgColumn; entityType: string }[]> = {
+  project: [
+    { table: tasks, fk: tasks.projectId, entityType: 'task' },
+    { table: deliverables, fk: deliverables.projectId, entityType: 'deliverable' },
+  ],
+  task: [{ table: tasks, fk: tasks.parentTaskId, entityType: 'task' }],
+  opportunity: [{ table: tasks, fk: tasks.opportunityId, entityType: 'task' }],
+};
+
+/** Pares padre→hijo de la cascada, para el test de regresión (todo hijo tiene que ser archivable). */
+export function archiveCascadePairs(): { parent: string; child: string }[] {
+  return Object.entries(ARCHIVE_CASCADE).flatMap(([parent, children]) =>
+    children.map((c) => ({ parent, child: c.entityType })),
+  );
+}
+
+/**
+ * Propaga el archivado (o el desarchivado) a los hijos declarados en `ARCHIVE_CASCADE`. **Punto único**: lo usan el
+ * archivado a mano, el barrido de estados terminales y el del ciclo de vida de las oportunidades.
+ *
+ * Al archivar, los hijos reciben **la misma marca de tiempo** que el padre. Eso no es cosmético: al restaurar sólo se
+ * desarchivan los hijos con ESA marca, así que un hijo que estaba archivado de antes (a mano, o con otro padre) no
+ * revive por rebote. `value = null` exige por eso el `previous` (la marca que tenía el padre).
+ */
+export async function cascadeArchive(
+  db: DbOrTx,
+  ctx: OrgContext,
+  entityType: string,
+  parentIds: string[],
+  value: Date | null,
+  previous?: Date | null,
+): Promise<number> {
+  const children = ARCHIVE_CASCADE[entityType];
+  if (!children || parentIds.length === 0) return 0;
+  let touched = 0;
+  for (const child of children) {
+    const c = child.table as unknown as ArchivableCols;
+    const rows = await db
+      .update(child.table)
+      .set({ archivedAt: value })
+      .where(
+        and(
+          orgEq(c.organizationId, ctx),
+          inArray(child.fk, parentIds),
+          // Al archivar: sólo lo que esté vivo. Al restaurar: sólo lo que se archivó EN ESA MISMA operación.
+          value === null
+            ? previous
+              ? eq(c.archivedAt, previous)
+              : isNotNull(c.archivedAt)
+            : isNull(c.archivedAt),
+        ),
+      )
+      .returning({ id: c.id });
+    for (const r of rows) {
+      await recordAudit(db, ctx, {
+        action: value === null ? 'RESTORE' : 'ARCHIVE',
+        entityType: child.entityType,
+        entityId: String(r.id),
+        metadata: { reason: 'cascade', parentType: entityType },
+      });
+    }
+    touched += rows.length;
+  }
+  return touched;
+}
+
 /** Aplica `archivedAt = value` a las filas seleccionadas (value=Date → archiva; null → restaura). */
 async function setArchived(
   db: Database,
@@ -85,18 +174,50 @@ async function setArchived(
   const { entityType, ids } = idsSchema.parse(input);
   const meta = ARCHIVABLE[entityType];
   if (!meta) throw notFound('entity');
+  // Lo que llega de Twenty no lo archiva ni lo restaura una PERSONA: aparece o desaparece según lo que viva allí.
+  // El sync (actor SYSTEM) sí puede: es quien archiva lo que dejó de venir en el pull y quien mueve una Person que
+  // cambia de rol (ADR-010). Mismo patrón que `createOpportunity`, que rechaza al usuario y deja pasar al sistema.
+  if (isExternallyArchived(entityType) && !isSystemActor(ctx)) throw archivedByOrigin(meta.label);
   const c = meta.table as unknown as ArchivableCols;
   const onlyMatching = value === null ? isNotNull(c.archivedAt) : isNull(c.archivedAt);
   try {
-    const rows = await db
-      .update(meta.table)
-      .set({ archivedAt: value })
-      .where(and(inArray(c.id, ids), orgEq(c.organizationId, ctx), onlyMatching))
-      .returning({ id: c.id });
-    for (const r of rows) {
-      await recordAudit(db, ctx, { action: value === null ? 'RESTORE' : 'ARCHIVE', entityType, entityId: String(r.id) });
-    }
-    return rows.length;
+    return await db.transaction(async (tx) => {
+      // Marcas de archivado ANTES de tocar nada. Hace falta para restaurar la cascada con exactitud, y no se puede
+      // sacar del `RETURNING`: Postgres devuelve la fila **nueva**, donde `archived_at` ya es null.
+      const before =
+        value === null
+          ? ((await tx
+              .select({ id: c.id, archivedAt: c.archivedAt })
+              .from(meta.table)
+              .where(
+                and(inArray(c.id, ids), orgEq(c.organizationId, ctx), isNotNull(c.archivedAt)),
+              )) as { id: string; archivedAt: Date | null }[])
+          : [];
+      const rows = (await tx
+        .update(meta.table)
+        .set({ archivedAt: value })
+        .where(and(inArray(c.id, ids), orgEq(c.organizationId, ctx), onlyMatching))
+        .returning({ id: c.id })) as { id: string }[];
+      for (const r of rows) {
+        await recordAudit(tx, ctx, {
+          action: value === null ? 'RESTORE' : 'ARCHIVE',
+          entityType,
+          entityId: String(r.id),
+        });
+      }
+      // Los hijos van con su padre, en la MISMA transacción: si falla algo, no queda un proyecto archivado con sus
+      // tareas vivas (que es justo lo que bloqueaba la purga).
+      if (rows.length > 0) {
+        if (value === null) {
+          // Restaurar va de uno en uno: cada padre se archivó en un momento distinto y sólo sus hijos de ESA marca
+          // vuelven con él (un hijo archivado por su cuenta se queda archivado).
+          for (const b of before) await cascadeArchive(tx, ctx, entityType, [String(b.id)], null, b.archivedAt);
+        } else {
+          await cascadeArchive(tx, ctx, entityType, rows.map((r) => String(r.id)), value);
+        }
+      }
+      return rows.length;
+    });
   } catch (e) {
     throw mapDbError(e, { entity: entityType });
   }
@@ -113,7 +234,9 @@ export function restoreRecords(db: Database, ctx: OrgContext, input: unknown): P
 export interface ArchivedGroup {
   entityType: string;
   label: string;
-  items: { id: string; name: string | null; archivedAt: Date | null }[];
+  /** `false` para lo que gobierna el origen (CRM de Twenty): ahí no se ofrece restaurar. */
+  restorable: boolean;
+  items: { id: string; name: string | null; archivedAt: Date | null; reason: string | null }[];
 }
 
 /**
@@ -218,6 +341,124 @@ export async function deleteRecordTraces(
 }
 
 /**
+ * Borrado DEFINITIVO de una fila archivada, con todo lo que hay que llevarse. Devuelve `false` —sin lanzar— si la
+ * base lo impide, que en la práctica significa **una fila viva la sigue referenciando** (una tarea dentro de un
+ * proyecto archivado). Se conserva archivada a propósito: es el único caso en que no borrar es lo correcto.
+ *
+ * Punto único de los dos caminos de purga: el barrido por retención y el borrado a mano desde «Archivados».
+ */
+async function hardDelete(
+  db: Database,
+  ctx: OrgContext,
+  entityType: string,
+  id: string,
+  metadata: Record<string, unknown>,
+): Promise<boolean> {
+  const meta = ARCHIVABLE[entityType]!;
+  const c = meta.table as unknown as ArchivableCols;
+  try {
+    await deleteDependents(db, ctx, entityType, id);
+    await db.delete(meta.table).where(and(eq(c.id, id), orgEq(c.organizationId, ctx)));
+    // DESPUÉS del borrado (si la FK lo bloquea, la fila sigue viva y su puntero tiene que seguir ahí).
+    await deleteRecordTraces(db, ctx, entityType, id);
+    await recordAudit(db, ctx, { action: 'DELETE', entityType, entityId: id, metadata });
+    return true;
+  } catch (e) {
+    logger.warn('borrado definitivo: registro conservado', {
+      entityType,
+      entityId: id,
+      error: e instanceof Error ? e.message : String(e),
+    });
+    return false;
+  }
+}
+
+/**
+ * Borra los hijos ARCHIVADOS de un registro antes de borrarlo a él. Si no, la FK del hijo bloquea al padre y la
+ * purga a mano de un proyecto no llegaba nunca a borrarlo (lo encontró el journey J17): archivar arrastra a los
+ * hijos, así que borrar tiene que arrastrarlos igual. Es recursiva por las subtareas (tarea → tarea).
+ *
+ * Sólo toca hijos **archivados**: uno vivo se conserva y deja al padre bloqueado, que es lo correcto — hay trabajo
+ * en curso dentro.
+ */
+async function purgeCascade(
+  db: Database,
+  ctx: OrgContext,
+  entityType: string,
+  id: string,
+  /**
+   * Lo ya procesado. Hace falta porque una misma fila cuelga de DOS padres de la cascada: una **subtarea** apunta a
+   * su tarea madre (`parent_task_id`) y al proyecto (`project_id`), así que sin esto se borraba una vez y se contaba
+   * dos (el borrado de una fila que ya no está no falla). Lo cazó el journey J17 con un `deleted` inflado.
+   */
+  seen: Set<string> = new Set(),
+): Promise<number> {
+  const children = ARCHIVE_CASCADE[entityType];
+  if (!children) return 0;
+  let deleted = 0;
+  for (const child of children) {
+    const c = child.table as unknown as ArchivableCols;
+    const rows = (await db
+      .select({ id: c.id })
+      .from(child.table)
+      .where(and(orgEq(c.organizationId, ctx), eq(child.fk, id), isNotNull(c.archivedAt)))) as { id: string }[];
+    for (const r of rows) {
+      const key = `${child.entityType}:${String(r.id)}`;
+      if (String(r.id) === id || seen.has(key)) continue;
+      seen.add(key);
+      deleted += await purgeCascade(db, ctx, child.entityType, String(r.id), seen);
+      if (await hardDelete(db, ctx, child.entityType, String(r.id), { reason: 'manual-purge-cascade', parentType: entityType })) {
+        deleted++;
+      }
+    }
+  }
+  return deleted;
+}
+
+/**
+ * **Borrar para siempre lo que ya está archivado**, por selección (owner 2026-09-27: «que exista un lugar donde
+ * revisar esta lista con la posibilidad de eliminar para siempre»). Hasta ahora el borrado definitivo sólo existía
+ * como política global por antigüedad, así que no había forma de decir «estos dos, ya».
+ *
+ * Sólo toca filas **archivadas**: un id vivo se ignora en silencio —no es un error del usuario, es que la lista que
+ * tenía delante ya no estaba al día— y se devuelve en `skipped`. Lo que la base no deja borrar por una FK viva sale
+ * en `blocked` para poder decirlo en pantalla.
+ *
+ * ⚠ Para lo que viene de un sistema externo, «para siempre» dura hasta el siguiente sync: borrar se lleva su
+ * `external_identity`, que es toda la idempotencia, así que si el registro sigue existiendo en Twenty/Notion/GitHub
+ * vuelve a crearse. Lo que se archivó porque desapareció del origen sí muere del todo.
+ */
+export async function purgeArchivedByIds(
+  db: Database,
+  ctx: OrgContext,
+  input: unknown,
+): Promise<{ deleted: number; blocked: number; skipped: number }> {
+  requireCan(ctx.role, 'delete');
+  const { entityType, ids } = idsSchema.parse(input);
+  const meta = ARCHIVABLE[entityType];
+  if (!meta) throw notFound('entity');
+  const c = meta.table as unknown as ArchivableCols;
+  const rows = (await db
+    .select({ id: c.id, name: meta.nameCol })
+    .from(meta.table)
+    .where(and(inArray(c.id, ids), orgEq(c.organizationId, ctx), isNotNull(c.archivedAt)))) as {
+    id: string;
+    name: string | null;
+  }[];
+  let deleted = 0;
+  let blocked = 0;
+  for (const r of rows) {
+    // Primero lo que cuelga de él y también está archivado (tareas y entregables de un proyecto, subtareas): su FK
+    // bloquearía el borrado del padre.
+    deleted += await purgeCascade(db, ctx, entityType, String(r.id));
+    const ok = await hardDelete(db, ctx, entityType, String(r.id), { reason: 'manual-purge', name: r.name });
+    if (ok) deleted++;
+    else blocked++;
+  }
+  return { deleted, blocked, skipped: ids.length - rows.length };
+}
+
+/**
  * Purga (borrado DEFINITIVO) de los registros archivados hace más de `retentionDays` días, en TODAS las
  * entidades archivables. `retentionDays <= 0` (o null) ⇒ no borra nada ("conservar siempre"). Cada borrado
  * deja rastro en `audit_logs` (acción DELETE, `metadata.reason = 'archived-retention'`).
@@ -257,28 +498,18 @@ export async function purgeArchivedRecords(
         name: string | null;
       }[];
       for (const r of rows) {
-        try {
-          await deleteDependents(db, ctx, entityType, String(r.id));
-          await db.delete(meta.table).where(and(eq(c.id, r.id), orgEq(c.organizationId, ctx)));
-          // DESPUÉS del borrado (si la FK lo bloquea, la fila sigue viva y su puntero tiene que seguir ahí).
-          await deleteRecordTraces(db, ctx, entityType, String(r.id));
-          await recordAudit(db, ctx, {
-            action: 'DELETE',
-            entityType,
-            entityId: String(r.id),
-            metadata: { reason: 'archived-retention', name: r.name, retentionDays: opts.retentionDays },
-          });
+        const ok = await hardDelete(db, ctx, entityType, String(r.id), {
+          reason: 'archived-retention',
+          name: r.name,
+          retentionDays: opts.retentionDays,
+        });
+        if (ok) {
           deleted++;
           deletedThisPass++;
-        } catch (e) {
+        } else {
           // Sigue referenciado por otra fila (FK) u otro impedimento → se conserva archivado. Se cuenta por
-          // entidad y se deja en el log del servidor: sin esto, un bloqueo permanente era invisible.
+          // entidad: sin esto, un bloqueo permanente era invisible.
           blocked[entityType] = (blocked[entityType] ?? 0) + 1;
-          logger.warn('purga de archivados: registro conservado', {
-            entityType,
-            entityId: String(r.id),
-            error: e instanceof Error ? e.message : String(e),
-          });
         }
       }
     }
@@ -288,17 +519,126 @@ export async function purgeArchivedRecords(
   return { deleted, skipped, blocked };
 }
 
-/** Lista lo archivado, agrupado por entidad (solo grupos con ≥1). Para la vista "Archivados". */
+/**
+ * **Autoarchivado por estado terminal** (owner 2026-09-27: «los objetos que han llegado a un estado terminal … una
+ * vez a la semana se mandan a una lista dedicada y desaparecen de la vista principal»).
+ *
+ * Recorre `TERMINAL_STATUS` (dominio) y archiva lo que lleve **7 días** en un estado de cierre —proyecto cerrado,
+ * capacidad o servicio retirado, decisión sustituida, reutilizable obsoleto, y el viejo estado `ARCHIVED` de las ocho
+ * entidades que lo ofrecían—. Arrastra a los hijos por `cascadeArchive`, así que un proyecto se lleva sus tareas y
+ * entregables y el conjunto queda purgable de verdad.
+ *
+ * **La edad se mide con `updated_at`**, no con una columna nueva: no hay «cerrado el» en estas tablas y añadirla
+ * obligaría a rellenarla hacia atrás. Tiene una propiedad útil: cualquier edición reinicia el reloj, así que algo que
+ * sigues tocando no se archiva a tu espalda. El cambio de estado en sí queda en `change_events`.
+ *
+ * Idempotente y restart-safe: mira estado + antigüedad, no un temporizador. `now` inyectable para tests.
+ */
+export async function archiveTerminalRecords(
+  db: Database,
+  ctx: OrgContext,
+  opts: { olderThanDays?: number; now?: Date } = {},
+): Promise<{ archived: number; byEntity: Record<string, number> }> {
+  requireCan(ctx.role, 'delete');
+  const days = opts.olderThanDays ?? TERMINAL_ARCHIVE_AFTER_DAYS;
+  const now = opts.now ?? new Date();
+  const cutoff = new Date(now.getTime() - days * 86_400_000);
+  const byEntity: Record<string, number> = {};
+  let archived = 0;
+
+  for (const [entityType, statuses] of Object.entries(TERMINAL_STATUS)) {
+    const meta = ARCHIVABLE[entityType];
+    if (!meta || statuses.length === 0) continue;
+    const c = meta.table as unknown as ArchivableCols & { status: AnyPgColumn; updatedAt: AnyPgColumn };
+    try {
+      const rows = (await db
+        .update(meta.table)
+        .set({ archivedAt: now })
+        .where(
+          and(
+            orgEq(c.organizationId, ctx),
+            isNull(c.archivedAt),
+            inArray(c.status, [...statuses]),
+            lt(c.updatedAt, cutoff),
+          ),
+        )
+        .returning({ id: c.id, name: meta.nameCol, status: c.status })) as {
+        id: string;
+        name: string | null;
+        status: string;
+      }[];
+      if (rows.length === 0) continue;
+      for (const r of rows) {
+        await recordAudit(db, ctx, {
+          action: 'ARCHIVE',
+          entityType,
+          entityId: String(r.id),
+          metadata: { reason: 'terminal-status', status: r.status, name: r.name, olderThanDays: days },
+        });
+      }
+      await cascadeArchive(db, ctx, entityType, rows.map((r) => String(r.id)), now);
+      byEntity[entityType] = rows.length;
+      archived += rows.length;
+    } catch (e) {
+      // Una entidad que falle no puede tumbar el barrido de las demás (mismo criterio que la purga).
+      logger.warn('autoarchivado por estado: entidad omitida', {
+        entityType,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }
+  return { archived, byEntity };
+}
+
+/**
+ * Lista lo archivado, agrupado por entidad (solo grupos con ≥1). Para la vista "Archivados".
+ *
+ * Trae también **por qué** está archivado cada uno, que es lo que hace la lista utilizable: no es lo mismo algo que
+ * archivaste tú, algo que se retiró solo al cerrarse, o algo que **ya no existe en Twenty** (eso último es lo que de
+ * verdad conviene borrar). El motivo sale del último `ARCHIVE` de auditoría (`metadata.reason`), que ya se escribía.
+ */
 export async function listArchived(db: Database, ctx: OrgContext): Promise<ArchivedGroup[]> {
   const groups = await Promise.all(
     Object.entries(ARCHIVABLE).map(async ([entityType, meta]) => {
       const c = meta.table as unknown as ArchivableCols;
-      const items = (await db
+      const rows = (await db
         .select({ id: c.id, name: meta.nameCol, archivedAt: c.archivedAt })
         .from(meta.table)
         .where(and(orgEq(c.organizationId, ctx), isNotNull(c.archivedAt)))
-        .orderBy(desc(c.archivedAt))) as ArchivedGroup['items'];
-      return { entityType, label: meta.label, items };
+        .orderBy(desc(c.archivedAt))) as { id: string; name: string | null; archivedAt: Date | null }[];
+      if (rows.length === 0) {
+        return { entityType, label: meta.label, restorable: !isExternallyArchived(entityType), items: [] };
+      }
+      // Un solo viaje por entidad: el motivo del ARCHIVE más reciente de cada fila.
+      const trail = await db
+        .select({ entityId: auditLogs.entityId, metadata: auditLogs.metadata, createdAt: auditLogs.createdAt })
+        .from(auditLogs)
+        .where(
+          and(
+            orgEq(auditLogs.organizationId, ctx),
+            eq(auditLogs.entityType, entityType),
+            eq(auditLogs.action, 'ARCHIVE'),
+            inArray(
+              auditLogs.entityId,
+              rows.map((r) => String(r.id)),
+            ),
+          ),
+        )
+        .orderBy(desc(auditLogs.createdAt));
+      const reasonById = new Map<string, string>();
+      for (const a of trail) {
+        const id = a.entityId ? String(a.entityId) : '';
+        // `orderBy desc` + primer visto = el más reciente.
+        if (id && !reasonById.has(id)) {
+          reasonById.set(id, ((a.metadata as { reason?: string } | null)?.reason ?? 'manual'));
+        }
+      }
+      return {
+        entityType,
+        label: meta.label,
+        restorable: !isExternallyArchived(entityType),
+        items: rows.map((r) => ({ ...r, reason: reasonById.get(String(r.id)) ?? null })),
+      };
     }),
   );
   return groups.filter((g) => g.items.length > 0);

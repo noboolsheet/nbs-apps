@@ -30,6 +30,10 @@ export function StatusSelect({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { cls, icon } = statusTone(current);
+  // Si el estado ACTUAL ya no se ofrece —`ARCHIVED` dejó de elegirse a mano el 2026-09-27— hay que añadirlo a la
+  // lista igualmente: un `<select>` con un `value` que no está entre sus opciones se pinta vacío, y esas filas
+  // (las que quedaron con ese valor antes del cambio) se quedarían sin forma de salir de ahí.
+  const choices = options.includes(current) ? options : [current, ...options];
 
   async function change(value: string) {
     if (value === current) return;
@@ -56,7 +60,7 @@ export function StatusSelect({
           aria-label={t('common.changeStatus')}
           className="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-default"
         >
-          {options.map((s) => (
+          {choices.map((s) => (
             <option key={s} value={s}>{enumLabel(s)}</option>
           ))}
         </select>

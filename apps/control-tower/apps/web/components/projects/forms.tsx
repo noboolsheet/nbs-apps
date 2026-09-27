@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { PROJECT_STATUS, TASK_STATUS, DELIVERABLE_STATUS } from '@ct/domain';
+import { selectableStatus, PROJECT_STATUS, TASK_STATUS, DELIVERABLE_STATUS } from '@ct/domain';
 import { patchJson, deleteJson } from '@/lib/client';
 import { StatusSelect } from '@/components/ui/status-select';
 import { fieldCls } from '@/components/ui/input';
@@ -12,7 +12,7 @@ import { t } from '@/lib/i18n';
 const inputCls = fieldCls;
 
 export function ProjectStatusControl({ id, current }: { id: string; current: string }) {
-  return <StatusSelect endpoint={`/api/v1/projects/${id}/status`} field="status" current={current} options={PROJECT_STATUS} />;
+  return <StatusSelect endpoint={`/api/v1/projects/${id}/status`} field="status" current={current} options={selectableStatus(PROJECT_STATUS)} />;
 }
 
 export function TaskStatusControl({ id, current }: { id: string; current: string }) {
@@ -106,7 +106,7 @@ export function TaskDueDateControl({ id, current }: { id: string; current: strin
 }
 
 export function DeliverableStatusControl({ id, current }: { id: string; current: string }) {
-  return <StatusSelect endpoint={`/api/v1/deliverables/${id}/status`} field="status" current={current} options={DELIVERABLE_STATUS} />;
+  return <StatusSelect endpoint={`/api/v1/deliverables/${id}/status`} field="status" current={current} options={selectableStatus(DELIVERABLE_STATUS)} />;
 }
 
 /**

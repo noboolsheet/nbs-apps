@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { KNOWLEDGE_ITEM_STATUS, DECISION_STATUS, ASSET_STATUS, REVIEW_ITEM_STATUS } from '@ct/domain';
+import { selectableStatus, KNOWLEDGE_ITEM_STATUS, DECISION_STATUS, ASSET_STATUS, REVIEW_ITEM_STATUS } from '@ct/domain';
 import { postJson, deleteJson } from '@/lib/client';
 import { StatusSelect } from '@/components/ui/status-select';
 import { fieldCls } from '@/components/ui/input';
@@ -16,16 +16,16 @@ const ghostBtn = btnSecondary;
 
 
 export function KnowledgeItemStatusControl({ id, current }: { id: string; current: string }) {
-  return <StatusSelect endpoint={`/api/v1/knowledge-items/${id}/status`} current={current} options={KNOWLEDGE_ITEM_STATUS} />;
+  return <StatusSelect endpoint={`/api/v1/knowledge-items/${id}/status`} current={current} options={selectableStatus(KNOWLEDGE_ITEM_STATUS)} />;
 }
 export function DecisionStatusControl({ id, current }: { id: string; current: string }) {
-  return <StatusSelect endpoint={`/api/v1/decisions/${id}/status`} current={current} options={DECISION_STATUS} />;
+  return <StatusSelect endpoint={`/api/v1/decisions/${id}/status`} current={current} options={selectableStatus(DECISION_STATUS)} />;
 }
 export function ReviewItemStatusControl({ id, current }: { id: string; current: string }) {
   return <StatusSelect endpoint={`/api/v1/review-items/${id}/status`} current={current} options={REVIEW_ITEM_STATUS} />;
 }
 export function AssetStatusControl({ id, current }: { id: string; current: string }) {
-  return <StatusSelect endpoint={`/api/v1/assets/${id}/status`} current={current} options={ASSET_STATUS} />;
+  return <StatusSelect endpoint={`/api/v1/assets/${id}/status`} current={current} options={selectableStatus(ASSET_STATUS)} />;
 }
 
 export function CaptureForm() {

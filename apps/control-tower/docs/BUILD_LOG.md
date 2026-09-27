@@ -5,6 +5,69 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-09-27 — Las políticas de archivado, en un solo mecanismo ✅
+
+Auditoría pedida por el owner («controla todas las políticas de archivar… y encuentra posibles fallas») y los cinco
+arreglos que salieron de ella. El detalle de los ocho hallazgos está en **F-38**; aquí lo que importa entender:
+
+**1. Había DOS «archivados» que no se hablaban.** `archived_at` (el de verdad) y un **valor de estado** `ARCHIVED` que
+ocho entidades ofrecían en su panel y que **no archivaba nada**: el registro seguía en su lista, no llegaba a Ajustes ›
+Archivados y la purga no lo veía nunca. El valor se retira de los selectores (`selectableStatus`, con test) y pasa a ser
+un **estado terminal**, así que lo que ya estuviera marcado así se archiva de verdad en el primer barrido. `goal` y
+`strategic_area` pierden el campo de estado: sus dos únicos valores eran ACTIVE/ARCHIVED, o sea, el archivado otra vez.
+
+**2. Sólo las oportunidades se archivaban solas.** Ahora hay un barrido diario (`sweep.terminal_archive`, ACT-16) que
+archiva lo que lleve **7 días** en un estado de cierre: proyecto CLOSED, servicio/capacidad/recurso RETIRED, decisión
+SUPERSEDED, reutilizable DEPRECATED. La edad se mide con **`updated_at`** —no hay columna «cerrado el» y añadirla
+obligaría a rellenarla hacia atrás—, con una propiedad útil: cualquier edición reinicia el reloj, así que algo que
+sigues tocando no se archiva a tu espalda. Las **tareas no entran**: tienen su propia retención (se borran) y meterlas
+sería el mismo circuito dos veces.
+
+**3. Los hijos van con el padre, y eso era lo que tenía atascada la purga.** Archivar un proyecto dejaba sus tareas y
+entregables vivos, y como su FK impide borrar el proyecto, el barrido lo contaba en `blocked` y lo reintentaba **cada
+día sin avanzar nunca**. `cascadeArchive` es ahora el punto único de los tres caminos (a mano, barrido terminal, cierre
+de oportunidades). Al restaurar vuelven **sólo** los hijos con la misma marca de tiempo que el padre — sin eso, una
+tarea que archivaste aparte revivía por rebote. (Escribí el restore leyendo la marca del `RETURNING`; devuelve la fila
+NUEVA, donde ya es `null`, así que hay que leerla antes del update. Está comentado en el código.)
+
+**4. En Archivados sólo se podía restaurar.** El borrado definitivo existía únicamente como política global por
+antigüedad, y por defecto es «conservar siempre», así que en la práctica no había forma de decir «estos dos, ya».
+Nuevo `purgeArchivedByIds` + `POST /api/v1/purge` + **«Eliminar definitivamente»** en la barra de selección (que ahora
+admite dos acciones a la vez). Sólo toca filas archivadas, y lo que una fila viva siga usando **se conserva y se dice**
+(«Se conservaron N: algo que sigue vivo los usa. Archiva primero lo de dentro»).
+
+**5. Fugas y detalles.** Los **reutilizables archivados seguían saliendo** en la ficha del proyecto; el endpoint de
+tareas de un proyecto devolvía las archivadas (y el comentario de su función vecina afirmaba lo contrario);
+`taskCountsByProject` las contaba, así que la lista de proyectos y la ficha daban **progresos distintos**. Biblioteca,
+Aprendizaje y Tareas no tenían botón de archivar. Los contactos se listaban por **email**. No se decía **por qué**
+estaba archivado algo (ahora hay columna «Motivo», con faceta). Y un archivado **seguía siendo editable por URL**, que
+es justo como enlaza la Actividad reciente: el panel se abre congelado.
+
+**El CRM queda fuera, por decisión del owner:** clientes, contactos y oportunidades **no se archivan desde Control
+Tower** — aparecen o desaparecen según lo que viva en Twenty (ADR-009/ADR-010). Se retiran sus cuatro botones y la
+restauración de la pestaña «Archivadas»; `setArchived` rechaza al actor **USER** y deja pasar al **SYSTEM**, que es lo
+que necesita el sync para archivar lo que desapareció del pull y para mover una Person que cambia de rol. En Archivados
+esos grupos salen sin «Restaurar» y con un aviso. Eliminar sí se permite: es la única forma de limpiar lo que el CRM ya
+no tiene, avisando de que si allí sigue existiendo, el siguiente sync lo recrea (la purga se lleva su
+`external_identity`, que es toda la idempotencia).
+
+**Lo que encontró el e2e (J17, nuevo):** la purga a mano de un proyecto **no borraba nada**. Archivar arrastra a los
+hijos, pero borrar no lo hacía, y la FK de la tarea archivada bloqueaba al padre — el mismo fallo que acabábamos de
+arreglar para el barrido, repetido en el camino nuevo. Ahora `purgeArchivedByIds` borra primero los hijos archivados
+(recursivo, por las subtareas) y lleva un registro de lo ya procesado: sin eso una subtarea, que cuelga **de dos
+padres** (su tarea madre y el proyecto), se borraba una vez y se contaba dos, porque borrar una fila que ya no está no
+da error.
+
+**Tests:** 4 guardias nuevas de las que no se notan usando la app (un estado terminal que no existe en su enum no
+archiva nunca y no falla; un hijo de la cascada que no sea archivable; el enum crudo colado en un `options`; un botón de
+archivar en el CRM) y **12 de integración** para el comportamiento: cascada y restauración selectiva, la purga del
+proyecto que antes se bloqueaba, el rechazo del CRM, los motivos de `listArchived`, el borrado por selección con su
+`blocked`/`skipped` y su propia cascada, y el barrido terminal (incluido que **no** toca tareas). Más el journey
+**J17** por HTTP, que es el que encontró el fallo de arriba.
+
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (191) · `pnpm build` · `pnpm test:integration`
+(**203**, 12 nuevos) · `e2e-journeys` (**J17 nuevo**, 16 checks; 85/85).
+
 ## 2026-09-27 — Entrar desde la red local (y la guarda de que el CRM no se crea en CT) ✅
 
 **1. La guarda de test que faltaba.** Cerrar la creación de clientes/contactos/oportunidades vive en dos sitios y
@@ -730,7 +793,13 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-09-27): se entra desde la red local.** Lo que rechazaba no era la red —el puerto 4272 ya
+> **⚑ ÚLTIMO (2026-09-27): el archivado, en un solo mecanismo.** `archived_at` es el único archivado: el **estado**
+> «Archivado» que ocho entidades ofrecían —y que no archivaba nada— se retira, lo que lleva **7 días cerrado se archiva
+> solo**, archivar un proyecto **se lleva sus tareas y entregables** (sin eso su purga no avanzaba nunca) y en *Ajustes ›
+> Archivados* ya se puede **eliminar definitivamente** por selección, con el motivo de cada archivado a la vista. El
+> **CRM no se archiva desde CT**: clientes, contactos y oportunidades dependen de Twenty. Ver **F-38**.
+>
+> **⚑ ANTES (2026-09-27): se entra desde la red local.** Lo que rechazaba no era la red —el puerto 4272 ya
 > escuchaba en la LAN— sino el login: Better Auth admitía un solo origen. Con **`BETTER_AUTH_ALLOWED_HOSTS`** se
 > declaran los hosts válidos (LAN, tailnet, nombre de Caddy) y la app deriva su URL de cada petición. Twenty, n8n y
 > Zammad tienen ya su nombre en Caddy (`*.noboolsheet.local`) y su variable para asumirlo, **comentada** hasta que el

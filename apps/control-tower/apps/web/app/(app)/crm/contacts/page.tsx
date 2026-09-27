@@ -48,14 +48,13 @@ export default async function ContactsPage() {
       // Sin botón de «Nuevo»: los contactos nacen en Twenty (ADR-009). Un contacto creado aquí no existiría en
       // el CRM, que es su dueño.
     >
+      {/* Sin «Archivar»: igual que los clientes, los contactos son de Twenty (ADR-009/ADR-010). */}
       <RecordTable
         columns={columns}
         rows={rows}
         getKey={(r) => r.id}
         truncatedAt={LIST_LIMIT}
         empty={{ title: t('crm.contactsEmpty'), hint: t('common.createFirstHint') }}
-        selectable
-        archive={{ entityType: 'contact' }}
       />
     </ListPage>
   );

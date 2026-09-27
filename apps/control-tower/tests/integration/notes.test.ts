@@ -11,7 +11,6 @@ import {
   deleteTasks,
   listNotes,
   updateNote,
-  archiveRecords,
   purgeArchivedRecords,
   type OrgContext,
 } from '@ct/application';
@@ -114,7 +113,8 @@ describe('notas por registro (E-15)', () => {
       const client = await createClient(tx, ctx, { name: 'Cliente a purgar' });
       await createNote(tx, ctx, { entityType: 'client', entityId: client.id, body: 'nota del cliente' });
 
-      await archiveRecords(tx, ctx, { entityType: 'client', ids: [client.id] });
+      // El cliente se archiva escribiendo la columna, como lo hace la reconciliación del sync: desde el 2026-09-27
+      // el CRM no se archiva a mano (`archiveRecords` lo rechaza), pero la purga sí tiene que llevárselo.
       // Archivado "hace 30 días" para que entre en la ventana de retención.
       await tx.execute(sql`update clients set archived_at = now() - interval '30 days' where id = ${client.id}`);
       await purgeArchivedRecords(tx, ctx, { retentionDays: 1 });

@@ -4,7 +4,6 @@ import { listGoals, listStrategicAreas } from '@ct/application';
 import { getCurrentContext } from '@/lib/auth-context';
 import { type Column } from '@/components/ui/entity-table';
 import { RecordTable } from '@/components/ui/record-table';
-import { StatusBadge } from '@/components/ui/status-badge';
 import { ListPage } from '@/components/ui/list-page';
 import { NewRecordButton } from '@/components/ui/new-record-button';
 import { RecordLink } from '@/components/ui/record-link';
@@ -46,7 +45,6 @@ export default async function GoalsPage() {
           <span className="text-fg-subtle">—</span>
         ),
     },
-    { header: t('field.status'), value: (r) => enumLabel(r.status), facet: true, cell: (r) => <StatusBadge status={r.status} /> },
     { header: t('field.priority'), value: (r) => enumLabel(r.priority), facet: true, cell: (r) => enumLabel(r.priority) },
     { header: t('field.targetDateGoal'), value: (r) => r.targetDate, cell: (r) => (r.targetDate ? formatDate(r.targetDate) : '—') },
   ];

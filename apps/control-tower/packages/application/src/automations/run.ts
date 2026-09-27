@@ -11,7 +11,7 @@ import { purgeCompletedTasks } from '../projects/index';
 import { archiveClosedOpportunities } from '../crm/index';
 import { purgeProcessedInbox } from '../knowledge/index';
 import { purgeReviewedItems } from '../review/index';
-import { purgeArchivedRecords } from '../maintenance/archive';
+import { archiveTerminalRecords, purgeArchivedRecords } from '../maintenance/archive';
 import { OPPORTUNITY_ARCHIVE_AFTER_DAYS } from '../maintenance/retention';
 import { getAutomationSpec } from './catalog';
 
@@ -70,6 +70,10 @@ export async function runAutomationNow(
       case 'opportunity_archive': {
         const res = await archiveClosedOpportunities(db, ctx, { olderThanDays: OPPORTUNITY_ARCHIVE_AFTER_DAYS });
         return { kind: 'sweep', sweep: 'opportunity_archive', archived: res.archived };
+      }
+      case 'terminal_archive': {
+        const res = await archiveTerminalRecords(db, ctx, {});
+        return { kind: 'sweep', sweep: 'terminal_archive', archived: res.archived };
       }
       case 'inbox_purge': {
         const res = await purgeProcessedInbox(db, ctx);

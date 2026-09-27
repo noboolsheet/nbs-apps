@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { postJson } from '@/lib/client';
-import { btnLink, btnPrimary, buttonCls } from './button';
+import { btnDanger, btnLink, btnPrimary, buttonCls } from './button';
 import { fieldCls } from './input';
 import { useReorder } from '@/lib/use-reorder';
 import { facetChoices, facetIsUseful, matchesFacets, pruneSelection, type FacetSelection } from '@/lib/facets';
@@ -65,6 +65,7 @@ export function DataTable({
   archive,
   restore,
   remove,
+  purge,
   fixedLayout = false,
   filterable = false,
   truncatedAt,
@@ -83,6 +84,12 @@ export function DataTable({
   restore?: { entityType: string };
   /** Habilita "Borrar" (definitivo) en la barra de selección. Mutuamente excluyente con archive/restore. */
   remove?: { entityType: string };
+  /**
+   * Habilita **«Eliminar definitivamente»** para filas YA ARCHIVADAS (vista de Archivados). Se puede combinar con
+   * `restore`: ahí conviven las dos salidas de un archivado —volver a la lista o desaparecer— y se pintan juntas,
+   * la destructiva en rojo y de segunda.
+   */
+  purge?: { entityType: string };
   /** `table-fixed`: anchos de columna estables e idénticos entre varias tablas apiladas (usar anchos en `columns[].className`). */
   fixedLayout?: boolean;
   /**
@@ -93,7 +100,8 @@ export function DataTable({
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [busy, setBusy] = useState(false);
+  // Qué acción está en curso (antes era un booleano: con dos botones hay que saber CUÁL).
+  const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<{ index: number; dir: 'asc' | 'desc' } | null>(null);
@@ -184,46 +192,83 @@ export function DataTable({
     });
   }
 
-  // Acción en lote: archivar (por defecto), restaurar (vista de archivados) o borrar (definitivo, p. ej. tareas).
-  const action = archive
-    ? {
-        entityType: archive.entityType,
-        endpoint: '/api/v1/archive',
-        verb: t('common.archive'),
-        busyVerb: t('common.archiving'),
-        confirmMsg: (n: number) => tPlural('table.confirmArchive', n),
-      }
-    : restore
-      ? {
-          entityType: restore.entityType,
-          endpoint: '/api/v1/restore',
-          verb: t('common.restore'),
-          busyVerb: t('common.restoring'),
-          confirmMsg: (n: number) => tPlural('table.confirmRestore', n),
-        }
-      : remove
-        ? {
-            entityType: remove.entityType,
-            endpoint: '/api/v1/delete',
-            verb: t('common.delete'),
-            busyVerb: t('common.deleting'),
-            confirmMsg: (n: number) => tPlural('table.confirmDelete', n),
-          }
-        : null;
+  /**
+   * Acciones en lote de la barra de selección. Son VARIAS a la vez porque la vista de Archivados necesita dos
+   * (restaurar y eliminar definitivamente); el resto de las listas sigue teniendo una sola.
+   */
+  const actions: {
+    key: string;
+    entityType: string;
+    endpoint: string;
+    verb: string;
+    busyVerb: string;
+    confirmMsg: (n: number) => string;
+    danger?: boolean;
+  }[] = [
+    archive && {
+      key: 'archive',
+      entityType: archive.entityType,
+      endpoint: '/api/v1/archive',
+      verb: t('common.archive'),
+      busyVerb: t('common.archiving'),
+      confirmMsg: (n: number) => tPlural('table.confirmArchive', n),
+    },
+    restore && {
+      key: 'restore',
+      entityType: restore.entityType,
+      endpoint: '/api/v1/restore',
+      verb: t('common.restore'),
+      busyVerb: t('common.restoring'),
+      confirmMsg: (n: number) => tPlural('table.confirmRestore', n),
+    },
+    remove && {
+      key: 'remove',
+      entityType: remove.entityType,
+      endpoint: '/api/v1/delete',
+      verb: t('common.delete'),
+      busyVerb: t('common.deleting'),
+      confirmMsg: (n: number) => tPlural('table.confirmDelete', n),
+      danger: true,
+    },
+    purge && {
+      key: 'purge',
+      entityType: purge.entityType,
+      endpoint: '/api/v1/purge',
+      verb: t('common.deleteForever'),
+      busyVerb: t('common.deleting'),
+      confirmMsg: (n: number) => tPlural('table.confirmPurge', n),
+      danger: true,
+    },
+  ].filter(Boolean) as {
+    key: string;
+    entityType: string;
+    endpoint: string;
+    verb: string;
+    busyVerb: string;
+    confirmMsg: (n: number) => string;
+    danger?: boolean;
+  }[];
 
-  async function doAction() {
-    if (!action || selectedIds.length === 0) return;
+  async function doAction(action: (typeof actions)[number]) {
+    if (selectedIds.length === 0) return;
     if (!confirm(action.confirmMsg(selectedIds.length))) return;
-    setBusy(true);
+    setBusy(action.key);
     setError(null);
-    const res = await postJson(action.endpoint, { entityType: action.entityType, ids: selectedIds });
-    setBusy(false);
+    const res = await postJson<{ blocked?: number; skipped?: number }>(action.endpoint, {
+      entityType: action.entityType,
+      ids: selectedIds,
+    });
+    setBusy(null);
     if (res.error) {
       setError(res.error.message);
       return;
     }
+    // Un borrado definitivo puede CONSERVAR filas: algo vivo las sigue referenciando (una tarea dentro de un
+    // proyecto archivado). Decirlo es la diferencia entre "no funciona" y "falta archivar lo de dentro".
+    const kept = res.data?.blocked ?? 0;
     setSelected(new Set());
     router.refresh();
+    if (kept > 0) setError(tPlural('table.purgeBlocked', kept));
   }
 
   const checkboxCls = 'h-4 w-4 cursor-pointer accent-primary';
@@ -233,11 +278,17 @@ export function DataTable({
       {selectable && selectedIds.length > 0 && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-line-strong bg-surface-muted px-3 py-2 text-sm">
           <span className="font-medium">{tPlural('table.selected', selectedIds.length)}</span>
-          {action && (
-            <button type="button" onClick={() => void doAction()} disabled={busy} className={btnPrimary}>
-              {busy ? action.busyVerb : action.verb}
+          {actions.map((a) => (
+            <button
+              key={a.key}
+              type="button"
+              onClick={() => void doAction(a)}
+              disabled={busy !== null}
+              className={a.danger ? btnDanger : btnPrimary}
+            >
+              {busy === a.key ? a.busyVerb : a.verb}
             </button>
-          )}
+          ))}
           <button type="button" onClick={() => setSelected(new Set())} className={btnLink}>
             {t('table.clearSelection')}
           </button>

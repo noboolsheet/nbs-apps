@@ -134,8 +134,6 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                     columns={contactCols}
                     rows={contacts}
                     getKey={(c) => c.id}
-                    selectable
-                    archive={{ entityType: 'contact' }}
                   />
                 )}
               </div>
@@ -153,8 +151,6 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                     columns={oppCols}
                     rows={opportunities}
                     getKey={(o) => o.id}
-                    selectable
-                    archive={{ entityType: 'opportunity' }}
                   />
                 )}
               </div>

@@ -26,11 +26,12 @@ export async function listSectors(db: Database, ctx: OrgContext): Promise<string
     db
       .selectDistinct({ sector: knowledgeItems.sector })
       .from(knowledgeItems)
-      .where(and(orgEq(knowledgeItems.organizationId, ctx), isNotNull(knowledgeItems.sector))),
+      // Sin archivados: un sector que sólo usaba algo archivado seguía apareciendo en los desplegables.
+      .where(and(orgEq(knowledgeItems.organizationId, ctx), isNotNull(knowledgeItems.sector), isNull(knowledgeItems.archivedAt))),
     db
       .selectDistinct({ sector: learningItems.sector })
       .from(learningItems)
-      .where(and(orgEq(learningItems.organizationId, ctx), isNotNull(learningItems.sector))),
+      .where(and(orgEq(learningItems.organizationId, ctx), isNotNull(learningItems.sector), isNull(learningItems.archivedAt))),
     db
       .selectDistinct({ sector: knowledgeInbox.sector })
       .from(knowledgeInbox)
@@ -38,7 +39,7 @@ export async function listSectors(db: Database, ctx: OrgContext): Promise<string
     db
       .selectDistinct({ sector: reviewItems.sector })
       .from(reviewItems)
-      .where(and(orgEq(reviewItems.organizationId, ctx), isNotNull(reviewItems.sector))),
+      .where(and(orgEq(reviewItems.organizationId, ctx), isNotNull(reviewItems.sector), isNull(reviewItems.archivedAt))),
   ]);
   const used = [...ki, ...li, ...inbox, ...review]
     .map((r) => r.sector)

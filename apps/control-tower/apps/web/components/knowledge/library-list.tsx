@@ -72,6 +72,8 @@ export function LibraryList({ items, lockedType = false }: { items: LibraryRow[]
       rows={items}
       getKey={(r) => r.id}
       empty={{ title: t('knowledge.libraryEmpty'), hint: t('knowledge.libraryEmptyHint') }}
+      selectable
+      archive={{ entityType: 'knowledge_item' }}
     />
   );
 }

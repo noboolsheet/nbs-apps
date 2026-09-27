@@ -48,6 +48,8 @@ export function LearningList({ items }: { items: LearningRow[] }) {
       rows={items}
       getKey={(r) => r.id}
       empty={{ title: t('knowledge.learningEmpty'), hint: t('knowledge.learningEmptyHint') }}
+      selectable
+      archive={{ entityType: 'learning_item' }}
     />
   );
 }

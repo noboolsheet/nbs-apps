@@ -160,7 +160,8 @@ describe('global search (FTS)', () => {
       const ctx = await makeOrg(tx);
       const cli = await createClient(tx, ctx, { name: 'Vanishing Corp' });
       expect((await globalSearch(tx, ctx, 'Vanishing')).total).toBe(1);
-      await archiveRecords(tx, ctx, { entityType: 'client', ids: [cli.id] });
+      // Como lo archiva la reconciliación del sync (actor SYSTEM): desde el 2026-09-27 una persona no archiva el CRM.
+      await archiveRecords(tx, { ...ctx, userId: 'system' }, { entityType: 'client', ids: [cli.id] });
       expect((await globalSearch(tx, ctx, 'Vanishing')).total).toBe(0);
     });
   });

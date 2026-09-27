@@ -54,8 +54,9 @@ Lo que ya corre sobre los motores de §0. Úsalo para no duplicar.
 | ACT-11 | **Captura del Inbox por webhook** | POST externo con token de canal | Crea entrada en knowledge_inbox (n8n/ChatGPT/email…) | `inbox-channels` + webhook route |
 | ACT-12 | **Auto-archivado de oportunidades cerradas** | 1×/día | Archiva las de la columna «Cerradas» (`LOST`/`ONBOARDED`) ~7 días después de cerrarse (las **ganadas no**). Sólo afecta a CT: en Twenty no cambia nada | `maintenance/retention` (`runOpportunityArchiveSweep`) |
 | ACT-13 | **Purga de la bandeja procesada** | 1×/día | Borra las capturas ya procesadas/descartadas según la política | `runInboxPurgeSweep` |
-| ACT-14 | **Purga de archivados** | 1×/día | Borra definitivamente lo archivado que supera `settings.archivedRetentionDays` | `runArchivedPurgeSweep` |
+| ACT-14 | **Purga de archivados** | 1×/día | Borra definitivamente lo archivado que supera `settings.archivedRetentionDays` (por defecto «conservar siempre» ⇒ no borra nada). Desde 2026-09-27 hay además **borrado a mano por selección** en Ajustes › Archivados, que no espera a ninguna política | `runArchivedPurgeSweep` · `purgeArchivedByIds` |
 | ACT-15 | **Purga del historial de syncs** (F-16) | 1×/día | Conserva los 50 runs más recientes por proveedor | `runSyncRunsPurgeSweep` |
+| ACT-16 | **Autoarchivado de lo cerrado** (owner 2026-09-27) | 1×/día · ventana de 7 días | Archiva lo que lleva una semana en un estado terminal (proyecto CLOSED, servicio/capacidad/recurso RETIRED, decisión SUPERSEDED, reutilizable DEPRECATED y todo lo que quedó en `ARCHIVED`) y **arrastra a sus hijos** (tareas y entregables del proyecto). La edad se mide con `updated_at`. **No** toca tareas (tienen su retención) ni el CRM (lo gobierna Twenty) | `runTerminalArchiveSweep` → `archiveTerminalRecords` |
 
 > **Gancho listo pero sin usar:** `project.status_changed` **se emite** en cada cambio de estado de proyecto pero
 > **no tiene handler** (solo se loguea) → aún no es una automatización; es el enganche natural para AUT-06/07/09/10/17.

@@ -186,6 +186,10 @@ export function RecordPanel() {
     };
   }, [spec, id, isNew, rec, presetField, presetValue]);
 
+  // Archivado: sale de la propia fila (`archived_at`), que ya viene en el GET. No hace falta que cada endpoint
+  // decida nada.
+  const archived = !isNew && !!raw?.archivedAt;
+
   // Cargar opciones de los campos de relación (GET de lista existente).
   useEffect(() => {
     if (!spec) return;
@@ -377,6 +381,13 @@ export function RecordPanel() {
                   🔒 {lockedMeta.reason ?? t('panel.readOnly')}
                 </div>
               )}
+              {/* Archivado ⇒ congelado. Un archivado seguía siendo editable entrando por su URL (`?rec=`), que es
+                  lo que hace la Actividad reciente: se podía cambiar algo que ya no aparece en ninguna lista. */}
+              {archived && (
+                <div className="rounded border border-line-strong bg-surface-muted px-3 py-2 text-xs text-fg-muted">
+                  🗄️ {t('panel.archivedReadOnly')}
+                </div>
+              )}
               {spec.fields
                 .filter(
                   (f) =>
@@ -387,7 +398,7 @@ export function RecordPanel() {
                 .map((f) => {
                 // Bloqueo por procedencia: si el registro vino de un proveedor que posee este campo, es de solo lectura.
                 const ownedByProvider = !isNew && !!source && !!f.ownedBy?.includes(source.provider);
-                const locked = !!f.readOnly || ownedByProvider || lockedMeta.locked;
+                const locked = !!f.readOnly || ownedByProvider || lockedMeta.locked || archived;
                 // Nota: los campos heredados (`derivedFrom`/`context`) se filtran arriba y se muestran en "Contexto".
                 return (
                 <div key={f.name} className="flex flex-col gap-1 text-sm">
@@ -596,6 +607,10 @@ function FieldControl({
     );
   }
   if (field.type === 'select') {
+    // El valor ACTUAL entra en la lista aunque ya no se ofrezca (caso de `ARCHIVED`, retirado de los selectores el
+    // 2026-09-27): si no, el desplegable aparecería vacío para las filas que lo tenían y no habría forma de sacarlas.
+    const options = field.options ?? [];
+    const choices = value && !options.includes(value) ? [value, ...options] : options;
     return (
       <select
         className={inputCls}
@@ -607,7 +622,7 @@ function FieldControl({
         }}
       >
         <option value="">—</option>
-        {(field.options ?? []).map((o) => (
+        {choices.map((o) => (
           <option key={o} value={o}>
             {enumLabel(o)}
           </option>

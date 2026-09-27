@@ -288,6 +288,23 @@ crea nada; CT lo **propone** (aviso en Inicio + botón en la ficha de la oportun
 ## Convenciones
 
 - Alias de import entre paquetes: `@ct/domain`, `@ct/db`, `@ct/db/schema`, `@ct/validation`, `@ct/application`, etc.
+- **⚑ Archivado (owner 2026-09-27): un solo mecanismo, `archived_at`.** Lo archivado sale de las listas, aparece en
+  **Ajustes › Archivados** y desde ahí se **restaura** o se **elimina definitivamente** (`purgeArchivedByIds`, botón por
+  selección; la política `archivedRetentionDays` sigue borrando por antigüedad). Tres cosas que no se tocan:
+  1. **`ARCHIVED` ya no es un estado elegible.** Ocho entidades lo ofrecían y no archivaba nada. Los selectores usan
+     `selectableStatus(ENUM)` (`@ct/domain/archiving`) y hay un test que falla si alguien vuelve a pasar el enum crudo.
+     El valor sigue en el modelo (hay CHECKs y filas viejas) y es uno de los **estados terminales** del barrido.
+  2. **Estados terminales → autoarchivado a los 7 días** (`TERMINAL_STATUS` + `archiveTerminalRecords`, barrido diario
+     `sweep.terminal_archive`). La edad se mide con `updated_at`. Al añadir una entidad, declara sus estados ahí; un
+     estado que no exista en su enum no falla, simplemente no archiva nunca — lo vigila un test.
+  3. **Los hijos van con el padre** (`ARCHIVE_CASCADE` → `cascadeArchive`, punto único de los tres caminos: a mano,
+     barrido terminal y cierre de oportunidades). Sin esto el padre no se purgaba NUNCA: su hijo vivo bloquea la FK.
+     Al restaurar sólo vuelven los hijos con la misma marca de tiempo que el padre.
+  **El CRM es la excepción:** `client`, `contact` y `opportunity` (`EXTERNALLY_ARCHIVED_ENTITIES`) **no se archivan ni
+  se restauran desde CT** — aparecen o desaparecen según lo que viva en Twenty (ADR-009/ADR-010). `setArchived` rechaza
+  al actor USER y deja pasar al SYSTEM (el sync archiva lo que desapareció del pull y mueve una Person que cambia de
+  rol); ninguna vista monta esos botones y hay un test que lo sostiene. Eliminarlos definitivamente sí se permite: es
+  la única forma de limpiar lo que el CRM ya no tiene, sabiendo que si allí sigue existiendo, el sync lo recrea.
 - **Entidad archivable nueva** ⇒ además de `ARCHIVABLE` (en `packages/application/src/maintenance/archive.ts`) hay
   que darle su sitio en `PURGE_ORDER` (hijo→padre, según las FKs reales) y, si tiene hijas NO archivables con FK hacia
   ella, borrarlas en `deleteDependents`. Si no, se archiva y **no se purga nunca**, sin error. Lo vigila

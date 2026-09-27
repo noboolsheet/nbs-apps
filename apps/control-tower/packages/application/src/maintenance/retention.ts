@@ -4,7 +4,7 @@ import type { OrganizationSettings } from '@ct/validation';
 import { purgeCompletedTasks } from '../projects/index';
 import { archiveClosedOpportunities } from '../crm/index';
 import { purgeProcessedInbox } from '../knowledge/index';
-import { purgeArchivedRecords } from './archive';
+import { archiveTerminalRecords, purgeArchivedRecords } from './archive';
 import { purgeOldSyncRuns } from '../integrations/sync-runs';
 import { rotateJobLog, rotateOutboxLog } from '../jobs/log-rotation';
 import { purgeReviewedItems } from '../review/index';
@@ -69,6 +69,28 @@ export async function runArchivedPurgeSweep(
     skipped += res.skipped;
   }
   return { organizations: sweptOrgs, deleted, skipped };
+}
+
+/**
+ * Barrido de autoarchivado por ESTADO TERMINAL (owner 2026-09-27): recorre las organizaciones y archiva lo que lleve
+ * una semana cerrado (ver `TERMINAL_STATUS` y `archiveTerminalRecords`). No es configurable por organización a
+ * propósito: la ventana es fija, como la de las oportunidades, y quien no la quiera pausa la automatización.
+ */
+export async function runTerminalArchiveSweep(
+  db: Database,
+  now?: Date,
+): Promise<{ organizations: number; archived: number }> {
+  const orgs = await db.select({ id: organizations.id }).from(organizations);
+  let sweptOrgs = 0;
+  let archived = 0;
+  for (const o of orgs) {
+    if (!(await isAutomationEnabled(db, o.id, 'sweep.terminal_archive'))) continue;
+    const ctx: OrgContext = { userId: 'system', organizationId: o.id, role: 'OWNER' };
+    const res = await archiveTerminalRecords(db, ctx, { now });
+    sweptOrgs++;
+    archived += res.archived;
+  }
+  return { organizations: sweptOrgs, archived };
 }
 
 /**

@@ -1,4 +1,5 @@
 import {
+  selectableStatus,
   CLIENT_STATUS,
   OPPORTUNITY_STAGE,
   PAYMENT_DIRECTION,
@@ -10,7 +11,6 @@ import {
   PRIORITY,
   TASK_STATUS,
   DELIVERABLE_STATUS,
-  LIFECYCLE_STATUS,
   SERVICE_STATUS,
   CAPABILITY_STATUS,
   CAPABILITY_MATURITY,
@@ -239,7 +239,7 @@ export const RECORDS: Record<string, RecordSpec> = {
       { name: 'name', label: t('field.name'), type: 'text', required: true },
       // Al inicio: si se marca personal, los campos de cliente/oportunidad/servicio se ocultan (no aplican).
       { name: 'personal', label: t('field.personal'), type: 'boolean' },
-      { name: 'status', label: t('field.status'), type: 'select', options: PROJECT_STATUS, commitPath: (id) => `/api/v1/projects/${id}/status` },
+      { name: 'status', label: t('field.status'), type: 'select', options: selectableStatus(PROJECT_STATUS), commitPath: (id) => `/api/v1/projects/${id}/status` },
       // A-1 (ADR-005): tipo. CLIENT exige cliente (el back rechaza lo contrario con PROJECT_CLIENT_REQUIRED).
       { name: 'type', label: t('field.kind'), type: 'select', options: PROJECT_TYPE, defaultValue: 'INTERNAL', hidden: (v) => v.personal === 'true' },
       { name: 'description', label: t('field.description'), type: 'textarea' },
@@ -309,7 +309,7 @@ export const RECORDS: Record<string, RecordSpec> = {
     contextCreate: { project: { presetField: 'projectId', createPath: (pid) => `/api/v1/projects/${pid}/deliverables` } },
     fields: [
       { name: 'name', label: t('field.name'), type: 'text', required: true },
-      { name: 'status', label: t('field.status'), type: 'select', options: DELIVERABLE_STATUS, commitPath: (id) => `/api/v1/deliverables/${id}/status` },
+      { name: 'status', label: t('field.status'), type: 'select', options: selectableStatus(DELIVERABLE_STATUS), commitPath: (id) => `/api/v1/deliverables/${id}/status` },
       { name: 'description', label: t('field.description'), type: 'textarea' },
       { name: 'dueDate', label: t('field.dueDate'), type: 'date' },
       { name: 'externalUrl', label: t('field.externalUrl'), type: 'text' },
@@ -327,7 +327,6 @@ export const RECORDS: Record<string, RecordSpec> = {
     fields: [
       { name: 'name', label: t('field.name'), type: 'text', required: true },
       { name: 'description', label: t('field.description'), type: 'textarea' },
-      { name: 'status', label: t('field.status'), type: 'select', options: LIFECYCLE_STATUS },
       { name: 'sortOrder', label: t('field.sortOrder'), type: 'number' },
     ],
   },
@@ -341,7 +340,6 @@ export const RECORDS: Record<string, RecordSpec> = {
     fields: [
       { name: 'name', label: t('field.name'), type: 'text', required: true },
       { name: 'description', label: t('field.description'), type: 'textarea' },
-      { name: 'status', label: t('field.status'), type: 'select', options: LIFECYCLE_STATUS },
       { name: 'priority', label: t('field.priority'), type: 'select', options: PRIORITY },
       { name: 'strategicAreaId', label: t('entity.strategic_area'), type: 'relation', relation: AREA_REL },
       { name: 'targetDate', label: t('field.targetDateGoal'), type: 'date' },
@@ -408,7 +406,7 @@ export const RECORDS: Record<string, RecordSpec> = {
     source: true,
     fields: [
       { name: 'title', label: t('field.title'), type: 'text', required: true },
-      { name: 'status', label: t('field.status'), type: 'select', options: KNOWLEDGE_ITEM_STATUS, commitPath: (id) => `/api/v1/knowledge-items/${id}/status` },
+      { name: 'status', label: t('field.status'), type: 'select', options: selectableStatus(KNOWLEDGE_ITEM_STATUS), commitPath: (id) => `/api/v1/knowledge-items/${id}/status` },
       { name: 'knowledgeType', label: t('field.kind'), type: 'select', options: KNOWLEDGE_TYPE },
       { name: 'sector', label: t('field.sector'), type: 'text', suggest: '/api/v1/knowledge/sectors' },
       { name: 'summary', label: t('common.summary'), type: 'textarea' },
@@ -424,7 +422,7 @@ export const RECORDS: Record<string, RecordSpec> = {
     contextCreate: { project: { presetField: 'projectId' }, service: { presetField: 'serviceId' } },
     fields: [
       { name: 'title', label: t('field.title'), type: 'text', required: true },
-      { name: 'status', label: t('field.status'), type: 'select', options: DECISION_STATUS, commitPath: (id) => `/api/v1/decisions/${id}/status` },
+      { name: 'status', label: t('field.status'), type: 'select', options: selectableStatus(DECISION_STATUS), commitPath: (id) => `/api/v1/decisions/${id}/status` },
       { name: 'context', label: t('field.context'), type: 'textarea' },
       { name: 'decision', label: t('entity.decision'), type: 'textarea', required: true },
       { name: 'rationale', label: t('field.rationale'), type: 'textarea' },
@@ -444,7 +442,7 @@ export const RECORDS: Record<string, RecordSpec> = {
     source: true, // puede venir de GitHub; nombre/descr/URLs se bloquean si es así
     fields: [
       { name: 'name', label: t('field.name'), type: 'text', required: true, ownedBy: ['GITHUB'] },
-      { name: 'status', label: t('field.status'), type: 'select', options: ASSET_STATUS, commitPath: (id) => `/api/v1/assets/${id}/status` },
+      { name: 'status', label: t('field.status'), type: 'select', options: selectableStatus(ASSET_STATUS), commitPath: (id) => `/api/v1/assets/${id}/status` },
       { name: 'assetType', label: t('field.kind'), type: 'text', required: true },
       { name: 'description', label: t('field.description'), type: 'textarea', ownedBy: ['GITHUB'] },
       { name: 'version', label: t('field.version'), type: 'text' },
@@ -482,7 +480,7 @@ export const RECORDS: Record<string, RecordSpec> = {
     itemPath: (id) => `/api/v1/portfolio-items/${id}`,
     fields: [
       { name: 'name', label: t('field.name'), type: 'text', required: true },
-      { name: 'status', label: t('field.status'), type: 'select', options: PORTFOLIO_ITEM_STATUS, commitPath: (id) => `/api/v1/portfolio-items/${id}/status` },
+      { name: 'status', label: t('field.status'), type: 'select', options: selectableStatus(PORTFOLIO_ITEM_STATUS), commitPath: (id) => `/api/v1/portfolio-items/${id}/status` },
       { name: 'visibility', label: t('field.visibility'), type: 'select', options: PORTFOLIO_ITEM_VISIBILITY, commitPath: (id) => `/api/v1/portfolio-items/${id}/visibility` },
       { name: 'type', label: t('field.kind'), type: 'select', options: PORTFOLIO_ITEM_TYPE },
       { name: 'description', label: t('field.description'), type: 'textarea' },

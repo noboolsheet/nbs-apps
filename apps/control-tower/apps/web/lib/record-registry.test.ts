@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { ARCHIVABLE, NOTE_TARGETS } from '@ct/application';
+import { ARCHIVED_STATUS } from '@ct/domain';
 import { RECORDS, auditEntityTarget } from './record-registry';
 
 /** Todas las vistas y componentes de la app (para las guardas que leen el CÓDIGO, no sólo el registro). */
@@ -115,5 +116,62 @@ describe('el CRM no se crea desde CT', () => {
     // Si esto cae a 0, los botones cambiaron de forma y el test dejó de mirar nada: arréglalo aquí también.
     expect(encontrados).toBeGreaterThan(10);
     expect(montados).toEqual([]);
+  });
+});
+
+/**
+ * **Un solo archivado** (owner 2026-09-27). Ocho entidades ofrecían «Archivado» como VALOR DE ESTADO y no archivaba
+ * nada: el registro seguía en su lista, no llegaba a Archivados y la purga no lo veía nunca. Ahora el estado se
+ * retira de los selectores (`selectableStatus`) y lo recoge el barrido de estados terminales. Si alguien vuelve a
+ * poner el enum crudo en un `options`, este test lo caza: no hay forma de notarlo usando la app, porque el valor
+ * se guarda sin protestar.
+ */
+describe('el estado «Archivado» no se elige a mano', () => {
+  it('ningún campo del panel ofrece ARCHIVED entre sus opciones', () => {
+    const ofrecen = Object.entries(RECORDS)
+      .flatMap(([entity, spec]) => spec.fields.map((f) => ({ entity, f })))
+      .filter(({ f }) => (f.options ?? []).includes(ARCHIVED_STATUS))
+      .map(({ entity, f }) => `${entity}.${f.name}`);
+    expect(ofrecen).toEqual([]);
+  });
+
+  it('ningún control de estado de una lista lo ofrece tampoco', () => {
+    // Los `StatusSelect` de las listas reciben el enum por `options={...}`: aquí se busca el enum CRUDO, que es la
+    // forma de colarlo (el helper `selectableStatus(...)` es justo lo que hay que usar).
+    const crudos = /options=\{(PROJECT_STATUS|DELIVERABLE_STATUS|DECISION_STATUS|KNOWLEDGE_ITEM_STATUS|ASSET_STATUS|PORTFOLIO_ITEM_STATUS|LIFECYCLE_STATUS)\}/;
+    const culpables = viewFiles().filter((f) => crudos.test(readFileSync(f, 'utf8')));
+    expect(culpables.map((f) => f.split('/web/')[1])).toEqual([]);
+  });
+});
+
+/**
+ * **El CRM se archiva en el origen** (owner 2026-09-27): clientes, contactos y oportunidades aparecen o desaparecen
+ * según lo que viva en Twenty (ADR-009/ADR-010). Ni «Archivar» ni «Restaurar» para ellos — el comando también lo
+ * rechaza, pero un botón que devuelve un 409 es peor que no tener botón.
+ */
+describe('el CRM no se archiva desde CT', () => {
+  it('ninguna vista monta archivar o restaurar para cliente, contacto u oportunidad', () => {
+    const prohibidas = ['client', 'contact', 'opportunity'];
+    const montados: string[] = [];
+    for (const file of viewFiles()) {
+      const src = readFileSync(file, 'utf8');
+      for (const m of src.matchAll(/(archive|restore)=\{\{\s*entityType:\s*'([a-z_]+)'/g)) {
+        if (prohibidas.includes(m[2]!)) montados.push(`${m[1]} ${m[2]} (${file.split('/web/')[1]})`);
+      }
+    }
+    expect(montados).toEqual([]);
+  });
+
+  it('las acciones de archivado de las vistas usan entidades de la allowlist', () => {
+    // Mismo patrón que el orden manual: un `entityType` mal escrito compila y falla sólo al pulsar el botón.
+    const usados = new Set<string>();
+    for (const file of viewFiles()) {
+      const src = readFileSync(file, 'utf8');
+      for (const m of src.matchAll(/(?:archive|restore|purge)=\{\{\s*entityType:\s*'([a-z_]+)'/g)) {
+        usados.add(m[1]!);
+      }
+    }
+    expect(usados.size).toBeGreaterThan(10);
+    expect([...usados].filter((e) => !ARCHIVABLE[e])).toEqual([]);
   });
 });

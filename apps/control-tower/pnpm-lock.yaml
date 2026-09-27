@@ -14,6 +14,9 @@ importers:
       '@ct/db':
         specifier: workspace:*
         version: link:packages/db
+      '@ct/domain':
+        specifier: workspace:*
+        version: link:packages/domain
       '@ct/integrations':
         specifier: workspace:*
         version: link:packages/integrations

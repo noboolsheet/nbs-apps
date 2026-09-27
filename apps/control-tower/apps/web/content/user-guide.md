@@ -68,7 +68,7 @@ Qué información maneja CT, quién es su dueño, de dónde viene y qué hacer p
 | **Clientes** | CRM › Clients | **Twenty CRM** | company de Twenty → **sólo pull** | Créalo y **edítalo en Twenty** —en CT no hay botón para crear clientes—: nombre, web y **tipo de organización** son suyos y salen con 🔒 («se edita en el origen»). El «Tipo de organización» es la etiqueta *Organization Type* de Twenty; la lista trae además un enlace directo para **abrir el cliente en el CRM**. En CT sí gobiernas su **estado** y sus **notas**, que son datos propios de Control Tower. Un cliente que crees **en CT** no viaja a Twenty y se edita entero aquí. |
 | **Clientes particulares** | CRM › Clients (con la etiqueta «Particular») | **Twenty CRM** | person con rol `INDIVIDUAL_CLIENT` → **sólo pull** | Una persona a la que marcas en Twenty como **cliente individual** aparece en CT **como cliente**, no como contacto: así puede tener proyectos, pagos y recursos. Su nombre es el de la persona; **su email y teléfono se consultan en Twenty** (el enlace está en la ficha). Si le quitas ese rol en Twenty, en el siguiente sync vuelve a Contactos y su ficha de cliente se archiva. Para que esto funcione, CT necesita saber cómo se llama en tu Twenty el campo de roles: por defecto `relationshipRoles`, y si es otro se pone en la configuración de la integración. Cuando no lo encuentra, **no reclasifica a nadie** y te lo dice en el historial de syncs. |
 | **Contactos** | CRM › Contacts | **Twenty CRM** | person de Twenty (sin el rol de cliente individual) → **sólo pull** | **En Twenty** (en CT no hay botón para crear contactos): nombre, email, teléfono, cargo y la empresa a la que pertenece son suyos (🔒 en CT). Las **notas** son de CT. Un contacto creado en CT se edita entero aquí y no viaja a Twenty. |
-| **Oportunidades** | CRM › Opportunities | **Twenty CRM** | opportunity de Twenty → **pull + write-back de la etapa** | **Se crean y se editan SIEMPRE en Twenty.** En Control Tower lo único que se toca es la **etapa** (ADR-008): CT es la máquina de estados del embudo, nada más. Los 13 stages son los mismos que en Twenty. Al pasar a **WON**, CT **te propone** crear su proyecto (aviso en Inicio y botón «Crear su proyecto» en la ficha) y lo crea cuando lo confirmas: crear un proyecto es una decisión. Si prefieres que se cree solo, activa la automatización en **Automatización › Automatizaciones**. El tablero **Activas** (Kanban de 4 columnas: *Calificación de leads · Propuesta · Negociación · Cerradas*) muestra las abiertas, las ganadas y las recién cerradas; se cambia de etapa con el **desplegable de cada tarjeta** (no se arrastra). Las de la columna **Cerradas** (`LOST`/`ONBOARDED`) pasan solas a la pestaña **Archivadas** (lista, restaurables) ~1 semana después — eso ocurre **solo en CT, no cambia nada en Twenty**. Las **ganadas (WON) NO se archivan solas**: siguen en Negociación hasta que las mueves a `ONBOARDED`. |
+| **Oportunidades** | CRM › Opportunities | **Twenty CRM** | opportunity de Twenty → **pull + write-back de la etapa** | **Se crean y se editan SIEMPRE en Twenty.** En Control Tower lo único que se toca es la **etapa** (ADR-008): CT es la máquina de estados del embudo, nada más. Los 13 stages son los mismos que en Twenty. Al pasar a **WON**, CT **te propone** crear su proyecto (aviso en Inicio y botón «Crear su proyecto» en la ficha) y lo crea cuando lo confirmas: crear un proyecto es una decisión. Si prefieres que se cree solo, activa la automatización en **Automatización › Automatizaciones**. El tablero **Activas** (Kanban de 4 columnas: *Calificación de leads · Propuesta · Negociación · Cerradas*) muestra las abiertas, las ganadas y las recién cerradas; se cambia de etapa con el **desplegable de cada tarjeta** (no se arrastra). Las de la columna **Cerradas** (`LOST`/`ONBOARDED`) pasan solas a la pestaña **Archivadas** ~1 semana después — eso ocurre **solo en CT, no cambia nada en Twenty**. Las **ganadas (WON) NO se archivan solas**: siguen en Negociación hasta que las mueves a `ONBOARDED`. |
 | **Tareas importadas** | Projects › Tasks | **Twenty** (las de origen Twenty) | task de Twenty → pull (marcadas como origen Twenty) | **No se usa: no se crean tareas en Twenty** (decisión del 2026-09-26). Las tareas son de CT. El camino de importación existe y funciona, pero mientras no haya tareas en Twenty no trae nada. Si alguna vez las hubiera: conviven con las de CT sin mezclarse, y **título y fecha** los manda Twenty (se editan allí). |
 | **Proyectos** | Projects | **Control Tower** | nativo (o creado auto desde una oportunidad WON) → espejo a Notion (push) | Créalo **en CT**. Se refleja en Notion. Cada proyecto tiene un **tipo**: *Interno*, *Cliente* o *Laboratorio*; el de tipo **Cliente exige tener cliente asignado** (si no, no deja guardar). Un proyecto **personal** es siempre Interno. |
 | **Fases de proyecto** | Projects › detalle › pestaña **Fases** | **Control Tower** | nativo (lista libre que defines) → NO se sincroniza | Divide el proyecto en etapas propias y ordénalas arrastrando. Una fase nace **Planificada**; la pones **Activa** cuando empieza y **Completada** al terminarla. Las **Fases en curso** del Resumen son las que estén Activas — pueden ser varias a la vez (diseño y desarrollo en paralelo). Ya no hay que marcar una «fase actual» aparte. Solo en CT. |
@@ -141,6 +141,39 @@ Los cambios que haces en CT se **empujan al instante** a su sistema dueño (a **
 **Twenty** los campos gestionados de clientes/contactos/oportunidades), sin esperar al sync. Los cambios que hace la
 propia sincronización no se re-empujan (así se evitan los bucles).
 
+### Archivar: cómo se retira algo sin perderlo
+
+**Archivar** saca un registro de sus listas y lo deja en **Ajustes › Archivados**. No se borra: sigue en la base, con
+sus notas y su historial, y desde esa pantalla puedes **devolverlo a su lista** o **eliminarlo definitivamente**.
+
+Hay tres formas de que algo acabe ahí, y la pantalla te dice cuál fue en la columna **Motivo**:
+
+1. **Lo archivas tú**, seleccionando filas en cualquier lista y pulsando «Archivar».
+2. **Lleva una semana cerrado.** Una vez al día, CT archiva lo que lleve **7 días** en un estado de cierre: proyecto
+   *Cerrado*, servicio, capacidad o recurso *Retirado*, decisión *Sustituida*, reutilizable *Obsoleto*. Las
+   oportunidades de la columna «Cerradas» tienen su propio barrido, con la misma ventana. Cualquier edición reinicia
+   ese reloj, así que algo que sigues tocando no se archiva a tu espalda.
+3. **Ha desaparecido de su origen** (ver el apartado siguiente).
+
+Dos cosas que conviene saber:
+
+- **Los hijos van con el padre.** Archivar un proyecto archiva sus **tareas** y sus **entregables**, porque fuera de él
+  no significan nada. Al restaurarlo vuelven con él — pero sólo los que se archivaron en ese momento: una tarea que
+  archivaste tú aparte se queda archivada. Documentos, recursos, decisiones y elementos de portafolio **no** se
+  arrastran: apuntan a un proyecto pero existen por su cuenta.
+- **Un archivado no se edita.** Su panel se abre en solo lectura: lo que está retirado no cambia.
+
+**Eliminar definitivamente** es exactamente eso: no hay vuelta atrás y sólo queda el rastro en la auditoría. Dos
+salvedades: si algo **vivo** sigue usando ese registro (una tarea dentro de un proyecto archivado), CT lo **conserva** y
+te lo dice —archiva primero lo de dentro—; y si el registro venía de **Twenty, Notion o GitHub** y allí sigue
+existiendo, el siguiente sync lo traerá otra vez, porque su existencia no la decide CT. También puedes dejar que se
+borre solo: la política **«retención de archivados»** de Ajustes borra lo que lleve N días archivado (por defecto,
+*conservar siempre*).
+
+**El CRM es la excepción: clientes, contactos y oportunidades no se archivan desde aquí.** Aparecen y desaparecen
+según lo que exista en Twenty, así que no tienen botón de archivar ni de restaurar. Lo que el sync archive por haber
+desaparecido del CRM sí se ve en Archivados, y ahí sólo se puede eliminar.
+
 ### Qué pasa cuando borras algo en el sistema de origen
 
 Las listas de Control Tower **siguen** a sus orígenes en las dos direcciones. Si borras un repositorio en GitHub, una
@@ -202,15 +235,20 @@ no contemplado se rechaza con **"Transición no permitida"** (`INVALID_TRANSITIO
 vale** (no es un cambio). Los estados marcados **(final)** no tienen salida: desde ellos no se puede volver atrás.
 
 - **Proyecto:**
-  - `PLANNED` (planificado) → `ACTIVE`, `ARCHIVED`
-  - `ACTIVE` (activo) → `BLOCKED`, `WAITING`, `REVIEW`, `CLOSED`, `ARCHIVED`
-  - `BLOCKED` (bloqueado) → `ACTIVE`, `WAITING`, `CLOSED`, `ARCHIVED`
-  - `WAITING` (en espera) → `ACTIVE`, `BLOCKED`, `CLOSED`, `ARCHIVED`
-  - `REVIEW` (en revisión) → `ACTIVE`, `DELIVERED`, `CLOSED`, `ARCHIVED`
-  - `DELIVERED` (entregado) → `CLOSED`, `ARCHIVED`
-  - `CLOSED` (cerrado) **(final)** · `ARCHIVED` (archivado) **(final)**
+  - `PLANNED` (planificado) → `ACTIVE`
+  - `ACTIVE` (activo) → `BLOCKED`, `WAITING`, `REVIEW`, `CLOSED`
+  - `BLOCKED` (bloqueado) → `ACTIVE`, `WAITING`, `CLOSED`
+  - `WAITING` (en espera) → `ACTIVE`, `BLOCKED`, `CLOSED`
+  - `REVIEW` (en revisión) → `ACTIVE`, `DELIVERED`, `CLOSED`
+  - `DELIVERED` (entregado) → `CLOSED`
+  - `CLOSED` (cerrado) **(final)**; una semana después se archiva solo
   - No existe el salto directo `PLANNED → DELIVERED` (hay que pasar por el flujo). Un proyecto cerrado **no** vuelve a
     abrirse: si necesitas retomar el trabajo, se crea un proyecto nuevo.
+> **«Archivado» ya no es un estado** (2026-09-27). Lo era en ocho entidades y no hacía nada: el registro seguía en su
+> lista igual que antes. Ahora retirar algo de la vista es **archivarlo** —botón de la lista, o solo una semana después
+> de cerrarse— y se ve en *Ajustes › Archivados*. El valor sigue existiendo en la base por compatibilidad, pero ya no se
+> ofrece; lo que tuvieras marcado así se archiva de verdad en el primer barrido.
+
 - **Tarea:**
   - `TODO` (por hacer) → `IN_PROGRESS`, `BLOCKED`, `DONE`, `CANCELLED`
   - `IN_PROGRESS` (en curso) → `TODO`, `BLOCKED`, `DONE`, `CANCELLED`
@@ -229,22 +267,22 @@ vale** (no es un cambio). Los estados marcados **(final)** no tienen salida: des
   **cerrar** a `LOST` u `ONBOARDED`. **Sólo esos dos son finales: una oportunidad cerrada NO se puede reabrir**
   (*"La oportunidad ya está cerrada; no se puede mover a…"*). `WON` **no** es final: una ganada sigue en el tablero (en
   la columna *Negociación*) y puede avanzar a `ONBOARDED` cuando termina la incorporación del cliente, o volver atrás si
-  el trato se cae. Al pasar a `WON`, CT crea su proyecto automáticamente.
+  el trato se cae. Al pasar a `WON`, CT **te propone** crear su proyecto (la automatización nace desactivada).
 - **Entregable (deliverable):** `PLANNED` → `IN_PROGRESS` → `REVIEW` → `APPROVED` → `DELIVERED`; se puede retroceder un
-  paso (p. ej. `REVIEW → IN_PROGRESS`) y **archivar** desde cualquier estado. `ARCHIVED` es **(final)**.
+  paso (p. ej. `REVIEW → IN_PROGRESS`). Para retirarlo de la vista se **archiva** (no es un estado).
 - **Servicio:** `IDEA` → `DESIGNING` → `READY` → `ACTIVE` ⇄ `PAUSED`; **retirar** (`RETIRED`) desde cualquiera. `RETIRED`
-  puede **reactivarse** volviendo a `IDEA`. No hay saltos (p. ej. `IDEA → ACTIVE` se rechaza).
+  puede **reactivarse** volviendo a `IDEA` (si no, a la semana se archiva solo). No hay saltos (`IDEA → ACTIVE` se rechaza).
 - **Capacidad (capability):** `PLANNED` → `DEVELOPING` → `AVAILABLE`, con retrocesos; **retirar** (`RETIRED`) desde
   cualquiera y `RETIRED` reactivable a `DEVELOPING`.
 - **Ítem de conocimiento (Library):** `INBOX` → `DRAFT` → `REVIEW` → `APPROVED`, con retroceso `REVIEW → DRAFT` y
-  `APPROVED → REVIEW`; **archivar** desde cualquiera. `ARCHIVED` es **(final)**.
-- **Decisión:** editorial `DRAFT` → `REVIEW` → `APPROVED`; histórico `APPROVED` → `SUPERSEDED` (sustituida) →
-  `ARCHIVED`. **Archivar** desde cualquiera; `ARCHIVED` es **(final)**. Una decisión aprobada no se "edita para atrás":
-  se **sustituye** (queda el histórico).
-- **Asset:** `DRAFT` → `ACTIVE` → `DEPRECATED` (y `DEPRECATED` puede volver a `ACTIVE`); **archivar** desde cualquiera.
-  `ARCHIVED` es **(final)**.
-- **Ítem de portfolio:** `NOT_ELIGIBLE` → `CANDIDATE` → `IN_PREPARATION` → `PUBLISHED`, con retrocesos; **archivar**
-  desde cualquiera. `ARCHIVED` es **(final)**.
+  `APPROVED → REVIEW`. Para retirarlo de la vista se **archiva** (no es un estado).
+- **Decisión:** editorial `DRAFT` → `REVIEW` → `APPROVED`; histórico `APPROVED` → `SUPERSEDED` (sustituida), que una
+  semana después **se archiva sola**. Una decisión aprobada no se "edita para atrás": se **sustituye** (queda el
+  histórico).
+- **Asset (reutilizable):** `DRAFT` → `ACTIVE` → `DEPRECATED` (y `DEPRECATED` puede volver a `ACTIVE`). Un obsoleto
+  se **archiva solo** una semana después.
+- **Ítem de portfolio:** `NOT_ELIGIBLE` → `CANDIDATE` → `IN_PREPARATION` → `PUBLISHED`, con retrocesos. Para retirarlo
+  de la vista se **archiva** (no es un estado).
 - **Bandeja de conocimiento (Inbox):** una captura sólo se puede **editar mientras está en `NEW`**; en cuanto se
   **resuelve** (se promueve a la Library → `PROCESSED`, o se **descarta** → `DISCARDED`) queda de **solo lectura**
   (`INBOX_NOT_EDITABLE`), y no se puede promover dos veces la misma captura (`INBOX_ALREADY_RESOLVED`).

@@ -124,12 +124,11 @@ export default async function OpportunitiesPage() {
         hint={t('crm.opportunitiesArchivedHint')}
       />
     ) : (
+      // Sin «Restaurar»: una oportunidad vuelve al Kanban si vuelve a estar abierta en Twenty, no a mano.
       <RecordTable
         columns={archivadasColumns}
         rows={archived}
         getKey={(o) => o.id}
-        selectable
-        restore={{ entityType: 'opportunity' }}
       />
     );
 

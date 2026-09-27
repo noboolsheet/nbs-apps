@@ -79,6 +79,20 @@ export function opportunityExternalOnly(): AppError {
   });
 }
 
+/**
+ * Archivado gobernado por el origen (owner 2026-09-27): clientes, contactos y oportunidades **aparecen o
+ * desaparecen según lo que viva en Twenty** (ADR-009/ADR-010), así que no se archivan ni se restauran a mano.
+ * Los archiva la reconciliación del sync cuando dejan de venir en el pull, y el ciclo de vida de la oportunidad
+ * retira del Kanban lo que se cerró hace una semana.
+ */
+export function archivedByOrigin(entityLabel: string): AppError {
+  return new AppError({
+    code: 'ARCHIVE_OWNED_EXTERNALLY',
+    kind: 'CONFLICT',
+    message: `«${entityLabel}» se archiva en el origen: aparece o desaparece según lo que exista en el CRM.`,
+  });
+}
+
 /** Campo gestionado por un sistema externo: no editable en CT para un registro importado de ese proveedor. */
 export function fieldOwnedExternally(field: string, providerLabel: string): AppError {
   return new AppError({

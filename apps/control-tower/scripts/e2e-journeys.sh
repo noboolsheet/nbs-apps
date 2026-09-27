@@ -203,6 +203,31 @@ check "$(psql_t "select sort_order from tasks where id='$STID';")" "2" "la otra 
 # `client` no es reordenable: la allowlist es lo que evita renumerar una tabla cualquiera.
 check "$(curl -s -b $JAR -o /dev/null -w '%{http_code}' -X POST "$B/api/v1/reorder" -H 'Content-Type: application/json' -d '{"entityType":"client","ids":["'"$CLIID"'","'"$CLIID"'"]}')" "400" "entidad no reordenable rechazada"
 
+echo "J17: Archivado (cascada, CRM gobernado por el origen y borrado definitivo)"
+# Un proyecto propio para no tocar el del resto de journeys.
+APRJ=$(curl -s -b $JAR -X POST "$B/api/v1/projects" -H 'Content-Type: application/json' -d '{"name":"Proyecto a archivar"}'); APRJID=$(echo "$APRJ" | uuid)
+ATSK=$(curl -s -b $JAR -X POST "$B/api/v1/projects/$APRJID/tasks" -H 'Content-Type: application/json' -d '{"title":"Tarea que va con el proyecto"}'); ATSKID=$(echo "$ATSK" | uuid)
+ADEL=$(curl -s -b $JAR -X POST "$B/api/v1/projects/$APRJID/deliverables" -H 'Content-Type: application/json' -d '{"name":"Entregable"}'); ADELID=$(echo "$ADEL" | uuid)
+check "$(curl -s -b $JAR -o /dev/null -w '%{http_code}' -X POST "$B/api/v1/archive" -H 'Content-Type: application/json' -d '{"entityType":"project","ids":["'"$APRJID"'"]}')" "200" "proyecto archivado"
+check "$(psql_t "select archived_at is not null from tasks where id='$ATSKID';")" "t" "la tarea se archiva CON el proyecto"
+check "$(psql_t "select archived_at is not null from deliverables where id='$ADELID';")" "t" "el entregable se archiva CON el proyecto"
+check "$(curl -s -b $JAR "$B/api/v1/projects" | grep -c 'Proyecto a archivar')" "0" "el archivado desaparece de su lista"
+# El CRM lo gobierna Twenty: archivar o restaurar un cliente desde CT se rechaza (409 CONFLICT).
+check "$(curl -s -b $JAR -o /dev/null -w '%{http_code}' -X POST "$B/api/v1/archive" -H 'Content-Type: application/json' -d '{"entityType":"client","ids":["'"$CLIID"'"]}')" "409" "archivar un cliente se rechaza (lo gobierna el CRM)"
+check "$(curl -s -b $JAR -o /dev/null -w '%{http_code}' -X POST "$B/api/v1/restore" -H 'Content-Type: application/json' -d '{"entityType":"contact","ids":["'"$CTID"'"]}')" "409" "restaurar un contacto se rechaza"
+# Restaurar el proyecto devuelve a los hijos que fueron con él.
+check "$(curl -s -b $JAR -o /dev/null -w '%{http_code}' -X POST "$B/api/v1/restore" -H 'Content-Type: application/json' -d '{"entityType":"project","ids":["'"$APRJID"'"]}')" "200" "proyecto restaurado"
+check "$(psql_t "select archived_at is null from tasks where id='$ATSKID';")" "t" "la tarea vuelve con él"
+# Borrado definitivo: sólo sobre lo archivado, y no se puede usar para borrar algo vivo.
+check "$(curl -s -b $JAR "$B/api/v1/purge" -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{"entityType":"project","ids":["'"$APRJID"'"]}' | head -1)" "200" "purga aceptada"
+check "$(psql_t "select count(*) from projects where id='$APRJID';")" "1" "un proyecto VIVO no se borra con la purga"
+curl -s -b $JAR -o /dev/null -X POST "$B/api/v1/archive" -H 'Content-Type: application/json' -d '{"entityType":"project","ids":["'"$APRJID"'"]}'
+# 3 borrados: el proyecto + su tarea + su entregable (la purga a mano arrastra a los hijos archivados, igual que el
+# archivado los arrastró; sin eso su FK bloqueaba al padre y el borrado no llegaba a ocurrir nunca).
+check "$(curl -s -b $JAR -X POST "$B/api/v1/purge" -H 'Content-Type: application/json' -d '{"entityType":"project","ids":["'"$APRJID"'"]}' | grep -c '"deleted":3')" "1" "archivado + purga = borrado definitivo (con sus hijos)"
+check "$(psql_t "select count(*) from projects where id='$APRJID';")" "0" "el proyecto ya no existe"
+check "$(psql_t "select count(*) from tasks where id='$ATSKID';")" "0" "sus hijos se van con él"
+
 echo "Hardening:"
 check "$(curl -s -b $JAR -o /dev/null -w '%{http_code}' -X POST "$B/api/v1/clients" -H 'Origin: http://evil.example' -H 'Content-Type: application/json' -d '{"name":"x"}')" "403" "CSRF: Origin ajeno rechazado (403)"
 check "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/v1/clients" -H 'Content-Type: application/json' -d '{"name":"x"}')" "401" "sin sesión → 401"

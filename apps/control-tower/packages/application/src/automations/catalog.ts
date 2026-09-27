@@ -13,7 +13,13 @@
 export type AutomationKind = 'core' | 'event' | 'sync' | 'sweep';
 
 /** Barridos "ejecutables ahora" acotados a la organización. */
-export type SweepKind = 'retention' | 'opportunity_archive' | 'inbox_purge' | 'archived_purge' | 'review_purge';
+export type SweepKind =
+  | 'retention'
+  | 'opportunity_archive'
+  | 'terminal_archive'
+  | 'inbox_purge'
+  | 'archived_purge'
+  | 'review_purge';
 
 export interface AutomationSpec {
   /** Identificador estable (p. ej. `sync.notion`). */
@@ -250,6 +256,23 @@ export const AUTOMATION_CATALOG: readonly AutomationSpec[] = [
     runnable: true,
     requirements: ['—'],
     pauseEffect: 'Las oportunidades perdidas dejan de archivarse solas (siguen en el Kanban).',
+  },
+  {
+    key: 'sweep.terminal_archive',
+    title: 'Autoarchivado de lo cerrado',
+    kind: 'sweep',
+    sweep: 'terminal_archive',
+    description:
+      'Archiva lo que lleva una semana en un estado de cierre —proyecto cerrado, servicio o capacidad retirados, recurso retirado, decisión sustituida, reutilizable obsoleto, y todo lo que se dejó en «Archivado»— y lo retira de las listas. Un proyecto se lleva con él sus tareas y entregables. Reversible: aparece en Ajustes › Archivados.',
+    frequencyLabel: 'Diario (día local) · ventana de 7 días',
+    triggerLabel: "Barrido diario del worker o «Ejecutar ahora»",
+    scope: 'org',
+    toggleable: true,
+    runnable: true,
+    requirements: ['—'],
+    pauseEffect: 'Lo cerrado se queda en sus listas indefinidamente (habrá que archivarlo a mano).',
+    notes:
+      'La antigüedad se mide con `updated_at`: cualquier edición reinicia el reloj, así que algo que sigues tocando no se archiva a tu espalda. Las tareas NO entran (tienen su propia política de retención) ni el CRM (clientes, contactos y oportunidades dependen de Twenty).',
   },
   {
     key: 'sweep.inbox_purge',

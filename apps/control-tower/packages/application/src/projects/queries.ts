@@ -66,8 +66,16 @@ async function taskCountsByProject(db: Database, ctx: OrgContext) {
       done: sql<number>`sum(case when ${tasks.status} = 'DONE' then 1 else 0 end)`,
     })
     .from(tasks)
-    // Solo tareas de nivel superior (sin subtareas), coherente con el progreso de la ficha del proyecto.
-    .where(and(orgEq(tasks.organizationId, ctx), isNotNull(tasks.projectId), isNull(tasks.parentTaskId)))
+    // Solo tareas de nivel superior (sin subtareas) y sin archivadas: es el mismo criterio con el que la FICHA del
+    // proyecto calcula su progreso, y sin el `archivedAt` la lista y la ficha daban porcentajes distintos.
+    .where(
+      and(
+        orgEq(tasks.organizationId, ctx),
+        isNotNull(tasks.projectId),
+        isNull(tasks.parentTaskId),
+        isNull(tasks.archivedAt),
+      ),
+    )
     .groupBy(tasks.projectId);
   const map = new Map<string, { total: number; done: number }>();
   for (const r of rows) {
@@ -314,7 +322,16 @@ export function listProjectTasks(db: Database, ctx: OrgContext, projectId: strin
     .select()
     .from(tasks)
     // Solo tareas de nivel superior: las subtareas viven dentro de su tarea madre, no en la lista del proyecto.
-    .where(and(eq(tasks.projectId, projectId), orgEq(tasks.organizationId, ctx), isNull(tasks.parentTaskId)))
+    // Y sin archivadas: era la única consulta de tareas que no las excluía —el comentario de `listOpportunityTasks`
+    // decía «mismo criterio que las de proyecto» dando por hecho que aquí ya estaba, y no estaba.
+    .where(
+      and(
+        eq(tasks.projectId, projectId),
+        orgEq(tasks.organizationId, ctx),
+        isNull(tasks.parentTaskId),
+        isNull(tasks.archivedAt),
+      ),
+    )
     .orderBy(desc(tasks.createdAt));
 }
 
@@ -376,7 +393,9 @@ export function listProjectAssets(db: Database, ctx: OrgContext, projectId: stri
     })
     .from(projectAssets)
     .innerJoin(assets, eq(assets.id, projectAssets.assetId))
-    .where(and(eq(projectAssets.projectId, projectId), orgEq(assets.organizationId, ctx)))
+    // Sin archivados: un reutilizable archivado seguía apareciendo en la sección «Reutilizables» de la ficha, que
+    // es la fuga de archivados más visible que había (el enlace `project_assets` no se archiva, el activo sí).
+    .where(and(eq(projectAssets.projectId, projectId), orgEq(assets.organizationId, ctx), isNull(assets.archivedAt)))
     .orderBy(asc(assets.name));
 }
 
@@ -386,6 +405,6 @@ export function listAssetProjects(db: Database, ctx: OrgContext, assetId: string
     .select({ id: projects.id, name: projects.name, status: projects.status })
     .from(projectAssets)
     .innerJoin(projects, eq(projects.id, projectAssets.projectId))
-    .where(and(eq(projectAssets.assetId, assetId), orgEq(projects.organizationId, ctx)))
+    .where(and(eq(projectAssets.assetId, assetId), orgEq(projects.organizationId, ctx), isNull(projects.archivedAt)))
     .orderBy(asc(projects.name));
 }

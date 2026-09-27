@@ -162,6 +162,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
             hint: t('tasks.completedEmptyHint'),
           }}
           selectable
+          archive={{ entityType: 'task' }}
           remove={{ entityType: 'task' }}
           fixedLayout
         />
@@ -259,6 +260,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
                 rows={overdue}
                 getKey={(task) => task.id}
                 selectable
+                archive={{ entityType: 'task' }}
                 remove={{ entityType: 'task' }}
                 fixedLayout
               />
@@ -279,6 +281,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
                   rows={items}
                   getKey={(task) => task.id}
                   selectable
+                  archive={{ entityType: 'task' }}
                   remove={{ entityType: 'task' }}
                   fixedLayout
                 />

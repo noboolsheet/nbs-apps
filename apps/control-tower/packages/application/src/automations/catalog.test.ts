@@ -52,6 +52,7 @@ describe('AUTOMATION_CATALOG', () => {
       'sweep.opportunity_archive',
       'sweep.retention',
       'sweep.review_purge',
+      'sweep.terminal_archive',
     ]);
   });
 

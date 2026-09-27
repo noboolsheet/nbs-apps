@@ -1,6 +1,6 @@
 import { and, eq, lt, isNull, isNotNull, inArray } from 'drizzle-orm';
 import type { Database } from '@ct/db';
-import { clients, contacts, opportunities, tasks } from '@ct/db/schema';
+import { clients, contacts, opportunities } from '@ct/db/schema';
 import {
   slugify,
   assertOpportunityStageTransition,
@@ -21,6 +21,9 @@ import { recordAudit, recordChangeEvent, recordFieldChanges, isSystemActor } fro
 import { emitOutbox } from '../outbox/index';
 import { mapDbError, notFound, opportunityArchived, opportunityExternalOnly } from '../errors';
 import { assertNotEditingOwnedFields } from '../integrations/identity';
+// Import directo al módulo (no al índice de `maintenance`) para no arrastrar `retention`, que importa este mismo
+// módulo: por el índice sería una dependencia circular.
+import { cascadeArchive } from '../maintenance/archive';
 
 /** Casos de uso del módulo CRM. Autorizan, validan, aplican dominio y filtran por organización. */
 
@@ -257,10 +260,9 @@ export async function archiveClosedOpportunities(
         .returning({ id: opportunities.id, name: opportunities.name });
       if (rows.length > 0) {
         // Las tareas de preventa se archivan JUNTO con su oportunidad (quedan congeladas y fuera de las listas).
-        await tx
-          .update(tasks)
-          .set({ archivedAt: now })
-          .where(and(orgEq(tasks.organizationId, ctx), inArray(tasks.opportunityId, rows.map((r) => r.id)), isNull(tasks.archivedAt)));
+        // La cascada vive en un solo sitio (`cascadeArchive`), compartida con el archivado a mano y con el barrido
+        // de estados terminales: así un hijo nuevo se declara una vez y lo heredan los tres caminos.
+        await cascadeArchive(tx, ctx, 'opportunity', rows.map((r) => r.id), now);
       }
       for (const r of rows) {
         await recordAudit(tx, ctx, {

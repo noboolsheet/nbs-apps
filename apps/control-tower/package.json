@@ -26,6 +26,7 @@
   "devDependencies": {
     "@ct/application": "workspace:*",
     "@ct/db": "workspace:*",
+    "@ct/domain": "workspace:*",
     "@ct/integrations": "workspace:*",
     "@ct/shared": "workspace:*",
     "@eslint/js": "^9.14.0",

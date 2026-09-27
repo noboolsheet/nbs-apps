@@ -2,9 +2,14 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { sql, eq } from 'drizzle-orm';
 import { getDb, closeDb } from '@ct/db';
 import * as s from '@ct/db/schema';
+import { isExternallyArchived } from '@ct/domain';
 import {
   ARCHIVABLE,
   archiveRecords,
+  restoreRecords,
+  listArchived,
+  archiveTerminalRecords,
+  purgeArchivedByIds,
   purgeArchivedRecords,
   purgeReviewedItems,
   createClient,
@@ -118,6 +123,14 @@ async function seedEverything(ctx: OrgContext): Promise<Record<string, string>> 
 /** Archiva todo lo creado y envejece la marca de archivado para que caiga fuera de la retención. */
 async function archiveAndAge(ctx: OrgContext, ids: Record<string, string>, days = 400) {
   for (const [type, id] of Object.entries(ids)) {
+    if (isExternallyArchived(type)) {
+      // Cliente, contacto y oportunidad ya no se archivan a mano (owner 2026-09-27): los archiva la reconciliación
+      // del sync, que escribe la columna directamente. Aquí se imita eso, porque la purga sí tiene que cubrirlos.
+      const meta = ARCHIVABLE[type]!;
+      const c = meta.table as unknown as { id: never };
+      await db.update(meta.table).set({ archivedAt: new Date() } as never).where(eq(c.id, id as never));
+      continue;
+    }
     await archiveRecords(db, ctx, { entityType: type, ids: [id] });
   }
   const aged = new Date(Date.now() - days * 86_400_000);
@@ -287,6 +300,268 @@ describe('purga de «Por revisar»', () => {
       const item = await createReviewItem(db, ctx, { title: 'Revisado' });
       await updateReviewItemStatus(db, ctx, item.id, 'REVIEWED');
       expect(await purgeReviewedItems(db, ctx, { retentionDays: 0 })).toEqual({ deleted: 0 });
+    } finally {
+      await dropOrg(ctx);
+    }
+  });
+});
+
+/**
+ * **Archivado: un solo mecanismo** (owner 2026-09-27). Lo que se comprueba aquí es justo lo que estaba roto:
+ * el archivado no arrastraba a los hijos (y por eso la purga del padre no avanzaba nunca), no existía forma de
+ * borrar un archivado concreto, y nada archivaba lo que llevaba semanas cerrado.
+ */
+describe('archivado en cascada', () => {
+  it('archivar un proyecto se lleva sus tareas y sus entregables', async () => {
+    const ctx = await makeOrg();
+    try {
+      const pr = await createProject(db, ctx, { name: 'Proyecto con hijos' });
+      const tarea = await createTask(db, ctx, { title: 'Tarea', projectId: pr.id });
+      const ent = await createDeliverable(db, ctx, pr.id, { name: 'Entregable' });
+
+      expect(await archiveRecords(db, ctx, { entityType: 'project', ids: [pr.id] })).toBe(1);
+
+      const [t] = await db.select().from(s.tasks).where(eq(s.tasks.id, tarea.id));
+      const [d] = await db.select().from(s.deliverables).where(eq(s.deliverables.id, ent.id));
+      expect(t!.archivedAt).not.toBeNull();
+      expect(d!.archivedAt).not.toBeNull();
+    } finally {
+      await dropOrg(ctx);
+    }
+  });
+
+  it('restaurar devuelve los hijos que se archivaron CON él, y sólo esos', async () => {
+    const ctx = await makeOrg();
+    try {
+      const pr = await createProject(db, ctx, { name: 'Proyecto' });
+      const propia = await createTask(db, ctx, { title: 'Archivada aparte', projectId: pr.id });
+      const conElPadre = await createTask(db, ctx, { title: 'Archivada con el proyecto', projectId: pr.id });
+
+      // Una tarea archivada ANTES, por su cuenta: no debe revivir al restaurar el proyecto.
+      await archiveRecords(db, ctx, { entityType: 'task', ids: [propia.id] });
+      await archiveRecords(db, ctx, { entityType: 'project', ids: [pr.id] });
+      await restoreRecords(db, ctx, { entityType: 'project', ids: [pr.id] });
+
+      const [a] = await db.select().from(s.tasks).where(eq(s.tasks.id, propia.id));
+      const [b] = await db.select().from(s.tasks).where(eq(s.tasks.id, conElPadre.id));
+      expect(a!.archivedAt, 'la que se archivó aparte sigue archivada').not.toBeNull();
+      expect(b!.archivedAt, 'la que fue con el proyecto vuelve').toBeNull();
+    } finally {
+      await dropOrg(ctx);
+    }
+  });
+
+  it('gracias a la cascada, la purga del proyecto ya avanza (antes se bloqueaba para siempre)', async () => {
+    const ctx = await makeOrg();
+    try {
+      const pr = await createProject(db, ctx, { name: 'Proyecto a purgar' });
+      await createTask(db, ctx, { title: 'Tarea', projectId: pr.id });
+      await createDeliverable(db, ctx, pr.id, { name: 'Entregable' });
+      await archiveRecords(db, ctx, { entityType: 'project', ids: [pr.id] });
+      await db.execute(sql`update projects set archived_at = now() - interval '30 days' where id = ${pr.id}`);
+      await db.execute(sql`update tasks set archived_at = now() - interval '30 days' where project_id = ${pr.id}`);
+      await db.execute(sql`update deliverables set archived_at = now() - interval '30 days' where project_id = ${pr.id}`);
+
+      const res = await purgeArchivedRecords(db, ctx, { retentionDays: 1 });
+      expect(res.skipped).toBe(0);
+      expect(await remaining(ctx)).toEqual({});
+    } finally {
+      await dropOrg(ctx);
+    }
+  });
+});
+
+describe('el CRM se archiva en el origen', () => {
+  it('cliente, contacto y oportunidad no se pueden archivar ni restaurar a mano', async () => {
+    const ctx = await makeOrg();
+    try {
+      const cl = await createClient(db, ctx, { name: 'Cliente de Twenty' });
+      const co = await createContact(db, ctx, { email: 'x@ex.com', clientId: cl.id });
+      const op = await createOpportunity(db, sync(ctx), { name: 'Oportunidad', clientId: cl.id });
+      for (const [entityType, id] of [['client', cl.id], ['contact', co.id], ['opportunity', op.id]] as const) {
+        await expect(archiveRecords(db, ctx, { entityType, ids: [id] })).rejects.toThrow(/en el origen/);
+        await expect(restoreRecords(db, ctx, { entityType, ids: [id] })).rejects.toThrow(/en el origen/);
+      }
+      // Y siguen vivos: el rechazo es antes de tocar nada.
+      const [row] = await db.select().from(s.clients).where(eq(s.clients.id, cl.id));
+      expect(row!.archivedAt).toBeNull();
+    } finally {
+      await dropOrg(ctx);
+    }
+  });
+
+  it('`listArchived` los marca como no restaurables y dice por qué están archivados', async () => {
+    const ctx = await makeOrg();
+    try {
+      const cl = await createClient(db, ctx, { name: 'Desaparecido de Twenty' });
+      const pr = await createProject(db, ctx, { name: 'Proyecto archivado a mano' });
+      // Como lo deja la reconciliación del sync.
+      await db.update(s.clients).set({ archivedAt: new Date() }).where(eq(s.clients.id, cl.id));
+      await db.insert(s.auditLogs).values({
+        organizationId: ctx.organizationId,
+        actorType: 'SYSTEM',
+        action: 'ARCHIVE',
+        entityType: 'client',
+        entityId: cl.id,
+        metadata: { reason: 'sync-missing' },
+      });
+      await archiveRecords(db, ctx, { entityType: 'project', ids: [pr.id] });
+
+      const groups = await listArchived(db, ctx);
+      const clientes = groups.find((g) => g.entityType === 'client');
+      const proyectos = groups.find((g) => g.entityType === 'project');
+      expect(clientes?.restorable).toBe(false);
+      expect(clientes?.items[0]?.reason).toBe('sync-missing');
+      expect(proyectos?.restorable).toBe(true);
+      // El archivado a mano no escribe motivo: la pantalla lo muestra como «Archivado a mano».
+      expect(proyectos?.items[0]?.reason).toBe('manual');
+    } finally {
+      await dropOrg(ctx);
+    }
+  });
+});
+
+describe('borrado definitivo por selección', () => {
+  it('borra lo archivado, ignora lo vivo y avisa de lo que algo vivo aún usa', async () => {
+    const ctx = await makeOrg();
+    try {
+      const archivado = await createKnowledgeItem(db, ctx, { title: 'Archivado' });
+      const vivo = await createKnowledgeItem(db, ctx, { title: 'Vivo' });
+      await archiveRecords(db, ctx, { entityType: 'knowledge_item', ids: [archivado.id] });
+
+      const res = await purgeArchivedByIds(db, ctx, {
+        entityType: 'knowledge_item',
+        ids: [archivado.id, vivo.id],
+      });
+      expect(res).toEqual({ deleted: 1, blocked: 0, skipped: 1 });
+
+      const quedan = await db
+        .select({ id: s.knowledgeItems.id })
+        .from(s.knowledgeItems)
+        .where(eq(s.knowledgeItems.organizationId, ctx.organizationId));
+      expect(quedan.map((r) => r.id)).toEqual([vivo.id]);
+    } finally {
+      await dropOrg(ctx);
+    }
+  });
+
+  it('arrastra a los hijos archivados (si no, su FK bloqueaba al padre y no se borraba nunca)', async () => {
+    const ctx = await makeOrg();
+    try {
+      const pr = await createProject(db, ctx, { name: 'Proyecto con hijos' });
+      const tarea = await createTask(db, ctx, { title: 'Tarea', projectId: pr.id });
+      const sub = await createTask(db, ctx, { title: 'Subtarea', projectId: pr.id, parentTaskId: tarea.id });
+      await createDeliverable(db, ctx, pr.id, { name: 'Entregable' });
+      await archiveRecords(db, ctx, { entityType: 'project', ids: [pr.id] });
+
+      // Proyecto + tarea + subtarea + entregable = 4.
+      expect(await purgeArchivedByIds(db, ctx, { entityType: 'project', ids: [pr.id] })).toEqual({
+        deleted: 4,
+        blocked: 0,
+        skipped: 0,
+      });
+      expect(await remaining(ctx)).toEqual({});
+      expect(sub.id).toBeTruthy();
+    } finally {
+      await dropOrg(ctx);
+    }
+  });
+
+  it('conserva —y lo dice— lo que una fila viva sigue referenciando', async () => {
+    const ctx = await makeOrg();
+    try {
+      const pr = await createProject(db, ctx, { name: 'Proyecto' });
+      const doc = await createDocument(db, ctx, { name: 'Documento vivo', projectId: pr.id });
+      // El proyecto se archiva (y arrastra tareas/entregables), pero el DOCUMENTO no es hijo de la cascada.
+      await archiveRecords(db, ctx, { entityType: 'project', ids: [pr.id] });
+
+      const res = await purgeArchivedByIds(db, ctx, { entityType: 'project', ids: [pr.id] });
+      expect(res).toEqual({ deleted: 0, blocked: 1, skipped: 0 });
+
+      // Archivando también el documento, el proyecto ya se puede borrar.
+      await archiveRecords(db, ctx, { entityType: 'document', ids: [doc.id] });
+      await purgeArchivedByIds(db, ctx, { entityType: 'document', ids: [doc.id] });
+      expect(await purgeArchivedByIds(db, ctx, { entityType: 'project', ids: [pr.id] })).toEqual({
+        deleted: 1,
+        blocked: 0,
+        skipped: 0,
+      });
+    } finally {
+      await dropOrg(ctx);
+    }
+  });
+});
+
+describe('autoarchivado por estado terminal', () => {
+  /** Envejece `updated_at`, que es la edad que mira el barrido. */
+  async function ageUpdated(table: string, id: string, days: number) {
+    await db.execute(sql.raw(`update ${table} set updated_at = now() - interval '${days} days' where id = '${id}'`));
+  }
+
+  it('archiva lo cerrado hace más de una semana y deja en paz lo reciente', async () => {
+    const ctx = await makeOrg();
+    try {
+      const viejo = await createProject(db, ctx, { name: 'Cerrado hace tiempo' });
+      const reciente = await createProject(db, ctx, { name: 'Cerrado ayer' });
+      await db.update(s.projects).set({ status: 'CLOSED' }).where(eq(s.projects.id, viejo.id));
+      await db.update(s.projects).set({ status: 'CLOSED' }).where(eq(s.projects.id, reciente.id));
+      await ageUpdated('projects', viejo.id, 30);
+      await ageUpdated('projects', reciente.id, 1);
+
+      const res = await archiveTerminalRecords(db, ctx, {});
+      expect(res.byEntity.project).toBe(1);
+
+      const [v] = await db.select().from(s.projects).where(eq(s.projects.id, viejo.id));
+      const [r] = await db.select().from(s.projects).where(eq(s.projects.id, reciente.id));
+      expect(v!.archivedAt).not.toBeNull();
+      expect(r!.archivedAt).toBeNull();
+    } finally {
+      await dropOrg(ctx);
+    }
+  });
+
+  it('recoge lo que quedó con el viejo estado «Archivado», que no archivaba nada', async () => {
+    const ctx = await makeOrg();
+    try {
+      const dec = await createDecision(db, ctx, { title: 'Decisión', decision: 'Algo' });
+      await db.update(s.decisions).set({ status: 'ARCHIVED' }).where(eq(s.decisions.id, dec.id));
+      await ageUpdated('decisions', dec.id, 30);
+
+      expect((await archiveTerminalRecords(db, ctx, {})).byEntity.decision).toBe(1);
+      const [d] = await db.select().from(s.decisions).where(eq(s.decisions.id, dec.id));
+      expect(d!.archivedAt).not.toBeNull();
+    } finally {
+      await dropOrg(ctx);
+    }
+  });
+
+  it('arrastra a los hijos del proyecto que archiva', async () => {
+    const ctx = await makeOrg();
+    try {
+      const pr = await createProject(db, ctx, { name: 'Proyecto cerrado' });
+      const tarea = await createTask(db, ctx, { title: 'Tarea', projectId: pr.id });
+      await db.update(s.projects).set({ status: 'CLOSED' }).where(eq(s.projects.id, pr.id));
+      await ageUpdated('projects', pr.id, 30);
+
+      await archiveTerminalRecords(db, ctx, {});
+      const [t] = await db.select().from(s.tasks).where(eq(s.tasks.id, tarea.id));
+      expect(t!.archivedAt).not.toBeNull();
+    } finally {
+      await dropOrg(ctx);
+    }
+  });
+
+  it('no toca las tareas por su cuenta (tienen su propia política de retención)', async () => {
+    const ctx = await makeOrg();
+    try {
+      const pr = await createProject(db, ctx, { name: 'Proyecto activo' });
+      const tarea = await createTask(db, ctx, { title: 'Tarea hecha', projectId: pr.id, status: 'DONE' });
+      await ageUpdated('tasks', tarea.id, 90);
+
+      const res = await archiveTerminalRecords(db, ctx, {});
+      expect(res.byEntity.task).toBeUndefined();
+      const [t] = await db.select().from(s.tasks).where(eq(s.tasks.id, tarea.id));
+      expect(t!.archivedAt).toBeNull();
     } finally {
       await dropOrg(ctx);
     }

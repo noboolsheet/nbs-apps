@@ -231,6 +231,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                     rows={tasks}
                     getKey={(task) => task.id}
                     selectable
+                    archive={{ entityType: 'task' }}
                     remove={{ entityType: 'task' }}
                   />
                 )}
