@@ -8,6 +8,7 @@ import { ListPage } from '@/components/ui/list-page';
 import { StatusControl } from '@/components/business/forms';
 import { NewRecordButton } from '@/components/ui/new-record-button';
 import { RecordLink } from '@/components/ui/record-link';
+import { enumLabel } from '@/lib/labels';
 import { t } from '@/lib/i18n';
 
 export const dynamic = 'force-dynamic';
@@ -29,8 +30,8 @@ export default async function CapabilitiesPage() {
         </RecordLink>
       ),
     },
-    { header: t('field.maturity'), cell: (r) => <StatusBadge status={r.maturity} /> },
-    { header: t('field.status'), cell: (r) => <StatusControl kind="capabilities" id={r.id} current={r.status} /> },
+    { header: t('field.maturity'), value: (r) => enumLabel(r.maturity), facet: true, cell: (r) => <StatusBadge status={r.maturity} /> },
+    { header: t('field.status'), value: (r) => enumLabel(r.status), facet: true, cell: (r) => <StatusControl kind="capabilities" id={r.id} current={r.status} /> },
   ];
 
   return (

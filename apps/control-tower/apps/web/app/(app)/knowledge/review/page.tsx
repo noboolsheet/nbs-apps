@@ -35,8 +35,8 @@ export default async function ReviewQueuePage() {
         </RecordLink>
       ),
     },
-    { header: t('field.kind'), className: 'w-32', value: (r) => enumLabel(r.kind ?? '') || null, cell: (r) => enumLabel(r.kind ?? '') || '—' },
-    { header: t('field.sector'), className: 'w-36', value: (r) => r.sector, cell: (r) => r.sector ?? '—' },
+    { header: t('field.kind'), className: 'w-32', value: (r) => enumLabel(r.kind ?? '') || null, facet: true, cell: (r) => enumLabel(r.kind ?? '') || '—' },
+    { header: t('field.sector'), className: 'w-36', value: (r) => r.sector, facet: true, cell: (r) => r.sector ?? '—' },
     { header: t('review.addedAt'), className: 'w-32', value: (r) => r.createdAt, cell: (r) => formatDate(r.createdAt) },
     {
       header: t('field.status'),
@@ -44,6 +44,7 @@ export default async function ReviewQueuePage() {
       value: (r) => enumLabel(r.status),
       // Revisado = terminal (`isReviewItemFrozen`): se pinta como insignia, no como desplegable. Ofrecer un
       // selector que el servidor va a rechazar es peor que no ofrecerlo.
+      facet: true,
       cell: (r) =>
         r.status === 'REVIEWED' ? (
           <StatusBadge status={r.status} />

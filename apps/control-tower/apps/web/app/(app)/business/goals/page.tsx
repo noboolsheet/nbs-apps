@@ -36,6 +36,7 @@ export default async function GoalsPage() {
     {
       header: t('business.areaLabel'),
       value: (r) => (r.strategicAreaId ? (areaById.get(r.strategicAreaId) ?? null) : null),
+      facet: true,
       cell: (r) =>
         r.strategicAreaId ? (
           <Link className="underline underline-offset-2 hover:no-underline" href={`/business/strategic-areas/${r.strategicAreaId}`}>
@@ -45,8 +46,8 @@ export default async function GoalsPage() {
           <span className="text-fg-subtle">—</span>
         ),
     },
-    { header: t('field.status'), value: (r) => enumLabel(r.status), cell: (r) => <StatusBadge status={r.status} /> },
-    { header: t('field.priority'), value: (r) => enumLabel(r.priority), cell: (r) => enumLabel(r.priority) },
+    { header: t('field.status'), value: (r) => enumLabel(r.status), facet: true, cell: (r) => <StatusBadge status={r.status} /> },
+    { header: t('field.priority'), value: (r) => enumLabel(r.priority), facet: true, cell: (r) => enumLabel(r.priority) },
     { header: t('field.targetDateGoal'), value: (r) => r.targetDate, cell: (r) => (r.targetDate ? formatDate(r.targetDate) : '—') },
   ];
 

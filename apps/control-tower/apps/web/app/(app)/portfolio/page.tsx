@@ -30,9 +30,9 @@ export default async function PortfolioPage() {
         </RecordLink>
       ),
     },
-    { header: t('field.kind'), value: (r) => enumLabel(r.type), cell: (r) => enumLabel(r.type) },
-    { header: t('field.status'), value: (r) => enumLabel(r.status), cell: (r) => <StatusBadge status={r.status} /> },
-    { header: t('field.visibility'), value: (r) => enumLabel(r.visibility), cell: (r) => enumLabel(r.visibility) },
+    { header: t('field.kind'), value: (r) => enumLabel(r.type), facet: true, cell: (r) => enumLabel(r.type) },
+    { header: t('field.status'), value: (r) => enumLabel(r.status), facet: true, cell: (r) => <StatusBadge status={r.status} /> },
+    { header: t('field.visibility'), value: (r) => enumLabel(r.visibility), facet: true, cell: (r) => enumLabel(r.visibility) },
     { header: t('field.sourceType'), cell: (r) => <SourceBadge source="NATIVE" url={r.externalUrl} linkLabel={t('common.open')} /> },
   ];
 

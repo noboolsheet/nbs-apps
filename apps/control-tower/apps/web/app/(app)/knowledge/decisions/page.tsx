@@ -7,6 +7,7 @@ import { ListPage } from '@/components/ui/list-page';
 import { DecisionStatusControl } from '@/components/knowledge/forms';
 import { NewRecordButton } from '@/components/ui/new-record-button';
 import { RecordLink } from '@/components/ui/record-link';
+import { enumLabel } from '@/lib/labels';
 import { t } from '@/lib/i18n';
 
 export const dynamic = 'force-dynamic';
@@ -63,7 +64,7 @@ export default async function DecisionsPage() {
         );
       },
     },
-    { header: t('field.status'), cell: (r) => <DecisionStatusControl id={r.id} current={r.status} /> },
+    { header: t('field.status'), value: (r) => enumLabel(r.status), facet: true, cell: (r) => <DecisionStatusControl id={r.id} current={r.status} /> },
   ];
 
   return (

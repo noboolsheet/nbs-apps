@@ -29,8 +29,8 @@ export default async function ServicesPage() {
         </RecordLink>
       ),
     },
-    { header: t('field.status'), value: (r) => enumLabel(r.status), cell: (r) => <StatusBadge status={r.status} /> },
-    { header: t('field.kind'), cell: (r) => r.serviceType ?? '—' },
+    { header: t('field.status'), value: (r) => enumLabel(r.status), facet: true, cell: (r) => <StatusBadge status={r.status} /> },
+    { header: t('field.kind'), value: (r) => r.serviceType, facet: true, cell: (r) => r.serviceType ?? '—' },
     { header: t('business.slugLabel'), cell: (r) => <code className="text-xs text-fg-muted">{r.slug}</code> },
   ];
 

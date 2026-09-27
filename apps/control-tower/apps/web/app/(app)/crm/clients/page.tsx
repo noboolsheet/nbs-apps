@@ -9,6 +9,7 @@ import { FilterTabs } from '@/components/ui/filter-tabs';
 import { ClientStatusControl } from '@/components/crm/forms';
 import { NewRecordButton } from '@/components/ui/new-record-button';
 import { RecordLink } from '@/components/ui/record-link';
+import { enumLabel } from '@/lib/labels';
 import { t } from '@/lib/i18n';
 
 export const dynamic = 'force-dynamic';
@@ -47,9 +48,9 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
         </RecordLink>
       ),
     },
-    { header: t('field.status'), cell: (r) => <ClientStatusControl id={r.id} current={r.status} /> },
-    { header: t('field.industry'), cell: (r) => r.industry ?? '—' },
-    { header: t('field.sourceType'), cell: (r) => <SourceBadge source={providerByClient.get(r.id) ?? 'NATIVE'} /> },
+    { header: t('field.status'), value: (r) => enumLabel(r.status), facet: true, cell: (r) => <ClientStatusControl id={r.id} current={r.status} /> },
+    { header: t('field.industry'), value: (r) => r.industry, facet: true, cell: (r) => r.industry ?? '—' },
+    { header: t('field.sourceType'), value: (r) => providerByClient.get(r.id) ?? 'NATIVE', facet: true, cell: (r) => <SourceBadge source={providerByClient.get(r.id) ?? 'NATIVE'} /> },
   ];
 
   return (

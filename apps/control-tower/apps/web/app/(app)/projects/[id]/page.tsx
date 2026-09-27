@@ -73,13 +73,26 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         <RecordLink entity="task" id={task.id} className="font-medium underline-offset-2 hover:underline">{task.title}</RecordLink>
       ),
     },
-    { header: t('field.priority'), className: 'w-24', value: (task) => enumLabel(task.priority), cell: (task) => enumLabel(task.priority) },
+    {
+      header: t('field.priority'),
+      className: 'w-24',
+      value: (task) => enumLabel(task.priority),
+      facet: true,
+      cell: (task) => enumLabel(task.priority),
+    },
     {
       header: t('field.status'),
       className: 'w-40',
+      value: (task) => enumLabel(task.status),
+      facet: true,
       cell: (task) => (closed ? <StatusBadge status={task.status} /> : <TaskStatusControl id={task.id} current={task.status} />),
     },
-    { header: t('field.dueDate'), className: 'w-32', cell: (task) => <span className="text-xs text-fg-muted">{fmtDate(task.dueDate)}</span> },
+    {
+      header: t('field.dueDate'),
+      className: 'w-32',
+      value: (task) => task.dueDate,
+      cell: (task) => <span className="text-xs text-fg-muted">{fmtDate(task.dueDate)}</span>,
+    },
   ];
   const delivCols: Column<(typeof deliverables)[number]>[] = [
     {

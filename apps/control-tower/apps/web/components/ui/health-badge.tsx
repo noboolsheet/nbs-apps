@@ -13,6 +13,11 @@ const HEALTH: Record<'ON_TRACK' | 'AT_RISK' | 'BLOCKED', { label: string; tone: 
   BLOCKED: { label: t('enum.BLOCKED'), tone: 'red' },
 };
 
+/** Etiqueta legible de la salud. La usan las listas para ordenar/filtrar por ella (no por el código crudo). */
+export function healthLabel(health: string): string {
+  return (HEALTH[health as keyof typeof HEALTH] ?? HEALTH.ON_TRACK).label;
+}
+
 export function HealthBadge({ health }: { health: string }): ReactNode {
   const h = HEALTH[health as 'ON_TRACK' | 'AT_RISK' | 'BLOCKED'] ?? HEALTH.ON_TRACK;
   const { cls, icon } = toneClasses(h.tone);

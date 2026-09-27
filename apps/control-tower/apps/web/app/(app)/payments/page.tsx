@@ -57,6 +57,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
       header: t('field.direction'),
       className: 'w-40 whitespace-nowrap',
       value: (p) => enumLabel(p.direction),
+      facet: true,
       // Convención contable: el dinero que entra en verde y el que sale en rojo. El signo ↓/↑ acompaña al color
       // para que la dirección se lea también sin distinguirlos.
       cell: (p) => (
@@ -94,6 +95,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
       header: t('field.status'),
       className: 'w-40',
       value: (p) => enumLabel(p.status),
+      facet: true,
       cell: (p) => <PaymentStatusControl id={p.id} current={p.status} />,
     },
   ];

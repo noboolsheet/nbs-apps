@@ -29,7 +29,7 @@ export default async function StrategicAreasPage() {
         </RecordLink>
       ),
     },
-    { header: t('field.status'), value: (r) => enumLabel(r.status), cell: (r) => <StatusBadge status={r.status} /> },
+    { header: t('field.status'), value: (r) => enumLabel(r.status), facet: true, cell: (r) => <StatusBadge status={r.status} /> },
     { header: t('field.sortOrder'), cell: (r) => r.sortOrder },
   ];
 

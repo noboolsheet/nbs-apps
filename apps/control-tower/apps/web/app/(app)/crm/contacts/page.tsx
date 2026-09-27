@@ -35,10 +35,10 @@ export default async function ContactsPage() {
         </RecordLink>
       ),
     },
-    { header: t('entity.client'), value: (r) => (r.clientId ? (clientById.get(r.clientId) ?? null) : null), cell: (r) => (r.clientId ? (clientById.get(r.clientId) ?? '—') : '—') },
+    { header: t('entity.client'), value: (r) => (r.clientId ? (clientById.get(r.clientId) ?? null) : null), facet: true, cell: (r) => (r.clientId ? (clientById.get(r.clientId) ?? '—') : '—') },
     { header: t('field.email'), value: (r) => r.email, cell: (r) => r.email ?? '—' },
     { header: t('field.phone'), value: (r) => r.phone, cell: (r) => r.phone ?? '—' },
-    { header: t('field.sourceType'), value: (r) => providerByContact.get(r.id) ?? 'NATIVE', cell: (r) => <SourceBadge source={providerByContact.get(r.id) ?? 'NATIVE'} /> },
+    { header: t('field.sourceType'), value: (r) => providerByContact.get(r.id) ?? 'NATIVE', facet: true, cell: (r) => <SourceBadge source={providerByContact.get(r.id) ?? 'NATIVE'} /> },
   ];
 
   return (

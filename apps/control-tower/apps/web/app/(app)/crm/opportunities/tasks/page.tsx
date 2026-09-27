@@ -48,20 +48,24 @@ export default async function OpportunityTasksPage({ searchParams }: { searchPar
     {
       header: t('entity.opportunity'),
       className: 'w-56',
+      value: (t) => t.opportunityName,
+      facet: true,
       cell: (t) => (
         <Link className="text-xs underline underline-offset-2" href={`/crm/opportunities/${t.opportunityId}`}>
           {t.opportunityName}
         </Link>
       ),
     },
-    { header: t('field.priority'), className: 'w-24', value: (t) => enumLabel(t.priority), cell: (t) => enumLabel(t.priority) },
+    { header: t('field.priority'), className: 'w-24', value: (t) => enumLabel(t.priority), facet: true, cell: (t) => enumLabel(t.priority) },
     {
       header: t('field.status'),
       className: 'w-40',
+      value: (t) => enumLabel(t.status),
+      facet: true,
       // Si la oportunidad está archivada, sus tareas quedan congeladas → badge de solo lectura.
       cell: (t) => (t.opportunityArchivedAt ? <StatusBadge status={t.status} /> : <TaskStatusControl id={t.id} current={t.status} />),
     },
-    { header: t('field.dueDate'), className: 'w-32', cell: (t) => <span className="text-xs text-fg-muted">{fmtDate(t.dueDate)}</span> },
+    { header: t('field.dueDate'), className: 'w-32', value: (t) => t.dueDate, cell: (t) => <span className="text-xs text-fg-muted">{fmtDate(t.dueDate)}</span> },
   ];
 
   return (

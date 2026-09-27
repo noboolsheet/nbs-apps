@@ -38,8 +38,8 @@ export default async function SystemHealthPage() {
     listLogArchives(db, ctx.org), // F-24: lotes ya rotados (procesos y bandeja de salida)
   ]);
   const jobColumns: Column<JobRow>[] = [
-    { header: t('field.kind'), value: (j) => j.jobType, cell: (j) => j.jobType },
-    { header: t('field.status'), value: (j) => enumLabel(j.status), cell: (j) => <StatusBadge status={j.status} /> },
+    { header: t('field.kind'), value: (j) => j.jobType, facet: true, cell: (j) => j.jobType },
+    { header: t('field.status'), value: (j) => enumLabel(j.status), facet: true, cell: (j) => <StatusBadge status={j.status} /> },
     { header: t('automation.attemptsLabel'), value: (j) => j.attempts, cell: (j) => `${j.attempts}/${j.maxAttempts}` },
     { header: t('automation.lastError'), value: (j) => j.lastError, cell: (j) => <span className="line-clamp-1 text-danger">{j.lastError ?? ''}</span> },
   ];

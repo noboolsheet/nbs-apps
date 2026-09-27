@@ -34,8 +34,8 @@ export default async function InboxPage() {
       ),
       className: 'w-full',
     },
-    { header: t('field.sourceType'), value: (r) => r.sourceType, cell: (r) => <SourceBadge source={r.sourceType} url={r.sourceUrl} />, className: 'whitespace-nowrap' },
-    { header: t('field.status'), value: (r) => enumLabel(r.status), cell: (r) => <StatusBadge status={r.status} />, className: 'whitespace-nowrap' },
+    { header: t('field.sourceType'), value: (r) => r.sourceType, facet: true, cell: (r) => <SourceBadge source={r.sourceType} url={r.sourceUrl} />, className: 'whitespace-nowrap' },
+    { header: t('field.status'), value: (r) => enumLabel(r.status), facet: true, cell: (r) => <StatusBadge status={r.status} />, className: 'whitespace-nowrap' },
   ];
 
   return (

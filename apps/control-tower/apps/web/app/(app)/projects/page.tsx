@@ -4,7 +4,7 @@ import { listProjects, type ProjectWithDerived } from '@ct/application';
 import { getCurrentContext } from '@/lib/auth-context';
 import { type Column } from '@/components/ui/entity-table';
 import { RecordTable } from '@/components/ui/record-table';
-import { HealthBadge } from '@/components/ui/health-badge';
+import { HealthBadge, healthLabel } from '@/components/ui/health-badge';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { ListPage } from '@/components/ui/list-page';
@@ -77,9 +77,9 @@ export default async function ProjectsPage({
           (r.clientName ?? r.contactName ?? '—')
         ),
     },
-    { header: t('field.kind'), className: 'w-28', value: (r) => enumLabel(r.type), cell: (r) => <span className="text-xs text-fg-muted">{enumLabel(r.type)}</span> },
-    { header: t('field.status'), value: (r) => enumLabel(r.status), cell: (r) => (r.status === 'CLOSED' ? <StatusBadge status={r.status} /> : <ProjectStatusControl id={r.id} current={r.status} />) },
-    { header: t('projects.colHealth'), value: (r) => r.health, cell: (r) => <HealthBadge health={r.health} /> },
+    { header: t('field.kind'), className: 'w-28', value: (r) => enumLabel(r.type), facet: true, cell: (r) => <span className="text-xs text-fg-muted">{enumLabel(r.type)}</span> },
+    { header: t('field.status'), value: (r) => enumLabel(r.status), facet: true, cell: (r) => (r.status === 'CLOSED' ? <StatusBadge status={r.status} /> : <ProjectStatusControl id={r.id} current={r.status} />) },
+    { header: t('projects.colHealth'), value: (r) => healthLabel(r.health), facet: true, cell: (r) => <HealthBadge health={r.health} /> },
     { header: t('projects.colProgress'), value: (r) => r.progress, cell: (r) => <ProgressBar value={r.progress} /> },
   ];
 

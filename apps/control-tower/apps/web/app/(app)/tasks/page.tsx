@@ -146,9 +146,9 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
         className: 'w-44',
         cell: (task) => assocCell(task),
       },
-      { header: t('field.priority'), className: 'w-24', value: (task) => enumLabel(task.priority), cell: (task) => <span className="text-xs text-fg-muted">{enumLabel(task.priority)}</span> },
-      { header: t('field.sourceType'), className: 'w-28 whitespace-nowrap', value: (task) => providerByTask.get(task.id) ?? 'NATIVE', cell: (task) => <SourceBadge source={providerByTask.get(task.id) ?? 'NATIVE'} /> },
-      { header: t('field.status'), className: 'w-36 whitespace-nowrap', value: (task) => enumLabel(task.status), cell: (task) => <StatusBadge status={task.status} /> },
+      { header: t('field.priority'), className: 'w-24', value: (task) => enumLabel(task.priority), facet: true, cell: (task) => <span className="text-xs text-fg-muted">{enumLabel(task.priority)}</span> },
+      { header: t('field.sourceType'), className: 'w-28 whitespace-nowrap', value: (task) => providerByTask.get(task.id) ?? 'NATIVE', facet: true, cell: (task) => <SourceBadge source={providerByTask.get(task.id) ?? 'NATIVE'} /> },
+      { header: t('field.status'), className: 'w-36 whitespace-nowrap', value: (task) => enumLabel(task.status), facet: true, cell: (task) => <StatusBadge status={task.status} /> },
       { header: t('common.completed'), className: 'w-32', value: (task) => task.completedAt, cell: (task) => <span className="text-xs text-fg-muted">{fmtDate(task.completedAt)}</span> },
     ];
     return (
@@ -218,9 +218,9 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
       value: (task) => task.projectName ?? (task.personal ? t('projects.personal') : null),
       cell: (task) => assocCell(task),
     },
-    { header: t('field.priority'), className: 'w-24', value: (task) => enumLabel(task.priority), cell: (task) => <span className="text-xs text-fg-muted">{enumLabel(task.priority)}</span> },
-    { header: t('field.sourceType'), className: 'w-28 whitespace-nowrap', value: (task) => providerByTask.get(task.id) ?? 'NATIVE', cell: (task) => <SourceBadge source={providerByTask.get(task.id) ?? 'NATIVE'} /> },
-    { header: t('field.status'), className: 'w-40 whitespace-nowrap', value: (task) => enumLabel(task.status), cell: (task) => <TaskStatusControl id={task.id} current={task.status} /> },
+    { header: t('field.priority'), className: 'w-24', value: (task) => enumLabel(task.priority), facet: true, cell: (task) => <span className="text-xs text-fg-muted">{enumLabel(task.priority)}</span> },
+    { header: t('field.sourceType'), className: 'w-28 whitespace-nowrap', value: (task) => providerByTask.get(task.id) ?? 'NATIVE', facet: true, cell: (task) => <SourceBadge source={providerByTask.get(task.id) ?? 'NATIVE'} /> },
+    { header: t('field.status'), className: 'w-40 whitespace-nowrap', value: (task) => enumLabel(task.status), facet: true, cell: (task) => <TaskStatusControl id={task.id} current={task.status} /> },
     { header: t('field.dueDate'), className: 'w-40', value: (task) => task.dueDate, cell: (task) => <TaskDueDateControl id={task.id} current={task.dueDate} /> },
   ];
 
@@ -233,10 +233,10 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
         <RecordLink entity="task" id={task.id} className="font-medium underline-offset-2 hover:underline">{task.title}</RecordLink>
       ),
     },
-    { header: t('entity.project'), className: 'w-44', value: (task) => task.projectName ?? task.opportunityName ?? null, cell: (task) => assocCell(task) },
-    { header: t('field.priority'), className: 'w-24', value: (task) => enumLabel(task.priority), cell: (task) => <span className="text-xs text-fg-muted">{enumLabel(task.priority)}</span> },
-    { header: t('field.sourceType'), className: 'w-28 whitespace-nowrap', value: (task) => providerByTask.get(task.id) ?? 'NATIVE', cell: (task) => <SourceBadge source={providerByTask.get(task.id) ?? 'NATIVE'} /> },
-    { header: t('field.status'), className: 'w-40 whitespace-nowrap', value: (task) => enumLabel(task.status), cell: (task) => <TaskStatusControl id={task.id} current={task.status} /> },
+    { header: t('entity.project'), className: 'w-44', value: (task) => task.projectName ?? task.opportunityName ?? null, facet: true, cell: (task) => assocCell(task) },
+    { header: t('field.priority'), className: 'w-24', value: (task) => enumLabel(task.priority), facet: true, cell: (task) => <span className="text-xs text-fg-muted">{enumLabel(task.priority)}</span> },
+    { header: t('field.sourceType'), className: 'w-28 whitespace-nowrap', value: (task) => providerByTask.get(task.id) ?? 'NATIVE', facet: true, cell: (task) => <SourceBadge source={providerByTask.get(task.id) ?? 'NATIVE'} /> },
+    { header: t('field.status'), className: 'w-40 whitespace-nowrap', value: (task) => enumLabel(task.status), facet: true, cell: (task) => <TaskStatusControl id={task.id} current={task.status} /> },
     { header: t('field.dueDate'), className: 'w-40', value: (task) => task.dueDate, cell: (task) => <TaskDueDateControl id={task.id} current={task.dueDate} /> },
   ];
 
