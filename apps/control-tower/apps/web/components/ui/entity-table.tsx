@@ -20,6 +20,13 @@ export interface Column<T> {
    * lo correcto para columnas de acciones o de controles interactivos.
    */
   value?: (row: T) => string | number | Date | null | undefined;
+  /**
+   * La columna ofrece **faceta**: un desplegable para quedarse con un valor exacto. Sólo tiene sentido en columnas
+   * de **conjunto cerrado o baja cardinalidad** (Estado, Prioridad, Tipo, Origen, Cliente…): en un nombre, una fecha
+   * o un importe no aporta nada y para eso está el buscador de texto. Requiere `value` (es lo que se compara), y el
+   * valor debería ser ya la **etiqueta legible** (`enumLabel(...)`), porque es lo que se ve en el desplegable.
+   */
+  facet?: boolean;
 }
 
 export function EntityTable<T>({

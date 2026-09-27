@@ -6,6 +6,7 @@ import { postJson } from '@/lib/client';
 import { btnLink, btnPrimary, buttonCls } from './button';
 import { fieldCls } from './input';
 import { useReorder } from '@/lib/use-reorder';
+import { facetChoices, facetIsUseful, matchesFacets, pruneSelection, type FacetSelection } from '@/lib/facets';
 import { t, tPlural } from '@/lib/i18n';
 import { formatDate } from '@/lib/i18n/format';
 
@@ -26,6 +27,11 @@ export interface DataTableColumn {
   className?: string;
   /** La columna es ordenable (su `Column.value` existe). Lo decide `RecordTable`, no la vista. */
   sortable?: boolean;
+  /**
+   * La columna ofrece **faceta**: un desplegable para quedarse con un valor exacto (Estado, Prioridad, Tipo…).
+   * Sólo para conjuntos cerrados o de baja cardinalidad; lo declara la vista con `Column.facet`.
+   */
+  facet?: boolean;
 }
 export interface DataTableRow {
   id: string;
@@ -91,24 +97,44 @@ export function DataTable({
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<{ index: number; dir: 'asc' | 'desc' } | null>(null);
+  const [facets, setFacets] = useState<FacetSelection>({});
   const headerRef = useRef<HTMLInputElement>(null);
   const manual = useReorder(reorder?.entityType, rows.map((r) => r.id));
 
   // Filtro + orden en CLIENTE, a propósito: no hay paginación, así que el servidor ya mandó todas las filas.
   // Hacerlo por URL obligaría a un viaje de ida y vuelta por cada clic — en la Pi eso se nota, y aquí no aporta.
-  const visibleRows = useMemo(() => {
+  // 1) texto libre. Se calcula aparte porque los CONTADORES de las facetas se cuentan sobre estas filas: así el
+  // número de cada opción es el que vas a obtener al elegirla.
+  const textRows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    let out = rows;
-    if (q) {
-      out = out.filter((r) =>
-        (r.values ?? []).some((v) => {
-          if (v == null) return false;
-          // Una fecha se filtra por su forma legible (día/mes/año), que es como el usuario la ve.
-          const text = v instanceof Date ? formatDate(v) : String(v);
-          return text.toLowerCase().includes(q);
-        }),
-      );
-    }
+    if (!q) return rows;
+    return rows.filter((r) =>
+      (r.values ?? []).some((v) => {
+        if (v == null) return false;
+        // Una fecha se filtra por su forma legible (día/mes/año), que es como el usuario la ve.
+        const text = v instanceof Date ? formatDate(v) : String(v);
+        return text.toLowerCase().includes(q);
+      }),
+    );
+  }, [rows, query]);
+
+  // Una faceta cuyo valor ya no existe (tras un refresco del servidor) dejaría la lista vacía sin motivo visible.
+  useEffect(() => {
+    setFacets((prev) => {
+      const next = pruneSelection(rows, prev, formatDate);
+      return Object.keys(next).length === Object.keys(prev).length ? prev : next;
+    });
+  }, [rows]);
+
+  const facetColumns = useMemo(
+    () => columns.map((c, i) => ({ index: i, header: c.header, on: !!c.facet })).filter((c) => c.on),
+    [columns],
+  );
+  const activeFacets = Object.values(facets).filter(Boolean).length;
+
+  // 2) facetas (Y entre ellas) y 3) orden.
+  const visibleRows = useMemo(() => {
+    let out = textRows.filter((r) => matchesFacets(r, facets, formatDate));
     if (sort) {
       // copia: `Array.sort` muta, y `rows` viene del render del servidor.
       out = [...out].sort((a, b) => {
@@ -117,7 +143,7 @@ export function DataTable({
       });
     }
     return out;
-  }, [rows, query, sort]);
+  }, [textRows, facets, sort]);
 
   // Arrastrar sólo tiene sentido si lo que se ve ES la lista completa y en su orden real. Con un orden por
   // columna, con un filtro puesto o con la consulta recortada por el tope, la posición en pantalla no es la
@@ -219,20 +245,59 @@ export function DataTable({
         </div>
       )}
 
-      {filterable && (
+      {(filterable || facetColumns.length > 0) && (
         <div className="flex flex-wrap items-center gap-2">
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t('table.filterPlaceholder')}
-            aria-label={t('table.filterPlaceholder')}
-            className={`w-56 ${fieldCls}`}
-          />
-          {query && (
-            <span className="text-xs text-fg-muted">
-              {tPlural('table.filterMatches', visibleRows.length)}
-            </span>
+          {filterable && (
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t('table.filterPlaceholder')}
+              aria-label={t('table.filterPlaceholder')}
+              className={`w-56 ${fieldCls}`}
+            />
+          )}
+          {/* Facetas: un desplegable por columna de conjunto cerrado, con las opciones que EXISTEN en la lista y
+              el número de filas de cada una. Una columna con un solo valor no se ofrece (no filtraría nada). */}
+          {facetColumns.map((fc) => {
+            const choices = facetChoices(textRows, fc.index, facets, formatDate);
+            if (!facetIsUseful(rows, fc.index, formatDate)) return null;
+            const selected = facets[fc.index] ?? '';
+            return (
+              <select
+                key={fc.index}
+                value={selected}
+                aria-label={fc.header}
+                onChange={(e) =>
+                  setFacets((prev) => ({ ...prev, [fc.index]: e.target.value }))
+                }
+                className={`${fieldCls} ${selected ? 'border-primary' : ''}`}
+              >
+                <option value="">{t('filter.allOfField', { field: fc.header })}</option>
+                {choices.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {t('filter.facetOption', { valor: c.value, n: c.count })}
+                  </option>
+                ))}
+              </select>
+            );
+          })}
+          {(query || activeFacets > 0) && (
+            <>
+              <span className="text-xs text-fg-muted">
+                {tPlural('table.filterMatches', visibleRows.length)}
+              </span>
+              <button
+                type="button"
+                className={btnLink}
+                onClick={() => {
+                  setQuery('');
+                  setFacets({});
+                }}
+              >
+                {t('filter.clear')}
+              </button>
+            </>
           )}
         </div>
       )}

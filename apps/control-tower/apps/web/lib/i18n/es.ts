@@ -335,6 +335,9 @@ export const es = {
   'table.clearSelection': 'Deseleccionar',
   // Filtro rápido y ordenación de las tablas (F-28).
   'table.filterPlaceholder': 'Filtrar en esta lista…',
+  // Facetas (filtro por valor exacto de una columna). El desplegable sin elegir dice qué columna filtra.
+  'filter.allOfField': '{field}: todos',
+  'filter.facetOption': '{valor} ({n})',
   'table.filterMatches.one': '1 coincidencia',
   'table.filterMatches.other': '{n} coincidencias',
   'table.noMatches': 'Nada coincide con el filtro.',

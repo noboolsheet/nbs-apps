@@ -61,7 +61,13 @@ export function RecordTable<T>({
   const anyValue = columns.some((c) => c.value);
   return (
     <DataTable
-      columns={columns.map(({ header, className, value }) => ({ header, className, sortable: !!value }))}
+      columns={columns.map(({ header, className, value, facet }) => ({
+        header,
+        className,
+        sortable: !!value,
+        // La faceta necesita el valor plano: sin `value` no habría nada por lo que filtrar.
+        facet: !!facet && !!value,
+      }))}
       rows={rows.map((row) => ({
         id: getKey(row),
         cells: columns.map((c) => c.cell(row)),
