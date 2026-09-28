@@ -5,6 +5,22 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-09-28 — Inicio: en vez del neto, lo que hay que apartar ✅
+
+Petición del owner tras verlo en la aplicación: *«esa cifra [el neto] no tiene sentido sin considerar el 30% que tengo
+que conservar de mis ingresos»*. Tiene razón, y el problema del neto no era que faltara un dato: es que **se lee como
+dinero disponible** —«te deben menos debes»— cuando de lo que te deben hay una parte que ya no es tuya. Así que el
+neto desaparece de la franja de dinero y en su sitio va **«Reservar (30%)»**, calculado sobre lo pendiente de cobro y
+en color de aviso, con el mismo texto emergente que ya usaba Pagos («no es un cálculo fiscal»).
+
+**De paso, la regla dejó de estar duplicada.** El 30% era una constante local de la página de Pagos; al necesitarla
+Inicio tocaba compartirla antes de tener dos treintas que un día se separan. Ahora vive en el dominio
+(`packages/domain/src/tax-reserve.ts`) con su propio test, y `taxReserve(importe, pct?)` **acepta el porcentaje** —hoy
+no se le pasa, pero es lo que hará falta el día que dependa del régimen y pase a Ajustes—. La clave `home.moneyNet`
+se retira del diccionario: una clave que ya no usa nadie es la siguiente que alguien reutiliza para otra cosa.
+
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (206, 3 nuevos) · `pnpm build`.
+
 ## 2026-09-27 — Documentación al día (README, CLAUDE.md, guía y memoria) ✅
 
 Repaso de los documentos después de las cuatro tandas del día. Lo que estaba mal, que era sobre todo el **README**:
@@ -1040,7 +1056,11 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-09-27): documentación al día.** README (decía puerto 3000, `.env` único y rutas a
+> **⚑ ÚLTIMO (2026-09-28): la franja de dinero de Inicio dice qué apartar, no el neto.** El neto se leía como dinero
+> disponible y de lo que te deben hay un 30% que ya no es tuyo (owner). En su lugar, **«Reservar (30%)»** sobre lo
+> pendiente de cobro; la regla pasa al dominio con test y deja de estar duplicada en la página de Pagos.
+>
+> **⚑ ANTES (2026-09-27): documentación al día.** README (decía puerto 3000, `.env` único y rutas a
 > `infrastructure/`), `CLAUDE.md` (estado, ADRs hasta 010 y tres convenciones nuevas), índice de `docs/`, el patrón de
 > desarrollo (la **guarda que ata dos listas**, que se aplicaba sin estar escrita), el contrato de Notion y la guía del
 > usuario. Antes, en el mismo día: **E-8 · F-40 · F-28 · F-41**.

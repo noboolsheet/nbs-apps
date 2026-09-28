@@ -9,5 +9,6 @@ export * from './quick-note';
 export * from './crm-classification';
 export * from './person-roles';
 export * from './billing-rules';
+export * from './tax-reserve';
 export * from './contactability';
 export * from './sop/index';

@@ -9,6 +9,7 @@ import { HealthBadge } from '@/components/ui/health-badge';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { EmptyState } from '@/components/ui/empty-state';
 import { RecordLink } from '@/components/ui/record-link';
+import { TAX_RESERVE_PCT, taxReserve } from '@ct/domain';
 import { auditEntityTarget } from '@/lib/record-registry';
 import { TaskCompleteButton, TaskDueDateControl } from '@/components/projects/forms';
 import { enumLabel } from '@/lib/labels';
@@ -378,7 +379,12 @@ function MoneyStrip({ pending, overdue }: { pending: MoneyTotal[]; overdue: Mone
             const out = pick(pending, currency, 'OUT');
             const lateIn = pick(overdue, currency, 'IN');
             const lateOut = pick(overdue, currency, 'OUT');
-            const net = (inn?.total ?? 0) - (out?.total ?? 0);
+            /**
+             * Lo que hay que **apartar** de lo que te deben, no el neto (owner 2026-09-28): «esa cifra no tiene
+             * sentido sin considerar el 30% que tengo que conservar de mis ingresos». Un neto de «te deben menos
+             * debes» se lee como dinero disponible, y de lo que te deben hay una parte que ya no es tuya.
+             */
+            const reserve = taxReserve(inn?.total ?? 0);
             return (
               <div key={currency} className="flex flex-wrap items-baseline gap-x-6 gap-y-1 rounded-lg border border-line px-3 py-2 text-sm">
                 <Link className="hover:underline" href="/payments">
@@ -391,13 +397,12 @@ function MoneyStrip({ pending, overdue }: { pending: MoneyTotal[]; overdue: Mone
                   <span className="font-medium tabular-nums">{formatMoney(out?.total ?? 0, currency)}</span>
                   {!!out?.count && <span className="text-xs text-fg-subtle"> ({out.count})</span>}
                 </Link>
-                <span>
-                  <span className="text-fg-muted">{t('home.moneyNet')}: </span>
-                  <span className={`font-medium tabular-nums ${net < 0 ? 'text-danger' : ''}`}>
-                    {net > 0 ? '+' : ''}
-                    {formatMoney(net, currency)}
-                  </span>
-                </span>
+                {reserve > 0 && (
+                  <Link className="hover:underline" href="/payments" title={t('payments.taxReserveHint', { pct: TAX_RESERVE_PCT })}>
+                    <span className="text-fg-muted">{t('payments.taxReserve', { pct: TAX_RESERVE_PCT })}: </span>
+                    <span className="font-medium tabular-nums text-warning">{formatMoney(reserve, currency)}</span>
+                  </Link>
+                )}
                 {(lateIn || lateOut) && (
                   <Link className="text-danger hover:underline" href="/payments?ver=retrasados">
                     ⚠ {t('home.moneyOverdue')}:{' '}

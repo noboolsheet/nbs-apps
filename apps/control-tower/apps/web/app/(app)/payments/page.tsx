@@ -1,5 +1,6 @@
 import { getDb } from '@ct/db';
 import { listPayments, pendingPaymentTotals, getOrganization } from '@ct/application';
+import { TAX_RESERVE_PCT, taxReserve } from '@ct/domain';
 import { getCurrentContext } from '@/lib/auth-context';
 import { type Column } from '@/components/ui/entity-table';
 import { RecordTable } from '@/components/ui/record-table';
@@ -16,11 +17,6 @@ export const dynamic = 'force-dynamic';
 
 type Payment = Awaited<ReturnType<typeof listPayments>>[number];
 
-/**
- * Porcentaje de lo pendiente de cobrar que conviene apartar para impuestos. Constante a propósito: es una regla de
- * bolsillo del owner, no un cálculo fiscal — si algún día depende del régimen o del país, pasará a Ajustes.
- */
-const TAX_RESERVE_PCT = 30;
 
 export default async function PaymentsPage({ searchParams }: { searchParams: Promise<{ ver?: string }> }) {
   const ctx = await getCurrentContext();
@@ -130,7 +126,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                 >
                   <span>{t('payments.taxReserve', { pct: TAX_RESERVE_PCT })}: </span>
                   <span className="font-medium tabular-nums">
-                    {formatMoney(String(tot.total * (TAX_RESERVE_PCT / 100)), tot.currencyCode)}
+                    {formatMoney(taxReserve(tot.total), tot.currencyCode)}
                   </span>
                 </span>
               )}

@@ -27,9 +27,9 @@ información tiene UNA fuente de verdad**. Según el dato, la relación es una d
 
 ## Las secciones de la app
 
-- **Inicio** — lo que hay que mirar hoy, en este orden: **Dinero** (cuánto te deben, cuánto debes y lo retrasado, por
-  moneda) · tres cifras sin lista propia (tareas abiertas, oportunidades abiertas, capturas por procesar) · el **bloc
-  de notas rápidas** ·
+- **Inicio** — lo que hay que mirar hoy, en este orden: **Dinero** (cuánto te deben, cuánto debes, **cuánto apartar**
+  —el 30% de lo que te deben, la misma reserva que ves en Pagos— y lo retrasado, por moneda) · tres cifras sin lista
+  propia (tareas abiertas, oportunidades abiertas, capturas por procesar) · el **bloc de notas rápidas** ·
   **Requiere atención** (sólo lo que no aparece en ningún otro bloque) y, en dos columnas: a la izquierda «qué ha
   pasado» —proyectos activos con su progreso, **decisiones en revisión**, estado del sistema en una línea y la
   **actividad reciente**— y a la derecha el trabajo: tareas en **vencidas · hoy · próximos 7 días** (más cuántas hay

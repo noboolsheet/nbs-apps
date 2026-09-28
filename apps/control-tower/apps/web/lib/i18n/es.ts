@@ -457,7 +457,6 @@ export const es = {
   'home.moneyTitle': 'Dinero',
   'home.moneyOwedToYou': 'Te deben',
   'home.moneyYouOwe': 'Debes',
-  'home.moneyNet': 'Neto',
   'home.moneyOverdue': 'Retrasado',
   'home.moneyEmpty': 'Sin cobros ni pagos pendientes',
   'home.moneyOpen': 'Ver Pagos',
