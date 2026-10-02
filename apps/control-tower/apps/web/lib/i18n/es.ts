@@ -68,6 +68,7 @@ export const es = {
   'enum.INDIVIDUAL_CLIENT': 'Cliente particular',
   'enum.PARTNER': 'Socio',
   'enum.SUPPLIER': 'Proveedor',
+  'enum.CONTACT': 'Contacto de empresa',
   'enum.COLLABORATOR': 'Colaborador',
   'enum.REFERRAL_SOURCE': 'Fuente de recomendación',
   // Idioma preferido

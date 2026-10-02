@@ -36,21 +36,37 @@ function nested(obj: TwentyRawRecord, key: string, sub: string): string | undefi
  * identidad: se valida contra el enum y, para instancias no alineadas o valores legacy, se traduce/cae a LEAD.
  */
 const STAGE_SET = new Set<string>(OPPORTUNITY_STAGE);
+/** Estados viejos de Twenty y de CT (hasta M39) que aún pueden llegar de un backup o de una instancia sin migrar. */
+const LEGACY_STAGES: Record<string, OpportunityStage> = {
+  NEW: 'LEAD',
+  SCREENING: 'QUALIFIED',
+  CUSTOMER: 'WON',
+  CONTACTED: 'LEAD',
+  PROPOSAL: 'PROPOSAL_SENT',
+  CANCELLED: 'LOST',
+  CLOSED: 'ONBOARDED',
+};
+
 export function mapTwentyStage(raw: unknown): OpportunityStage {
-  const s = (typeof raw === 'string' ? raw : '').toUpperCase();
-  if (STAGE_SET.has(s)) return s as OpportunityStage;
-  // Fallback para instancias con los estados legacy de Twenty (por si no se alinearon) y para los stages que CT
-  // tuvo hasta M39 y ya no existen (por si vuelve un valor viejo desde un backup o una instancia sin migrar).
-  const legacy: Record<string, OpportunityStage> = {
-    NEW: 'LEAD',
-    SCREENING: 'QUALIFIED',
-    CUSTOMER: 'WON',
-    CONTACTED: 'LEAD',
-    PROPOSAL: 'PROPOSAL_SENT',
-    CANCELLED: 'LOST',
-    CLOSED: 'ONBOARDED',
-  };
-  return legacy[s] ?? 'LEAD';
+  return mapStage(raw).stage;
+}
+
+/**
+ * El stage, y **si hubo que adivinarlo**. Lo segundo importa: un stage que CT no conoce caía a `LEAD` en silencio,
+ * así que una oportunidad en una etapa nueva de Twenty aparecía aquí como «Prospecto» sin que nada lo dijera —y
+ * mover el embudo es justo lo único que CT escribe de vuelta—. Ahora el sync lo informa (owner 2026-10-02, al
+ * revisar las etiquetas de los selects de Twenty).
+ *
+ * Los `LEGACY_STAGES` **no** se consideran desconocidos: ahí sabemos a qué equivalen.
+ */
+export function mapStage(raw: unknown): { stage: OpportunityStage; unknown?: string } {
+  const original = typeof raw === 'string' ? raw.trim() : '';
+  const s = original.toUpperCase().replace(/[\s-]+/g, '_');
+  if (STAGE_SET.has(s)) return { stage: s as OpportunityStage };
+  const legacy = LEGACY_STAGES[s];
+  if (legacy) return { stage: legacy };
+  // Sin etiqueta no hay nada que avisar (un campo vacío no es un valor nuevo); con etiqueta, se dice cuál.
+  return original === '' ? { stage: 'LEAD' } : { stage: 'LEAD', unknown: original };
 }
 
 /**
@@ -139,7 +155,10 @@ export function mapOpportunity(raw: TwentyRawRecord): NormalizedOpportunity {
   return {
     externalId: raw.id,
     name: str(raw.name) ?? '(sin nombre)',
-    stage: mapTwentyStage(raw.stage),
+    ...(() => {
+      const m = mapStage(raw.stage);
+      return m.unknown ? { stage: m.stage, unknownStage: m.unknown } : { stage: m.stage };
+    })(),
     estimatedValue,
     currencyCode,
     expectedCloseDate: close ? close.slice(0, 10) : undefined,

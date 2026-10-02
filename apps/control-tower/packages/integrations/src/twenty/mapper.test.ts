@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mapCompany, mapPerson, mapOpportunity, mapTwentyStage, opportunityPatch } from './mapper';
+import { mapCompany, mapPerson, mapOpportunity, mapStage, mapTwentyStage, opportunityPatch } from './mapper';
 
 describe('twenty mapper', () => {
   it('mapea company defensivamente', () => {
@@ -70,6 +70,29 @@ describe('twenty mapper', () => {
     expect(mapTwentyStage('CANCELLED')).toBe('LOST');
     expect(mapTwentyStage('PROPOSAL')).toBe('PROPOSAL_SENT');
     expect(mapTwentyStage('SOMETHING')).toBe('LEAD');
+  });
+
+  /**
+   * El fallback a `LEAD` era **silencioso**: una oportunidad en una etapa nueva de Twenty aparecía en CT como
+   * «Prospecto» y nada lo decía — y mover el embudo es lo único que CT escribe de vuelta. Ahora el mapper dice que
+   * tuvo que adivinar y el sync lo avisa (owner 2026-10-02).
+   */
+  it('stage: dice CUÁL no reconoció, y no confunde un legacy con un desconocido', () => {
+    expect(mapStage('NEGOTIATION')).toEqual({ stage: 'NEGOTIATION' });
+    expect(mapStage('CUSTOMER')).toEqual({ stage: 'WON' }); // legacy: sabemos a qué equivale, no es desconocido
+    expect(mapStage('Due Diligence')).toEqual({ stage: 'LEAD', unknown: 'Due Diligence' });
+    // Normaliza antes de rendirse: un espacio o un guion no hacen desconocido a un estado que sí conocemos.
+    expect(mapStage('proposal sent')).toEqual({ stage: 'PROPOSAL_SENT' });
+    // Vacío o ausente no es «un valor nuevo»: no hay nada que avisar.
+    expect(mapStage('')).toEqual({ stage: 'LEAD' });
+    expect(mapStage(undefined)).toEqual({ stage: 'LEAD' });
+  });
+
+  it('la oportunidad arrastra la etiqueta desconocida para que el sync la informe', () => {
+    const o = mapOpportunity({ id: 'o9', name: 'Trato', stage: 'Due Diligence' });
+    expect(o).toMatchObject({ stage: 'LEAD', unknownStage: 'Due Diligence' });
+    // Y cuando el stage se reconoce, no se inventa el campo.
+    expect(mapOpportunity({ id: 'o8', name: 'Trato', stage: 'WON' }).unknownStage).toBeUndefined();
   });
 
   describe('write-back CT → Twenty (ADR-009: sólo el stage de la oportunidad)', () => {

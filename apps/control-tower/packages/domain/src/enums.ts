@@ -200,6 +200,11 @@ export const COMPANY_RELATIONSHIP_ROLE = [
 ] as const;
 export const PERSON_RELATIONSHIP_ROLE = [
   'INDIVIDUAL_CLIENT',
+  // Contacto de una empresa: el caso más común y el que FALTABA (owner 2026-10-02, con el aviso del sync delante:
+  // «Roles de relación que Twenty trae y Control Tower no conoce»). El handoff listaba los otros cinco y este se
+  // quedó fuera, así que cada sync marcaba «con advertencias» por el rol más normal de todos. No cambia la
+  // clasificación —sólo `INDIVIDUAL_CLIENT` hace cliente a una persona— pero deja de ser un valor «desconocido».
+  'CONTACT',
   'PARTNER',
   'SUPPLIER',
   'COLLABORATOR',

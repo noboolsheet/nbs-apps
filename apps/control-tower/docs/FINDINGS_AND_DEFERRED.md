@@ -22,6 +22,9 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
 >   test) y **E-8** (los barridos no dejaban huella; ahora la dejan en `automation_runs`).
 > - **Se arregla en el momento:** el copy del estado vacío de Clientes decía «Crea uno con el formulario de arriba»,
 >   y ahí ya no hay formulario **ni** botón de crear (los clientes son de Twenty).
+> - **F-42 (2026-10-02):** cerrado. Faltaba `CONTACT` en los roles de persona de Twenty —el rol más común, que dejaba
+>   cada sync «con advertencias»— y un stage desconocido caía a «Prospecto» sin avisar. Ver el addendum de ADR-010 para
+>   qué hace CT con cada etiqueta que no conoce (ignorar, guardar tal cual o avisar), que no es lo mismo en los tres.
 > - **Nuevos, y ya cerrados el mismo día:** **F-40** (había texto de interfaz en español **fuera del diccionario**,
 >   incluida la capa de aplicación; ahora la aplicación manda códigos y datos, y dos guardas lo vigilan) y **F-41**
 >   (un test de integración dependía del orden de los ficheros).
@@ -1263,6 +1266,34 @@ hay que volver a medir antes de dar por bueno el síntoma.
 - **Lo que se queda en español a propósito:** los **mensajes de error** de dominio y aplicación (decisión ya tomada y
   anotada en la auditoría técnica) y el `'(sin título)'` de `notion-specs.ts`, que **no es interfaz**: es el valor que
   se **guarda** como nombre del registro cuando la página de Notion no tiene título.
+
+### F-42 · El rol más común de Twenty no estaba en el contrato, y un stage desconocido caía a «Prospecto» en silencio ✅ RESUELTO (2026-10-02)
+
+- **Hallado por el owner** integrando Twenty: el sync avisaba *«config CONTACT: Roles de relación que Twenty trae y
+  Control Tower no conoce: se han ignorado al clasificar»*.
+- **Lo que el aviso decía de verdad:** la etiqueta ignorada era **`CONTACT`** (el aviso la pone en el campo del id del
+  saltado, así que el dato estaba ahí). `PERSON_RELATIONSHIP_ROLE` tenía cinco roles y ése no, **aunque es el más
+  común** y el owner lo había descrito desde el primer día. Consecuencia práctica: la clasificación era correcta
+  —quien sólo es contacto se queda como contacto— pero **cada sync quedaba «con advertencias»** por el caso normal, y
+  ese ruido es exactamente lo que hace que un aviso de verdad pase inadvertido. → `CONTACT` añadido al enum, con su
+  etiqueta y tres tests (incluido que con `CONTACT` + `INDIVIDUAL_CLIENT` manda el segundo).
+- **Lo que salió al revisar los otros selects:** un **stage** que CT no conoce caía a `LEAD` **sin avisar**. Es el
+  peor sitio para un fallback silencioso: el stage es lo **único** que CT escribe de vuelta a Twenty, así que una
+  etapa nueva allí se vería aquí como «Prospecto» y nadie se enteraría. → El mapper devuelve ahora
+  `{ stage, unknown? }` (`mapStage`), la oportunidad arrastra `unknownStage` y el sync lo informa una vez por
+  ejecución, por el mismo canal que los roles. Los estados *legacy* (`CUSTOMER`→WON, `NEW`→LEAD…) **no** cuentan como
+  desconocidos: ahí sabemos a qué equivalen. Y se normalizan espacios y guiones antes de rendirse («proposal sent» es
+  `PROPOSAL_SENT`, no un valor nuevo).
+- **Lo que se deja como está, a propósito:** un **Organization Type** que no esté en el contrato se **guarda tal cual**
+  y no genera aviso — es una etiqueta descriptiva y verla sin traducir en la pantalla ya informa; descartarla sería
+  perder dato.
+- **Lo que CT no lee** (y por tanto no puede reconocer): los roles de relación de la **empresa**
+  (`COMPANY_RELATIONSHIP_ROLE`) y los campos del handoff que aún no se tiran del pull —idioma y canal preferidos, tipo
+  de servicio, origen del lead, motivo de pérdida—. Tienen enum y traducción porque se usarán; decidir cuáles viajan
+  es parte de **E-18**.
+- **Cómo alinear sin adivinar**, que es lo que falló aquí: pedirle a Twenty los valores que de verdad usa
+  (`/rest/people?limit=…` y mirar los valores distintos del campo, o la API de metadatos) antes de dar una lista por
+  completa. Queda escrito en el addendum de **ADR-010**.
 
 ### F-41 · Un test de integración depende del orden de los ficheros y falla de forma intermitente ✅ RESUELTO (2026-09-27)
 

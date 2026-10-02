@@ -43,3 +43,29 @@ describe('roles de relación de una persona', () => {
     expect(crmTargetForPerson(parsePersonRoles(undefined))).toBe('contact');
   });
 });
+
+/**
+ * El aviso que lo encontró (owner 2026-10-02, integrando Twenty): «config CONTACT: Roles de relación que Twenty trae
+ * y Control Tower no conoce». El rol **más común de todos** —contacto de una empresa— no estaba en el enum, así que
+ * cada sincronización marcaba el run «con advertencias» por el caso normal.
+ */
+describe('CONTACT es un rol conocido (el aviso del sync del 2026-10-02)', () => {
+  it('reconoce «Contact» en las formas en que Twenty lo puede traer', () => {
+    for (const raw of ['CONTACT', 'Contact', 'contact', ' contact ']) {
+      const r = parsePersonRoles([raw]);
+      expect(r.roles, raw).toEqual(['CONTACT']);
+      expect(r.unknown, raw).toEqual([]);
+    }
+  });
+
+  it('un contacto de empresa sigue siendo CONTACTO en CT, no cliente', () => {
+    expect(crmTargetForPerson(parsePersonRoles(['Contact']))).toBe('contact');
+    expect(isIndividualClient(parsePersonRoles(['Contact']).roles)).toBe(false);
+  });
+
+  it('y con los dos roles manda INDIVIDUAL_CLIENT (es a quien se factura)', () => {
+    const r = parsePersonRoles(['Contact', 'Individual Client']);
+    expect(r.roles).toEqual(['INDIVIDUAL_CLIENT', 'CONTACT']); // en el orden del enum
+    expect(crmTargetForPerson(r)).toBe('client');
+  });
+});

@@ -53,6 +53,11 @@ export interface NormalizedOpportunity {
   externalId: string;
   name: string;
   stage: string; // ya mapeado al enum de dominio (OPPORTUNITY_STAGE)
+  /**
+   * Etiqueta de stage que Twenty trajo y CT no reconoció. Cuando viene, `stage` es el fallback (`LEAD`) y **no** el
+   * estado real: el sync lo informa en el historial para que no pase inadvertido.
+   */
+  unknownStage?: string;
   estimatedValue?: number;
   currencyCode?: string;
   expectedCloseDate?: string; // YYYY-MM-DD

@@ -185,6 +185,7 @@ export async function syncTwenty(
    */
   let rolesFieldMissing = 0;
   const unknownRoleLabels = new Set<string>();
+  const unknownStageLabels = new Set<string>();
   for (const p of data.people) {
     if (!p.firstName && !p.lastName && !p.email) continue; // sin datos identificables
     try {
@@ -288,6 +289,8 @@ export async function syncTwenty(
         ? (await resolveInternalId(db, ctx, P, 'company', o.companyExternalId)) ?? undefined
         : undefined;
       const stage = o.stage as OpportunityStage;
+      // Un stage que el mapper no reconoció: `stage` es el fallback, no el estado real. Se junta para avisar una vez.
+      if (o.unknownStage) unknownStageLabels.add(o.unknownStage);
       const existing = await resolveInternalId(db, ctx, P, 'opportunity', o.externalId);
       if (existing && pendingPush.opportunity!.has(existing)) {
         summary.skipped.push({ entity: 'opportunity', externalId: o.externalId, error: PENDING_PUSH_MSG });
@@ -324,6 +327,19 @@ export async function syncTwenty(
     } catch (e) {
       summary.skipped.push({ entity: 'opportunity', externalId: o.externalId, error: errMsg(e) });
     }
+  }
+
+  if (unknownStageLabels.size > 0) {
+    // Mismo canal que los roles: `entity: 'config'`, una vez por sync y con las etiquetas en el campo del id, para
+    // poder alinearlas. Esto antes no existía: un stage desconocido caía a «Prospecto» y nadie se enteraba —y mover
+    // el embudo es justo lo único que CT escribe de vuelta a Twenty.
+    summary.skipped.push({
+      entity: 'config',
+      externalId: [...unknownStageLabels].join(', '),
+      error:
+        'Etapas de oportunidad que Twenty trae y Control Tower no conoce: esas oportunidades se han guardado como ' +
+        '«Prospecto» (LEAD). Alinea las etapas en Twenty, o dilo para añadirlas al contrato.',
+    });
   }
 
   // --- Tasks → tasks (origen Twenty; sin proyecto, se ven junto a las de CT en /tasks) ---

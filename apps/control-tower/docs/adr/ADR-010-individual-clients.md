@@ -92,3 +92,31 @@ relleno** para un particular. Faltaba aplicar la misma idea a qué entidad de CT
    diferencia de `createOpportunity` (ADR-008) **no rechazan a un actor USER**, porque el e2e crea sus fixtures por
    HTTP; si se quiere cerrar también a nivel de API, hay que reescribir esas pruebas primero.
 
+
+## Addendum (2026-10-02) — el juego de roles, y qué pasa con una etiqueta que no está en él
+
+Integrando Twenty de verdad, el sync avisó: *«config CONTACT: Roles de relación que Twenty trae y Control Tower no
+conoce: se han ignorado al clasificar»*. El aviso funcionó —dice el nombre de la etiqueta en el campo del id— y
+señalaba un agujero real: **`CONTACT` no estaba en `PERSON_RELATIONSHIP_ROLE`**, aunque es el rol más común de todos
+y el owner lo había descrito desde el principio («si la persona es sólo un contacto de una empresa (CONTACT)»). El
+handoff listaba los otros cinco y ése se quedó fuera, así que **cada sincronización marcaba el run «con
+advertencias» por el caso normal**, y el ruido tapaba los avisos que sí importan.
+
+**Los roles de persona que CT reconoce** (`PERSON_RELATIONSHIP_ROLE`) son: `INDIVIDUAL_CLIENT` · **`CONTACT`** ·
+`PARTNER` · `SUPPLIER` · `COLLABORATOR` · `REFERRAL_SOURCE` · `OTHER`. La comparación es **tolerante**: se normaliza
+mayúsculas, espacios y guiones («Individual Client», `individual-client` y `INDIVIDUAL_CLIENT` son el mismo rol). La
+regla de clasificación no cambia: sólo `INDIVIDUAL_CLIENT` convierte a una persona en cliente de CT; con los dos roles
+a la vez, manda `INDIVIDUAL_CLIENT` (es a quien se factura).
+
+**Qué hace CT con un valor que no conoce, por campo** — y la respuesta no es la misma, a propósito:
+
+| Campo de Twenty | Si la etiqueta no está en el contrato |
+|---|---|
+| **People › Relationship Roles** | se **ignora** ese rol (los demás del registro sí cuentan) y el sync lo informa con su nombre. Nadie se reclasifica por un rol que no se entiende. |
+| **Companies › Organization Type** | se **guarda tal cual**. Es una etiqueta descriptiva: mostrar «Cooperativa» sin traducir informa más que descartarla, y se ve en pantalla sin necesidad de aviso. |
+| **Opportunity › Stage** | cae a `LEAD` **y ahora se avisa** (antes era silencioso). Es el caso más delicado: el stage es lo único que CT escribe de vuelta, así que una etapa nueva en Twenty aparecía aquí como «Prospecto» sin que nada lo dijera. |
+
+**Lo que CT NO lee de esos tres objetos**, aunque tenga el enum declarado: `COMPANY_RELATIONSHIP_ROLE` (los roles de
+la **empresa**) y los campos del handoff que aún no se tiran — idioma y canal preferidos, tipo de servicio, origen del
+lead, motivo de pérdida. Están en el dominio y traducidos porque se usarán, pero hoy el pull no los pide: no es que no
+los reconozca, es que no los mira. Decidir cuáles merecen viajar es parte de E-18.

@@ -5,6 +5,41 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-10-02 — Las etiquetas de los selects de Twenty, revisadas ✅
+
+El owner integró Twenty y el sync avisó: *«config CONTACT: Roles de relación que Twenty trae y Control Tower no
+conoce»*. El aviso hizo su trabajo —lleva la etiqueta en el campo del id del saltado, así que decía **cuál**— y
+señalaba un agujero de verdad.
+
+**`CONTACT` no estaba en el contrato.** `PERSON_RELATIONSHIP_ROLE` tenía cinco roles y le faltaba **el más común de
+todos**, el de contacto de una empresa, que el owner había descrito desde el primer día. La clasificación no estaba
+mal (quien sólo es contacto se queda como contacto), pero **cada sincronización quedaba «con advertencias» por el caso
+normal** — y ese ruido es exactamente lo que hace que un aviso importante pase inadvertido. Añadido, con etiqueta y
+tres tests: las formas en que Twenty puede traerlo, que sigue siendo contacto y que con los dos roles manda
+`INDIVIDUAL_CLIENT`.
+
+**Y revisando los otros selects salió uno peor: un `stage` desconocido caía a `LEAD` en silencio.** Es el sitio donde
+más duele un fallback mudo, porque el stage es **lo único** que CT escribe de vuelta a Twenty: una etapa nueva allí se
+vería aquí como «Prospecto» y nadie se enteraría. Ahora el mapper devuelve `{ stage, unknown? }`, la oportunidad
+arrastra `unknownStage` y el sync lo informa una vez por ejecución, por el mismo canal que los roles. Dos matices que
+el test fija: los estados *legacy* (`CUSTOMER`→WON, `NEW`→LEAD…) **no** son desconocidos —sabemos a qué equivalen— y se
+normalizan espacios y guiones antes de rendirse («proposal sent» es `PROPOSAL_SENT`).
+
+**Lo que NO se cambia, con su razón:** un **Organization Type** fuera del contrato se **guarda tal cual** y no avisa —
+es una etiqueta descriptiva, verla sin traducir ya informa y descartarla sería perder dato—. Y lo que CT **no lee** de
+esos tres objetos (los roles de la **empresa**, idioma y canal preferidos, tipo de servicio, origen del lead, motivo de
+pérdida): tienen enum y traducción porque se usarán, pero el pull no los pide, así que no es que no los reconozca — es
+que no los mira. Decidir cuáles viajan es parte de E-18.
+
+La tabla de «qué hace CT con cada etiqueta que no conoce», campo por campo, queda en el **addendum de ADR-010**; el
+hallazgo, en **F-42**. Y la lección de método: el contrato de un select no se da por completo sin **preguntárselo a
+Twenty** (los valores en uso con `/rest/people?limit=…`, o la API de metadatos), que es justo el paso que faltó.
+
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (211, 5 nuevos) · `pnpm build` · `pnpm test:integration`
+(219) · `e2e-journeys` (todos OK). *(De paso: el contenedor de Postgres se había parado a mitad de sesión y la
+integración salía roja con un `AggregateError` de red; `docker compose up -d db` y verde otra vez. Ya pasó el 26/09 —
+conviene mirar el contenedor antes de leer un rojo de integración.)*
+
 ## 2026-09-28 — Inicio: en vez del neto, lo que hay que apartar ✅
 
 Petición del owner tras verlo en la aplicación: *«esa cifra [el neto] no tiene sentido sin considerar el 30% que tengo
@@ -1056,7 +1091,12 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-09-28): la franja de dinero de Inicio dice qué apartar, no el neto.** El neto se leía como dinero
+> **⚑ ÚLTIMO (2026-10-02): las etiquetas de los selects de Twenty.** Faltaba **`CONTACT`** en los roles de persona —el
+> rol más común, que dejaba cada sync «con advertencias»— y un **stage desconocido caía a «Prospecto» sin avisar**, que
+> es el peor sitio para un fallback mudo porque el stage es lo único que CT escribe de vuelta. Los dos arreglados; la
+> tabla de qué hace CT con cada etiqueta que no conoce, en el addendum de **ADR-010** (F-42).
+>
+> **⚑ ANTES (2026-09-28): la franja de dinero de Inicio dice qué apartar, no el neto.** El neto se leía como dinero
 > disponible y de lo que te deben hay un 30% que ya no es tuyo (owner). En su lugar, **«Reservar (30%)»** sobre lo
 > pendiente de cobro; la regla pasa al dominio con test y deja de estar duplicada en la página de Pagos.
 >
