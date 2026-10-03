@@ -31,6 +31,20 @@ esos tres objetos (los roles de la **empresa**, idioma y canal preferidos, tipo 
 pérdida): tienen enum y traducción porque se usarán, pero el pull no los pide, así que no es que no los reconozca — es
 que no los mira. Decidir cuáles viajan es parte de E-18.
 
+**Verificado luego contra el Twenty real** (4 personas y 4 empresas; 2026-10-03): los roles en uso son `CONTACT` e
+`INDIVIDUAL_CLIENT`, los tipos de organización `BUSINESS` y `SCHOOL_EDUCATION`, y ningún enum se queda corto. Las
+**etapas quedan sin verificar**: la tabla de oportunidades está vacía y las opciones de un select no se deducen de
+registros que no existen — con el aviso nuevo, la primera que llegue fuera del contrato lo dirá.
+
+**Y la verificación destapó algo más grande, que no estaba anotado en ningún backlog: E-19.** La lista de campos que
+devolvió Twenty enseña que ya tiene, con datos, los campos del contrato del handoff —el bloque de facturación
+(`legalName`, `vatNumber`, `fiscalCode`, `billingEmail`, `pec`, `sdiCode`, `taxCountry`, `personalTaxId`),
+`doNotContact`, `preferredLanguage` y los **roles de la empresa**— y el pull **no los pide**. Consecuencia: tres reglas
+de dominio escritas y probadas el 2026-09-25 (Completitud Administrativa §7.1, supresión de contacto §10, y la
+clasificación de la empresa por sus roles) **no tienen nada que evaluar**, y ni columnas hay donde guardarlo. Aquello se
+entregó a propósito como «sólo capa de dominio» porque faltaban dos cosas: el Twenty real y los documentos del SOP. La
+primera ya no falta.
+
 La tabla de «qué hace CT con cada etiqueta que no conoce», campo por campo, queda en el **addendum de ADR-010**; el
 hallazgo, en **F-42**. Y la lección de método: el contrato de un select no se da por completo sin **preguntárselo a
 Twenty** (los valores en uso con `/rest/people?limit=…`, o la API de metadatos), que es justo el paso que faltó.
@@ -1091,7 +1105,12 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-10-02): las etiquetas de los selects de Twenty.** Faltaba **`CONTACT`** en los roles de persona —el
+> **⚑ ÚLTIMO (2026-10-03): los selects de Twenty, verificados contra la instancia real.** Los valores en uso caben
+> todos en el contrato (tras añadir `CONTACT`); las **etapas** siguen sin verificar porque no hay oportunidades. La
+> verificación destapó **E-19**: Twenty ya tiene con datos los campos de facturación, `doNotContact`, idioma y los roles
+> de la **empresa**, y el pull no los trae — así que tres reglas de dominio ya escritas no tienen nada que evaluar.
+>
+> **⚑ ANTES (2026-10-02): las etiquetas de los selects de Twenty.** Faltaba **`CONTACT`** en los roles de persona —el
 > rol más común, que dejaba cada sync «con advertencias»— y un **stage desconocido caía a «Prospecto» sin avisar**, que
 > es el peor sitio para un fallback mudo porque el stage es lo único que CT escribe de vuelta. Los dos arreglados; la
 > tabla de qué hace CT con cada etiqueta que no conoce, en el addendum de **ADR-010** (F-42).

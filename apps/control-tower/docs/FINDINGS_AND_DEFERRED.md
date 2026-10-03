@@ -37,6 +37,11 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
 >   canal de notificación: ya elegido —bot de Telegram— pero sin implementar por decisión del owner).
 > - **Seguridad de la cuenta:** E-9a — cambiar **email y contraseña** con verificación por correo (hoy el email es solo
 >   lectura a propósito).
+> - **Nuevo, pendiente de decisión (2026-10-03):** **E-19** — Twenty ya tiene con datos los campos del contrato del
+>   handoff (facturación, `doNotContact`, idioma preferido, roles de la empresa) y **el pull no los trae**, así que tres
+>   reglas de dominio ya escritas y probadas (Completitud Administrativa §7.1, supresión de contacto §10 y la
+>   clasificación de la empresa por sus roles) no tienen nada que evaluar. Falta el cable: columnas, mapeo, propiedad
+>   por campo y dónde se ven.
 > - **Decisión de producto pendiente:** **E-18** — `primary_contact_id`, `source` y `notes` de las oportunidades no
 >   viajan a Twenty y están vacías; hay que decidir si se mapean, se quedan como datos propios de CT o se retiran.
 >   *(Con **ADR-009** el marco ya está: nada de CT viaja a Twenty salvo el `stage`, así que la pregunta se reduce a
@@ -1266,6 +1271,38 @@ hay que volver a medir antes de dar por bueno el síntoma.
 - **Lo que se queda en español a propósito:** los **mensajes de error** de dominio y aplicación (decisión ya tomada y
   anotada en la auditoría técnica) y el `'(sin título)'` de `notion-specs.ts`, que **no es interfaz**: es el valor que
   se **guarda** como nombre del registro cuando la página de Notion no tiene título.
+
+### E-19 · Lo que Twenty ya tiene y el pull no trae: tres reglas de dominio escritas y sin datos que masticar 🟡 ABIERTO (2026-10-03)
+
+- **Hallado al verificar los selects del CRM contra el Twenty real** (F-42). Al pedirle a Twenty un puñado de
+  registros, la lista de campos de `people` y `companies` enseñó **más de lo que se buscaba**: están ahí, con datos, los
+  campos del contrato del handoff que la capa de dominio ya sabe usar y el pull **no pide**.
+- **Verificado el 2026-10-03** (4 personas y 4 empresas reales, oportunidades todavía 0):
+  - `people` trae `relationshipRoles` ✅(se lee) · `preferredLanguage` (ES·IT) · `preferredContactChannel` ·
+    **`doNotContact`** · `taxCountry` · `billingAddress` · `personalTaxId` · `linkedinLink` · `position`.
+  - `companies` trae `organizationType` ✅(se lee) · `domainName` ✅ · **`relationshipRoles`** (COMMERCIAL_ACCOUNT ·
+    SUPPLIER · COLLABORATOR) · `legalName` · `vatNumber` · `fiscalCode` · `billingEmail` · `pec` · `sdiCode` ·
+    `taxCountry` · `preferredLanguage` · `annualRevenue` · `address` · `accountOwnerId`.
+  - Todos los valores vistos **están en el contrato**: ningún enum se queda corto. Lo que falta es el cable.
+- **Las tres reglas que esperan por esos datos** (puras, con test, y hoy sin nada que evaluar porque CT no guarda sus
+  insumos — ni columnas tiene):
+  1. **`billing-rules.ts` — Completitud Administrativa (§7.1).** Necesita `legalName`, `vatNumber`/`fiscalCode`,
+     `billingEmail`, `taxCountry` y, en Italia, `pec`/`sdiCode`; para un particular, `personalTaxId`. Es la regla que
+     diría «esta oportunidad no se puede facturar todavía, y falta esto en este registro de Twenty».
+  2. **`contactability.ts` — `Do Not Contact` (§10).** Supresión dura antes de cualquier outreach. El campo existe en
+     Twenty; CT no lo trae, así que la primera automatización de contacto no podría respetarlo.
+  3. **Clasificación de la EMPRESA por sus roles.** `COMPANY_RELATIONSHIP_ROLE` se usa en Twenty (proveedor,
+     colaborador, cuenta comercial) y CT no lo mira: en la lista de clientes, un proveedor y un cliente son iguales.
+- **Por qué está así, y no es un olvido:** la entrega del 2026-09-25 fue **a propósito sólo la capa de dominio**
+  (ver su entrada en `BUILD_LOG.md`), porque lo demás dependía de dos cosas que faltaban: **acceso al Twenty real** y
+  los documentos del **SOP CLI 001**. La primera ya no falta — de ahí este ítem.
+- **Qué haría falta** (y es lo que hay que decidir, no sólo hacer): columnas nuevas en `clients`/`contacts`
+  (migración aditiva), mapearlas en el pull, declararlas **propiedad de Twenty** (`FIELD_OWNERSHIP` → inmutables en el
+  panel, como `name` o `email`) y decidir **dónde se ven**. Mi recomendación: traer el **bloque de facturación** (es lo
+  que desbloquea una regla ya escrita y probada), más `doNotContact` y `preferredLanguage`; **dejar fuera**
+  `annualRevenue` —el handoff lo desactiva explícitamente—, `address`, `linkedinLink` y `accountOwnerId`, que hoy no
+  alimentan ninguna decisión de CT.
+- **Lo que sigue bloqueado y no depende de esto:** el motor del **SOP** (puertas y matriz) espera sus documentos.
 
 ### F-42 · El rol más común de Twenty no estaba en el contrato, y un stage desconocido caía a «Prospecto» en silencio ✅ RESUELTO (2026-10-02)
 

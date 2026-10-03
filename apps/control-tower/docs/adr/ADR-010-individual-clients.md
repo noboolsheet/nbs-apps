@@ -120,3 +120,22 @@ a la vez, manda `INDIVIDUAL_CLIENT` (es a quien se factura).
 la **empresa**) y los campos del handoff que aún no se tiran — idioma y canal preferidos, tipo de servicio, origen del
 lead, motivo de pérdida. Están en el dominio y traducidos porque se usarán, pero hoy el pull no los pide: no es que no
 los reconozca, es que no los mira. Decidir cuáles merecen viajar es parte de E-18.
+
+### Verificación contra el Twenty real (2026-10-03)
+
+Pedidos 4 registros de cada entidad a la instancia del owner, los valores en uso son:
+
+| Objeto · campo | Valores en uso | ¿En el contrato? |
+|---|---|---|
+| `people.relationshipRoles` | `CONTACT` · `INDIVIDUAL_CLIENT` | sí, **tras añadir `CONTACT`** |
+| `people.preferredLanguage` | `ES` · `IT` | sí (pero CT no lee el campo) |
+| `companies.organizationType` | `BUSINESS` · `SCHOOL_EDUCATION` | sí |
+| `companies.relationshipRoles` | `COMMERCIAL_ACCOUNT` · `SUPPLIER` · `COLLABORATOR` | sí (pero CT no lee el campo) |
+| `opportunities.stage` | — (0 oportunidades) | sin verificar: no hay registros |
+
+Ningún enum se queda corto con los datos que hay. **Las etapas quedan sin verificar** porque la tabla está vacía: los
+valores de un select no se pueden deducir de los registros cuando no hay registros. Como el stage desconocido ya avisa,
+la primera oportunidad que llegue con una etapa fuera del contrato lo dirá en el historial del sync — y si se quiere
+comprobar antes, hay que preguntarle las opciones a la **API de metadatos** de Twenty, no a los registros.
+
+Lo que esa misma verificación destapó —los campos del contrato que Twenty ya tiene y el pull no pide— es **E-19**.
