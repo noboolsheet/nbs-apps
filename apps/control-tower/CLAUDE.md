@@ -251,6 +251,14 @@ IDs de las DBs de Notion en `configuration.databases.<key>` y el `folderId` de D
   (**13 stages**) — si los enums se separan no salta ningún error: el pull cae a `LEAD` y el push devuelve `400`
   (pasó, ver ADR-002 addendum 2026-09-02). **Tareas: no se crean en Twenty** (owner 2026-09-26); el pull de tasks
   sigue en el código pero está **inerte** (ver F-18).
+- **⚑ De clientes y contactos, CT sólo trae lo que los IDENTIFICA (owner 2026-10-03).** Nombre, email, teléfono, cargo,
+  empresa, web y tipo de organización: lo justo para reconocerlos y distinguirlos. **NO** se traen los campos que
+  sirven para *decidir* —bloque de facturación (`legalName`, `vatNumber`, `fiscalCode`, `billingEmail`, `pec`,
+  `sdiCode`, `taxCountry`, `personalTaxId`), `doNotContact`, `preferredContactChannel`, `preferredLanguage`— porque
+  esas decisiones se toman **en Twenty**, y una copia aquí sólo podría estar vieja justo cuando se usa. Por eso
+  `billing-rules.ts` y `contactability.ts` son **reglas puras sin consumidor**: no están a medias, están esperando a
+  que algo de CT necesite decidirlo, y entonces leerán Twenty en el momento (ver E-19). Antes de añadir un campo del
+  CRM, la pregunta es: ¿identifica, o decide?
 - **Notion**: bidireccional con **propiedad por campo** — CT es dueño de las propiedades estructuradas (push CT→Notion),
   Notion es dueño del cuerpo de la página. Motor genérico `syncNotionEntity` + `notion-specs.ts` (una spec por entidad).
   Specs **push-only** (sin `importFromNotion`, p. ej. `resources`): CT único dueño, nunca importa → sin ciclos.

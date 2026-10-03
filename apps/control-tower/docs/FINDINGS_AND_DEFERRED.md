@@ -37,11 +37,11 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
 >   canal de notificación: ya elegido —bot de Telegram— pero sin implementar por decisión del owner).
 > - **Seguridad de la cuenta:** E-9a — cambiar **email y contraseña** con verificación por correo (hoy el email es solo
 >   lectura a propósito).
-> - **Nuevo, pendiente de decisión (2026-10-03):** **E-19** — Twenty ya tiene con datos los campos del contrato del
->   handoff (facturación, `doNotContact`, idioma preferido, roles de la empresa) y **el pull no los trae**, así que tres
->   reglas de dominio ya escritas y probadas (Completitud Administrativa §7.1, supresión de contacto §10 y la
->   clasificación de la empresa por sus roles) no tienen nada que evaluar. Falta el cable: columnas, mapeo, propiedad
->   por campo y dónde se ven.
+> - **E-19 (2026-10-03): descartado casi entero por el owner** — de clientes y contactos sólo se trae lo que sirve para
+>   **identificarlos y diferenciarlos**; las decisiones (facturar, contactar, idioma) se toman en Twenty, donde el dato
+>   está fresco. `billing-rules.ts` y `contactability.ts` se quedan como reglas puras sin consumidor, a propósito y
+>   anotado. **Queda una pregunta:** los **roles de la empresa**, porque sin ellos un proveedor se ve igual que un
+>   cliente en la lista de Clientes.
 > - **Decisión de producto pendiente:** **E-18** — `primary_contact_id`, `source` y `notes` de las oportunidades no
 >   viajan a Twenty y están vacías; hay que decidir si se mapean, se quedan como datos propios de CT o se retiran.
 >   *(Con **ADR-009** el marco ya está: nada de CT viaja a Twenty salvo el `stage`, así que la pregunta se reduce a
@@ -1272,7 +1272,7 @@ hay que volver a medir antes de dar por bueno el síntoma.
   anotada en la auditoría técnica) y el `'(sin título)'` de `notion-specs.ts`, que **no es interfaz**: es el valor que
   se **guarda** como nombre del registro cuando la página de Notion no tiene título.
 
-### E-19 · Lo que Twenty ya tiene y el pull no trae: tres reglas de dominio escritas y sin datos que masticar 🟡 ABIERTO (2026-10-03)
+### E-19 · Lo que Twenty ya tiene y el pull no trae ❌ DESCARTADO en su mayor parte (owner, 2026-10-03) · queda **una** pregunta abierta
 
 - **Hallado al verificar los selects del CRM contra el Twenty real** (F-42). Al pedirle a Twenty un puñado de
   registros, la lista de campos de `people` y `companies` enseñó **más de lo que se buscaba**: están ahí, con datos, los
@@ -1303,6 +1303,30 @@ hay que volver a medir antes de dar por bueno el síntoma.
   `annualRevenue` —el handoff lo desactiva explícitamente—, `address`, `linkedinLink` y `accountOwnerId`, que hoy no
   alimentan ninguna decisión de CT.
 - **Lo que sigue bloqueado y no depende de esto:** el motor del **SOP** (puertas y matriz) espera sus documentos.
+
+**Decisión del owner (2026-10-03), que cierra casi todo el ítem:**
+
+> «No es necesario traer información de los clientes y los contactos que no sirva **exclusivamente a identificarlos y
+> diferenciarlos** en Control Tower, porque todas las decisiones y tareas importantes para hacer con ellos se harán
+> directamente desde Twenty.»
+
+Es un criterio, no un «no» suelto, y recorta el ítem entero: **el bloque de facturación, `doNotContact`,
+`preferredContactChannel`, `preferredLanguage`, `taxCountry` y `personalTaxId` NO se traen.** Todos sirven a una
+**decisión** (¿puedo facturar?, ¿puedo escribirle?, ¿en qué idioma?) y esas decisiones se toman en Twenty, que es donde
+el dato vive y está fresco. Traer una copia sería además arrastrar el peor defecto posible en un dato de este tipo:
+quedarse viejo entre dos syncs justo cuando se usa para decidir.
+
+**Consecuencia asumida:** `billing-rules.ts` (Completitud Administrativa §7.1) y `contactability.ts` (`Do Not Contact`
+§10) se quedan como **reglas puras sin consumidor** en CT. No se retiran: son el contrato escrito y con test de cómo se
+decide eso, y el día que una automatización de CT tenga que decidirlo —o que haya que enseñarlo— lo que hará es **leer
+Twenty en ese momento**, no mirar una copia. Queda dicho aquí para que nadie las lea dentro de seis meses como un
+trabajo a medias.
+
+**Lo único que sigue abierto es una pregunta, porque sí entra en «identificar y diferenciar»:** los **roles de la
+empresa** (`companies.relationshipRoles`: `COMMERCIAL_ACCOUNT` · `SUPPLIER` · `COLLABORATOR`, en uso en el Twenty del
+owner). Hoy CT no los lee, así que en la lista de **Clientes** una empresa que es **sólo un proveedor** se ve igual que
+un cliente de verdad — el mismo problema que el owner acaba de resolver para las personas con `INDIVIDUAL_CLIENT`, pero
+en el otro objeto. Es diferenciación pura, no una decisión. Pendiente de que el owner valore qué hacer con ello.
 
 ### F-42 · El rol más común de Twenty no estaba en el contrato, y un stage desconocido caía a «Prospecto» en silencio ✅ RESUELTO (2026-10-02)
 

@@ -5,6 +5,36 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-10-03 — Qué se trae de Twenty: sólo lo que identifica ✅ (decisión del owner)
+
+Puesto delante de E-19 —Twenty tiene con datos el bloque de facturación, `doNotContact`, idioma preferido y los roles
+de la empresa, y el pull no los pide— el owner cortó con un criterio, no con un «no»:
+
+> «No es necesario traer información de los clientes y los contactos que no sirva **exclusivamente a identificarlos y
+> diferenciarlos** en Control Tower, porque todas las decisiones y tareas importantes para hacer con ellos se harán
+> directamente desde Twenty.»
+
+Eso recorta el ítem entero y, mejor, da la regla para los que vengan: **¿identifica, o decide?** Facturación, `Do Not
+Contact`, canal e idioma preferidos sirven para **decidir** (¿puedo facturar?, ¿puedo escribirle?, ¿en qué idioma?), y
+esas decisiones se toman en Twenty. Una copia en CT arrastraría el peor defecto posible para un dato así: quedarse vieja
+entre dos syncs **justo cuando se usa para decidir**.
+
+**Consecuencia asumida y anotada:** `billing-rules.ts` (§7.1) y `contactability.ts` (§10) se quedan como **reglas puras
+sin consumidor**. No se retiran —son el contrato escrito y con test de cómo se decide eso— y el día que una
+automatización de CT lo necesite, leerá Twenty en ese momento en vez de mirar una copia. Queda escrito en E-19 y en
+`CLAUDE.md` para que dentro de seis meses nadie las lea como trabajo a medias.
+
+**Lo único que sigue abierto es una pregunta**, y es la que sí pasa el filtro: los **roles de la empresa**
+(`COMMERCIAL_ACCOUNT` · `SUPPLIER` · `COLLABORATOR`, en uso). Sin ellos, en la lista de **Clientes** una empresa que es
+**sólo un proveedor** se ve igual que un cliente — el mismo problema que el owner resolvió para las personas con
+`INDIVIDUAL_CLIENT`, pero en el otro objeto. Es diferenciación, no decisión.
+
+**Y sobre lo de las personas con `INDIVIDUAL_CLIENT` en la lista de Clientes: ya está hecho** desde el 2026-09-27
+(ADR-010, mismo día en que lo pidió) — el sync las crea como cliente, mueve la fila si cambian de rol y archiva la
+vieja. Que el aviso de los roles desconocidos llegara a su pantalla prueba que ese código **está corriendo** en vibox:
+sólo existe en esa versión del sync. Lo que faltaba era `CONTACT` en el contrato (F-42), que no afectaba a la
+clasificación pero ensuciaba cada ejecución.
+
 ## 2026-10-02 — Las etiquetas de los selects de Twenty, revisadas ✅
 
 El owner integró Twenty y el sync avisó: *«config CONTACT: Roles de relación que Twenty trae y Control Tower no
@@ -1105,7 +1135,13 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-10-03): los selects de Twenty, verificados contra la instancia real.** Los valores en uso caben
+> **⚑ ÚLTIMO (2026-10-03): de clientes y contactos sólo se trae lo que los IDENTIFICA.** Criterio del owner que cierra
+> casi todo E-19: lo que sirve para **decidir** (facturación, `Do Not Contact`, canal e idioma) se consulta **en
+> Twenty**, no se copia — una copia sólo podría estar vieja justo cuando se usa. `billing-rules.ts` y
+> `contactability.ts` se quedan como reglas puras sin consumidor, a propósito. Queda **una** pregunta: los roles de la
+> **empresa**, porque sin ellos un proveedor se ve igual que un cliente.
+>
+> **⚑ ANTES (2026-10-03): los selects de Twenty, verificados contra la instancia real.** Los valores en uso caben
 > todos en el contrato (tras añadir `CONTACT`); las **etapas** siguen sin verificar porque no hay oportunidades. La
 > verificación destapó **E-19**: Twenty ya tiene con datos los campos de facturación, `doNotContact`, idioma y los roles
 > de la **empresa**, y el pull no los trae — así que tres reglas de dominio ya escritas no tienen nada que evaluar.
