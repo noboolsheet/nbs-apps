@@ -392,6 +392,9 @@ export const es = {
   'field.organizationType': 'Tipo de organización',
   'field.jobTitle': 'Cargo',
   'field.kind': 'Tipo',
+  // Roles de relación de la empresa en Twenty (M46). «Relación» y no «Roles»: lo que contesta es *qué es esta ficha
+  // para mí* (cliente, proveedor, colaborador), no qué papel tiene alguien dentro de ella.
+  'field.relationshipRoles': 'Relación',
   'field.lastName': 'Apellido',
   'field.maturity': 'Madurez',
   'field.name': 'Nombre',

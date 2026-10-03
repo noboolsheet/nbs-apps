@@ -20,10 +20,10 @@ export const FIELD_OWNERSHIP: Record<string, Record<string, readonly string[]>> 
   asset: {
     GITHUB: ['name', 'description', 'externalUrl', 'repositoryUrl'],
   },
-  // Cliente importado de Twenty (company): el pull reescribe nombre, industria y web en cada sync. `status` y
-  // `notes` NO están: son columnas propias de CT que Twenty no conoce ni pisa.
+  // Cliente importado de Twenty (company): el pull reescribe nombre, industria, ROLES DE RELACIÓN (M46) y web en
+  // cada sync. `status` y `notes` NO están: son columnas propias de CT que Twenty no conoce ni pisa.
   client: {
-    TWENTY: ['name', 'industry', 'websiteUrl'],
+    TWENTY: ['name', 'industry', 'relationshipRoles', 'websiteUrl'],
   },
   // Contacto importado de Twenty (person): el pull reescribe nombre, email, teléfono, cargo y la empresa a la que
   // pertenece. `notes` es de CT.

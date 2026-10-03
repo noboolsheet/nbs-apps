@@ -303,6 +303,59 @@ describe('twenty sync (fixture)', () => {
     });
   });
 
+  /**
+   * Roles de relación de las EMPRESAS (M46, owner 2026-10-03): la columna «Relación» de Clientes. Lo que importa aquí
+   * es lo mismo que en el tipo de organización: que un campo que no viene **no borre** lo que ya estaba guardado.
+   */
+  it('guarda los roles de relación de la empresa y no los pisa si el campo deja de venir', async () => {
+    await inRollback(async (tx) => {
+      const ctx = await makeOrg(tx);
+      const conRoles = {
+        ...fixture(),
+        companies: [{ id: 'c1', name: 'Acme', relationshipRoles: ['Commercial Account', 'Supplier'] }],
+        opportunities: [],
+      };
+      await syncTwenty(tx, sync(ctx), new TwentyAdapter(new FixtureSource(conRoles)));
+      const [acme] = await tx.select().from(s.clients).where(eq(s.clients.name, 'Acme'));
+      expect(acme!.relationshipRoles).toEqual(['COMMERCIAL_ACCOUNT', 'SUPPLIER']);
+
+      // Segundo sync SIN el campo (en ese Twenty se llama de otra forma): no se borra y se avisa.
+      const sinCampo = { ...fixture(), companies: [{ id: 'c1', name: 'Acme' }], opportunities: [] };
+      const summary = await syncTwenty(tx, sync(ctx), new TwentyAdapter(new FixtureSource(sinCampo)));
+      const [despues] = await tx.select().from(s.clients).where(eq(s.clients.id, acme!.id));
+      expect(despues!.relationshipRoles).toEqual(['COMMERCIAL_ACCOUNT', 'SUPPLIER']);
+      expect(
+        summary.skipped.some((k) => k.entity === 'config' && k.error.includes('roles de relación de las empresas')),
+      ).toBe(true);
+
+      // Y si Twenty dice que ya no tiene ninguno, eso SÍ se escribe (vacío declarado ≠ campo ausente).
+      const vacio = { ...fixture(), companies: [{ id: 'c1', name: 'Acme', relationshipRoles: [] }], opportunities: [] };
+      await syncTwenty(tx, sync(ctx), new TwentyAdapter(new FixtureSource(vacio)));
+      const [limpio] = await tx.select().from(s.clients).where(eq(s.clients.id, acme!.id));
+      expect(limpio!.relationshipRoles).toEqual([]);
+    });
+  });
+
+  it('una etiqueta de rol de empresa que CT no conoce se avisa aparte de las de personas', async () => {
+    await inRollback(async (tx) => {
+      const ctx = await makeOrg(tx);
+      const data = {
+        ...fixture(),
+        companies: [{ id: 'c1', name: 'Acme', relationshipRoles: ['Investor'] }],
+        people: [{ id: 'p1', name: { firstName: 'Jane', lastName: 'Doe' }, relationshipRoles: ['Inversor'] }],
+        opportunities: [],
+      };
+      const summary = await syncTwenty(tx, sync(ctx), new TwentyAdapter(new FixtureSource(data)));
+      const avisos = summary.skipped.filter((k) => k.entity === 'config' && k.error.includes('no conoce'));
+      // Dos avisos distintos: los vocabularios son distintos y hay que saber qué etiqueta alinear y dónde.
+      expect(avisos).toHaveLength(2);
+      expect(avisos.find((a) => a.error.includes('empresa'))!.externalId).toBe('Investor');
+      expect(avisos.find((a) => !a.error.includes('empresa'))!.externalId).toBe('Inversor');
+      const [acme] = await tx.select().from(s.clients).where(eq(s.clients.name, 'Acme'));
+      expect(acme!.relationshipRoles).toEqual([]); // lo desconocido no se guarda
+    });
+  });
+
   it('mantiene el aislamiento por organización', async () => {
     await inRollback(async (tx) => {
       const a = await makeOrg(tx);

@@ -37,11 +37,11 @@ Leyenda impacto: 🟢 cosmético/menor · 🟡 funcional visible · 🔴 decisi�
 >   canal de notificación: ya elegido —bot de Telegram— pero sin implementar por decisión del owner).
 > - **Seguridad de la cuenta:** E-9a — cambiar **email y contraseña** con verificación por correo (hoy el email es solo
 >   lectura a propósito).
-> - **E-19 (2026-10-03): descartado casi entero por el owner** — de clientes y contactos sólo se trae lo que sirve para
->   **identificarlos y diferenciarlos**; las decisiones (facturar, contactar, idioma) se toman en Twenty, donde el dato
->   está fresco. `billing-rules.ts` y `contactability.ts` se quedan como reglas puras sin consumidor, a propósito y
->   anotado. **Queda una pregunta:** los **roles de la empresa**, porque sin ellos un proveedor se ve igual que un
->   cliente en la lista de Clientes.
+> - **E-19 (2026-10-04): CERRADO.** De clientes y contactos sólo se trae lo que sirve para **identificarlos y
+>   diferenciarlos**; las decisiones (facturar, contactar, idioma) se toman en Twenty, donde el dato está fresco.
+>   `billing-rules.ts` y `contactability.ts` se quedan como reglas puras sin consumidor, a propósito y anotado. La
+>   única pregunta que quedaba —los **roles de la empresa**— la resolvió el owner: **columna «Relación» con filtro** en
+>   Clientes (M46), así un proveedor ya no se ve igual que un cliente.
 > - **Decisión de producto pendiente:** **E-18** — `primary_contact_id`, `source` y `notes` de las oportunidades no
 >   viajan a Twenty y están vacías; hay que decidir si se mapean, se quedan como datos propios de CT o se retiran.
 >   *(Con **ADR-009** el marco ya está: nada de CT viaja a Twenty salvo el `stage`, así que la pregunta se reduce a
@@ -1272,7 +1272,7 @@ hay que volver a medir antes de dar por bueno el síntoma.
   anotada en la auditoría técnica) y el `'(sin título)'` de `notion-specs.ts`, que **no es interfaz**: es el valor que
   se **guarda** como nombre del registro cuando la página de Notion no tiene título.
 
-### E-19 · Lo que Twenty ya tiene y el pull no trae ❌ DESCARTADO en su mayor parte (owner, 2026-10-03) · queda **una** pregunta abierta
+### E-19 · Lo que Twenty ya tiene y el pull no trae ✅ CERRADO (2026-10-04) — descartado en su mayor parte (owner, 2026-10-03) + roles de empresa traídos (M46)
 
 - **Hallado al verificar los selects del CRM contra el Twenty real** (F-42). Al pedirle a Twenty un puñado de
   registros, la lista de campos de `people` y `companies` enseñó **más de lo que se buscaba**: están ahí, con datos, los
@@ -1322,11 +1322,24 @@ decide eso, y el día que una automatización de CT tenga que decidirlo —o que
 Twenty en ese momento**, no mirar una copia. Queda dicho aquí para que nadie las lea dentro de seis meses como un
 trabajo a medias.
 
-**Lo único que sigue abierto es una pregunta, porque sí entra en «identificar y diferenciar»:** los **roles de la
-empresa** (`companies.relationshipRoles`: `COMMERCIAL_ACCOUNT` · `SUPPLIER` · `COLLABORATOR`, en uso en el Twenty del
-owner). Hoy CT no los lee, así que en la lista de **Clientes** una empresa que es **sólo un proveedor** se ve igual que
-un cliente de verdad — el mismo problema que el owner acaba de resolver para las personas con `INDIVIDUAL_CLIENT`, pero
-en el otro objeto. Es diferenciación pura, no una decisión. Pendiente de que el owner valore qué hacer con ello.
+**La única pregunta que quedaba abierta —los roles de la empresa— la cerró el owner el 2026-10-04:**
+
+> «Puedes traer el rol de las empresas con la propuesta 1 de crear una columna Relación.»
+
+Entra en «identificar y diferenciar» y no en «decidir»: `companies.relationshipRoles` (`COMMERCIAL_ACCOUNT` ·
+`SUPPLIER` · `COLLABORATOR`, en uso en el Twenty del owner) es lo que distingue, dentro de la MISMA lista de Clientes,
+a un cliente de verdad de una empresa que está en el CRM por ser proveedora o colaboradora — el mismo problema que ya
+se había resuelto para las personas con `INDIVIDUAL_CLIENT`, pero en el otro objeto.
+
+**Cómo quedó (M46):** columna `clients.relationship_roles` (`varchar[]`, aditiva y NULLable) · nombre del campo de
+Twenty configurable (`configuration.fields.companyRelationshipRoles`, por defecto `relationshipRoles`) porque no se
+adivina · lector compartido con las personas (`parseRelationshipRoles` en `@ct/domain`) pero **vocabulario propio**, así
+que un rol de persona en una empresa se avisa en vez de guardarse · campo **propiedad de Twenty**
+(`FIELD_OWNERSHIP.client.TWENTY`), de sólo lectura en CT · **columna «Relación» con faceta** en `/crm/clients`.
+**Tres guardas:** si el campo no viene en el pull **no se pisa** lo guardado (y el run queda «con advertencias»), un
+`[]` declarado por Twenty **sí** se escribe (vacío ≠ ausente), y las etiquetas desconocidas se avisan **aparte** de las
+de personas. Las demás propuestas (una lista separada de proveedores; un filtro que escondiera lo que no es cliente) se
+descartaron: moverían gobierno del CRM a CT, que es justo lo que ADR-009 evita.
 
 ### F-42 · El rol más común de Twenty no estaba en el contrato, y un stage desconocido caía a «Prospecto» en silencio ✅ RESUELTO (2026-10-02)
 

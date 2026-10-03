@@ -5,6 +5,47 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-10-04 — La columna «Relación»: qué es cada empresa, de un golpe ✅ (M46, cierra E-19)
+
+El owner cerró la última pregunta de E-19 eligiendo la primera de las tres propuestas:
+
+> «Puedes traer el rol de las empresas con la propuesta 1 de crear una columna Relación.»
+
+**El problema que resuelve:** en la lista de **Clientes** conviven empresas que son clientes y empresas que están en el
+CRM por ser **proveedoras** o **colaboradoras**, y nada las distinguía. Es el mismo agujero que ADR-010 ya había tapado
+para las personas con `INDIVIDUAL_CLIENT`, pero en el otro objeto. Y pasa el filtro del día anterior —**¿identifica, o
+decide?**— por el lado bueno: el rol **describe** la ficha, no decide nada.
+
+**Lo que se hizo:**
+- **M46** (`0030_m46_client_relationship_roles.sql`): columna `clients.relationship_roles` `varchar[]`, aditiva y
+  NULLable. Es la **primera columna array del esquema**, a propósito: es una lista de códigos, no un documento (los
+  `jsonb` que ya había guardan payloads). `NULL` = sin dato · `{}` = Twenty dice «ninguno».
+- **Lector compartido, vocabulario propio:** `parseRelationshipRoles(raw, known)` en
+  `packages/domain/src/relationship-roles.ts` — lo que ya hacía bien el de personas (normalizar «Commercial Account» →
+  `COMMERCIAL_ACCOUNT`, aceptar array o cadena con comas, informar de lo desconocido y distinguir «el campo no viene» de
+  «viene vacío») generalizado, con `parseCompanyRoles` sobre `COMPANY_RELATIONSHIP_ROLE` y `parsePersonRoles` sobre el
+  suyo. Un `INDIVIDUAL_CLIENT` en una empresa **no se guarda: se avisa**, que es la guarda del error más probable
+  (apuntar la configuración al campo de la otra familia, porque en un Twenty estándar los dos se llaman igual).
+- **Pull y persistencia:** `mapCompany(raw, orgTypeField, rolesField)` con `fields.companyRelationshipRoles`
+  configurable (no se adivinan identificadores de API) y el sync escribiendo la columna sólo cuando el campo **viene**.
+- **Propiedad de Twenty:** `FIELD_OWNERSHIP.client.TWENTY` incluye `relationshipRoles`, así que es de sólo lectura por
+  procedencia y no está en el esquema de creación (no cuela por API).
+- **UI:** columna **«Relación»** con faceta en `/crm/clients`, con `enumLabel` por rol y vacía en los clientes
+  particulares (su rol es el que los trajo ahí, y «Tipo» ya dice «Particular»).
+
+**Las tres guardas, que es lo que de verdad tenía riesgo:** (1) si el campo **no viene** en el pull no se pisa lo
+guardado y el run queda «con advertencias» —borrar un dato por no encontrar un campo es peor que no actualizarlo—; (2) un
+`[]` **declarado** por Twenty sí se escribe (vacío ≠ ausente); (3) las etiquetas desconocidas se avisan **aparte** de las
+de personas, porque los vocabularios son distintos y juntarlas haría imposible saber qué alinear y dónde. Las tres tienen
+test (unitario del lector y del mapper, integración del sync con los tres escenarios seguidos).
+
+**Descartado:** una lista separada de proveedores y un filtro que escondiera de Clientes lo que no es cliente. Las dos
+mueven a CT la decisión de qué es un cliente, que es de Twenty (ADR-009), y la segunda esconde registros sin decirlo.
+
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (**219**, 8 nuevos) · `pnpm build` ·
+`pnpm test:integration` (**221**, 2 nuevos) · `bash scripts/e2e-journeys.sh` (J1–J18 ✅).
+Documentado en ADR-010 (addendum 2026-10-04), E-19 cerrado, `CLAUDE.md` y la matriz de la guía de uso.
+
 ## 2026-10-03 — Qué se trae de Twenty: sólo lo que identifica ✅ (decisión del owner)
 
 Puesto delante de E-19 —Twenty tiene con datos el bloque de facturación, `doNotContact`, idioma preferido y los roles
@@ -27,7 +68,8 @@ automatización de CT lo necesite, leerá Twenty en ese momento en vez de mirar 
 **Lo único que sigue abierto es una pregunta**, y es la que sí pasa el filtro: los **roles de la empresa**
 (`COMMERCIAL_ACCOUNT` · `SUPPLIER` · `COLLABORATOR`, en uso). Sin ellos, en la lista de **Clientes** una empresa que es
 **sólo un proveedor** se ve igual que un cliente — el mismo problema que el owner resolvió para las personas con
-`INDIVIDUAL_CLIENT`, pero en el otro objeto. Es diferenciación, no decisión.
+`INDIVIDUAL_CLIENT`, pero en el otro objeto. Es diferenciación, no decisión. *(Resuelta al día siguiente:
+columna «Relación», M46 — ver la entrada de arriba.)*
 
 **Y sobre lo de las personas con `INDIVIDUAL_CLIENT` en la lista de Clientes: ya está hecho** desde el 2026-09-27
 (ADR-010, mismo día en que lo pidió) — el sync las crea como cliente, mueve la fila si cambian de rol y archiva la
@@ -1135,11 +1177,16 @@ cual la transición a LOST no se puede implementar.
 Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (129, **41 nuevos**) · `pnpm build`.
 Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-blanket.md`.
 
-> **⚑ ÚLTIMO (2026-10-03): de clientes y contactos sólo se trae lo que los IDENTIFICA.** Criterio del owner que cierra
+> **⚑ ÚLTIMO (2026-10-04): la columna «Relación» en Clientes (M46) — E-19 CERRADO.** De las empresas de Twenty se trae
+> `relationshipRoles` (cuenta comercial · proveedor · colaborador · socio · prescriptor) a una columna con filtro: en una
+> lista donde conviven clientes y proveedores, ya se ve quién es qué. Lector compartido con las personas pero
+> **vocabulario propio**, campo de Twenty configurable, propiedad de Twenty (sólo lectura) y tres guardas: campo ausente
+> **no borra**, `[]` declarado sí se escribe, etiquetas desconocidas se avisan aparte.
+>
+> **⚑ ANTES (2026-10-03): de clientes y contactos sólo se trae lo que los IDENTIFICA.** Criterio del owner que cierra
 > casi todo E-19: lo que sirve para **decidir** (facturación, `Do Not Contact`, canal e idioma) se consulta **en
 > Twenty**, no se copia — una copia sólo podría estar vieja justo cuando se usa. `billing-rules.ts` y
-> `contactability.ts` se quedan como reglas puras sin consumidor, a propósito. Queda **una** pregunta: los roles de la
-> **empresa**, porque sin ellos un proveedor se ve igual que un cliente.
+> `contactability.ts` se quedan como reglas puras sin consumidor, a propósito.
 >
 > **⚑ ANTES (2026-10-03): los selects de Twenty, verificados contra la instancia real.** Los valores en uso caben
 > todos en el contrato (tras añadir `CONTACT`); las **etapas** siguen sin verificar porque no hay oportunidades. La

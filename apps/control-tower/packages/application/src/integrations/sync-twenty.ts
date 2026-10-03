@@ -122,10 +122,16 @@ export async function syncTwenty(
   // `clients.industry` guarda el **Organization Type** de Twenty desde el 2026-09-27 (Empresa, Centro educativo,
   // Autónomo…). Si el campo no viene en el pull —puede llamarse de otra forma en ese Twenty— **no se pisa** lo que
   // hubiera: borrar un dato por no encontrar un campo sería peor que no actualizarlo.
+  // Lo mismo, aparte, para los **roles de relación** de la empresa (M46): `null` = sin dato, `[]` = Twenty dice que
+  // no tiene ninguno. Si el campo no viene en el pull no se escribe nada, que es distinto de escribir «ninguno».
   let orgTypeFieldMissing = 0;
+  let companyRolesFieldMissing = 0;
+  const unknownCompanyRoleLabels = new Set<string>();
   for (const c of data.companies) {
     try {
       if (!c.orgTypeFieldPresent) orgTypeFieldMissing++;
+      if (!c.rolesFieldPresent) companyRolesFieldMissing++;
+      for (const u of c.unknownRoles ?? []) unknownCompanyRoleLabels.add(u);
       const existing = await resolveInternalId(db, ctx, P, 'company', c.externalId);
       if (existing) {
         await db
@@ -133,6 +139,7 @@ export async function syncTwenty(
           .set({
             name: c.name,
             ...(c.orgTypeFieldPresent ? { industry: c.industry } : {}),
+            ...(c.rolesFieldPresent ? { relationshipRoles: c.relationshipRoles ?? [] } : {}),
             websiteUrl: c.websiteUrl,
             updatedAt: new Date(),
           })
@@ -146,6 +153,14 @@ export async function syncTwenty(
           industry: c.industry,
           websiteUrl: c.websiteUrl,
         });
+        // Los roles se escriben aparte, no por `createClient`: son de Twenty (`FIELD_OWNERSHIP`), así que no están en
+        // el esquema de creación y nadie puede mandarlos por la API.
+        if (c.rolesFieldPresent) {
+          await db
+            .update(clients)
+            .set({ relationshipRoles: c.relationshipRoles ?? [] })
+            .where(and(eq(clients.id, client.id), orgEq(clients.organizationId, ctx)));
+        }
         await upsertIdentity(db, ctx, { provider: P, externalType: 'company', externalId: c.externalId, internalType: 'client', internalId: client.id, metadata: { url: twentyRecordUrl(opts.crmBaseUrl, 'company', c.externalId) } });
         summary.companies.created++;
       }
@@ -161,6 +176,25 @@ export async function syncTwenty(
         'No se encontró el campo «Organization Type» en Twenty, así que el tipo de organización de los clientes no ' +
         'se ha actualizado (no se ha borrado el que hubiera). Si en tu Twenty ese campo se llama de otra forma, ' +
         'ponlo en la configuración de la integración (`fields.companyOrganizationType`).',
+    });
+  }
+  if (companyRolesFieldMissing > 0) {
+    summary.skipped.push({
+      entity: 'config',
+      externalId: `${companyRolesFieldMissing} empresa(s)`,
+      error:
+        'No se encontró el campo de roles de relación de las empresas en Twenty, así que la columna «Relación» de ' +
+        'los clientes no se ha actualizado (no se ha borrado la que hubiera). Si en tu Twenty ese campo se llama de ' +
+        'otra forma, ponlo en la configuración de la integración (`fields.companyRelationshipRoles`).',
+    });
+  }
+  if (unknownCompanyRoleLabels.size > 0) {
+    // Aviso SEPARADO del de las personas a propósito: los vocabularios son distintos (una empresa no puede ser
+    // `INDIVIDUAL_CLIENT`), así que juntarlos haría imposible saber qué etiqueta hay que alinear y dónde.
+    summary.skipped.push({
+      entity: 'config',
+      externalId: [...unknownCompanyRoleLabels].join(', '),
+      error: 'Roles de relación de empresa que Twenty trae y Control Tower no conoce: no se han guardado.',
     });
   }
 

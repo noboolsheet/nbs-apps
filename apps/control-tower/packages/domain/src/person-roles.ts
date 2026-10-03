@@ -1,5 +1,6 @@
 import { PERSON_RELATIONSHIP_ROLE, type PersonRelationshipRole } from './enums';
 import { INDIVIDUAL_CLIENT_ROLE } from './crm-classification';
+import { parseRelationshipRoles, type ParsedRoles } from './relationship-roles';
 
 /**
  * **Roles de relación de una Person de Twenty** y a qué se parece esa persona en Control Tower.
@@ -15,51 +16,10 @@ import { INDIVIDUAL_CLIENT_ROLE } from './crm-classification';
  * Pura y defensiva: el valor llega de un campo de Twenty cuya forma no controlamos (array, cadena con comas,
  * etiquetas con espacios o en minúsculas).
  */
-export interface ParsedPersonRoles {
-  /** Roles reconocidos, sin repetidos y en el orden del enum del dominio. */
-  roles: PersonRelationshipRole[];
-  /**
-   * ¿VENÍA el campo en el registro? Distinto de «venía vacío». Si el campo no existe —porque en ese Twenty se
-   * llama de otra forma— **no se reclasifica a nadie** y se avisa, en vez de dar por hecho que nadie es cliente
-   * individual (el handoff prohíbe inferir identificadores de API en silencio).
-   */
-  present: boolean;
-  /** Valores que venían pero no son roles conocidos. Se informan: suelen ser una etiqueta nueva en Twenty. */
-  unknown: string[];
-}
-
-const KNOWN = new Set<string>(PERSON_RELATIONSHIP_ROLE);
-
-/** Normaliza una etiqueta de Twenty («Individual Client», «individual_client») al código del enum. */
-function normalize(raw: string): string {
-  return raw.trim().toUpperCase().replace(/[\s-]+/g, '_');
-}
+export type ParsedPersonRoles = ParsedRoles<PersonRelationshipRole>;
 
 export function parsePersonRoles(raw: unknown): ParsedPersonRoles {
-  if (raw === undefined || raw === null) return { roles: [], present: false, unknown: [] };
-
-  // Twenty devuelve un multi-select como array; algunos despliegues lo exponen como cadena separada por comas.
-  const values = Array.isArray(raw)
-    ? raw
-    : typeof raw === 'string'
-      ? raw.split(',')
-      : // Un objeto (p. ej. `{ value: [...] }`) no se adivina: se declara ausente y que se vea en el aviso.
-        null;
-  if (values === null) return { roles: [], present: false, unknown: [] };
-
-  const roles = new Set<PersonRelationshipRole>();
-  const unknown: string[] = [];
-  for (const v of values) {
-    if (typeof v !== 'string' || v.trim() === '') continue;
-    const code = normalize(v);
-    if (KNOWN.has(code)) roles.add(code as PersonRelationshipRole);
-    else unknown.push(v.trim());
-  }
-  return {
-    roles: PERSON_RELATIONSHIP_ROLE.filter((r) => roles.has(r)),
-    present: true,
-    unknown,
-  };
+  return parseRelationshipRoles(raw, PERSON_RELATIONSHIP_ROLE);
 }
 
 /** ¿Esta persona es un cliente por sí misma? */

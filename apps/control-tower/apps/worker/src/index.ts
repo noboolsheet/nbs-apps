@@ -140,12 +140,17 @@ const jobRegistry: JobRegistry = {
       // sync avisa de que no ha reclasificado a nadie en vez de suponerlo.
       const integ = await getIntegrationByProvider(db, ctx, 'TWENTY');
       const fields = (integ?.configuration as {
-        fields?: { personRelationshipRoles?: string; companyOrganizationType?: string };
+        fields?: {
+          personRelationshipRoles?: string;
+          companyOrganizationType?: string;
+          companyRelationshipRoles?: string;
+        };
       } | null)?.fields;
       const adapter = new TwentyAdapter(
         new HttpTwentyDataSource({ baseUrl, apiKey }),
         fields?.personRelationshipRoles,
         fields?.companyOrganizationType,
+        fields?.companyRelationshipRoles,
       );
       // TWENTY_CRM_URL = URL del navegador (Tailscale/LAN), para el enlace "Open in CRM" (F-1).
       const summary = await syncTwenty(db, ctx, adapter, { crmBaseUrl: process.env.TWENTY_CRM_URL ?? null });

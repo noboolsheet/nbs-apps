@@ -1,0 +1,11 @@
+-- M46 — Roles de relación de las EMPRESAS que llegan de Twenty (columna «Relación» de la lista de Clientes).
+--
+-- Por qué una columna y no derivarlo: el rol vive en Twenty (multi-select `Relationship Roles` de Company) y CT no
+-- lo puede deducir de nada que tenga. Es dato de identificación —distingue a un cliente de un proveedor o un
+-- colaborador dentro de la misma lista— y eso es justo lo único que el owner quiere traer del CRM (E-19, ADR-010).
+--
+-- Aditiva y NULLable a propósito: `NULL` = «todavía no sabemos» (un cliente nativo de CT, o un sync que no encontró
+-- el campo) y `{}` = «Twenty dice que no tiene ninguno». El sync distingue los dos casos y nunca pisa con vacío.
+-- Sin CHECK: sólo se guardan códigos de `COMPANY_RELATIONSHIP_ROLE` (el mapper descarta lo que no reconoce y avisa),
+-- y un CHECK sobre un array obligaría a una migración cada vez que Twenty estrene una etiqueta.
+ALTER TABLE "clients" ADD COLUMN IF NOT EXISTS "relationship_roles" varchar[];

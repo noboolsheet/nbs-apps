@@ -116,9 +116,9 @@ a la vez, manda `INDIVIDUAL_CLIENT` (es a quien se factura).
 | **Companies › Organization Type** | se **guarda tal cual**. Es una etiqueta descriptiva: mostrar «Cooperativa» sin traducir informa más que descartarla, y se ve en pantalla sin necesidad de aviso. |
 | **Opportunity › Stage** | cae a `LEAD` **y ahora se avisa** (antes era silencioso). Es el caso más delicado: el stage es lo único que CT escribe de vuelta, así que una etapa nueva en Twenty aparecía aquí como «Prospecto» sin que nada lo dijera. |
 
-**Lo que CT NO lee de esos tres objetos**, aunque tenga el enum declarado: `COMPANY_RELATIONSHIP_ROLE` (los roles de
-la **empresa**) y los campos del handoff que aún no se tiran — idioma y canal preferidos, tipo de servicio, origen del
-lead, motivo de pérdida. Están en el dominio y traducidos porque se usarán, pero hoy el pull no los pide: no es que no
+**Lo que CT NO lee de esos tres objetos**, aunque tenga el enum declarado: los campos del handoff que aún no se tiran
+— idioma y canal preferidos, tipo de servicio, origen del lead, motivo de pérdida. *(`COMPANY_RELATIONSHIP_ROLE` estaba
+en esta lista hasta el 2026-10-04: ahora **sí** se lee, ver el addendum de abajo.)* Están en el dominio y traducidos porque se usarán, pero hoy el pull no los pide: no es que no
 los reconozca, es que no los mira. Decidir cuáles merecen viajar es parte de E-18.
 
 ### Verificación contra el Twenty real (2026-10-03)
@@ -130,7 +130,7 @@ Pedidos 4 registros de cada entidad a la instancia del owner, los valores en uso
 | `people.relationshipRoles` | `CONTACT` · `INDIVIDUAL_CLIENT` | sí, **tras añadir `CONTACT`** |
 | `people.preferredLanguage` | `ES` · `IT` | sí (pero CT no lee el campo) |
 | `companies.organizationType` | `BUSINESS` · `SCHOOL_EDUCATION` | sí |
-| `companies.relationshipRoles` | `COMMERCIAL_ACCOUNT` · `SUPPLIER` · `COLLABORATOR` | sí (pero CT no lee el campo) |
+| `companies.relationshipRoles` | `COMMERCIAL_ACCOUNT` · `SUPPLIER` · `COLLABORATOR` | sí — **y desde el 2026-10-04 CT lo lee** (M46) |
 | `opportunities.stage` | — (0 oportunidades) | sin verificar: no hay registros |
 
 Ningún enum se queda corto con los datos que hay. **Las etapas quedan sin verificar** porque la tabla está vacía: los
@@ -139,3 +139,45 @@ la primera oportunidad que llegue con una etapa fuera del contrato lo dirá en e
 comprobar antes, hay que preguntarle las opciones a la **API de metadatos** de Twenty, no a los registros.
 
 Lo que esa misma verificación destapó —los campos del contrato que Twenty ya tiene y el pull no pide— es **E-19**.
+
+
+## Addendum 2026-10-04 — los roles de la EMPRESA sí se traen: la columna «Relación» (M46)
+
+Pedido del owner, cerrando la única pregunta que quedaba abierta de **E-19**:
+
+> «Puedes traer el rol de las empresas con la propuesta 1 de crear una columna Relación.»
+
+**Por qué entra, cuando casi todo lo demás de E-19 se descartó.** El criterio del owner es que de clientes y contactos
+CT sólo trae **lo que los identifica y los diferencia**, porque las decisiones se toman en Twenty. El rol de relación es
+exactamente eso: dentro de la **misma** lista de Clientes conviven empresas que son clientes y empresas que están en el
+CRM por ser **proveedoras** o **colaboradoras**, y hasta ahora nada las distinguía. Es el mismo problema que este ADR ya
+había resuelto para las personas con `INDIVIDUAL_CLIENT`, pero en el otro objeto.
+
+**Simetría con las personas, con una diferencia que importa.** Las dos familias usan el mismo lector tolerante
+(`parseRelationshipRoles` en `@ct/domain/relationship-roles`: normaliza mayúsculas, espacios y guiones, informa de lo
+desconocido y distingue «el campo no viene» de «viene vacío»), pero **el vocabulario es propio de cada una**:
+`COMPANY_RELATIONSHIP_ROLE` = `COMMERCIAL_ACCOUNT` · `PARTNER` · `SUPPLIER` · `COLLABORATOR` · `REFERRAL_SOURCE` ·
+`OTHER`. Un `INDIVIDUAL_CLIENT` en una empresa **no** se guarda: se avisa como etiqueta desconocida. Esa es la guarda que
+delata el error más probable —apuntar la configuración al campo de la otra familia—, porque en un Twenty estándar los dos
+campos se llaman igual (`relationshipRoles`) y son campos distintos.
+
+**Y una diferencia de fondo con `INDIVIDUAL_CLIENT`: el rol de empresa NO reclasifica nada.** No mueve el registro de
+lista ni cambia lo que es: sólo lo describe. Un proveedor sigue viviendo en `clients` —es la tabla de «empresas y
+personas con las que trabajo», y partirla en dos sería traerse a CT un gobierno que es de Twenty (ADR-009)—, pero ahora
+se ve de un golpe qué es cada ficha y se puede filtrar por ello.
+
+**Decisiones concretas:**
+
+| Decisión | Por qué |
+|---|---|
+| Columna `clients.relationship_roles` `varchar[]`, aditiva y **NULLable** | `NULL` = sin dato (cliente nativo de CT, o el sync no encontró el campo) · `{}` = Twenty dice «ninguno». El sync distingue los dos y **nunca pisa con vacío**. Es la primera columna array del esquema, a propósito: es una lista de códigos, no un documento (los `jsonb` de la base guardan payloads). |
+| Sin `CHECK` sobre el array | Sólo se guardan códigos del enum (el mapper descarta y avisa lo demás), y un CHECK obligaría a migrar cada vez que Twenty estrene una etiqueta. |
+| Nombre del campo de Twenty **configurable** (`configuration.fields.companyRelationshipRoles`) y **aparte** del de personas | No se adivinan identificadores de API (regla del handoff). Aparte porque son dos campos distintos del CRM: renombrar uno no renombra el otro. |
+| **Propiedad de Twenty** (`FIELD_OWNERSHIP.client.TWENTY`) | Bloqueo por procedencia, como `name` o `industry`: editarlo en CT sería un cambio que el siguiente sync borra. Tampoco está en el esquema de creación, así que no cuela por API. |
+| Se ve como **columna con faceta** en `/crm/clients`, no en el panel | Es un dato para **comparar en lista** («quién es qué»), no para leer ficha a ficha. Con varios roles el valor de la celda es la combinación (`Proveedor · Colaborador`) y ésa es su propia opción en el filtro: lo que se ve en la columna es lo que se puede elegir. |
+| **Vacío en los clientes particulares** | Su rol es el que los trajo a la lista (`INDIVIDUAL_CLIENT`) y la columna «Tipo» ya dice «Particular». Repetirlo en «Relación» —y con el vocabulario de la otra familia— sería ruido. |
+| No se refleja en Notion | `clients` no es una entidad del espejo (`notion-specs.ts` no la tiene): nada que contagiar. |
+
+**Qué NO se hizo, y por qué:** una lista separada de proveedores, o un filtro que escondiera de Clientes lo que no es
+cliente. Las dos obligan a CT a decidir qué es un cliente de verdad —gobierno que es de Twenty (ADR-009)— y la segunda
+además esconde registros sin que se vea que los esconde.

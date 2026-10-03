@@ -26,6 +26,12 @@ export const clients = pgTable(
     slug: varchar('slug').notNull(),
     status: varchar('status').notNull(),
     industry: varchar('industry'),
+    /**
+     * Roles de relación que trae Twenty para esta empresa (M46): cuenta comercial, proveedor, colaborador,
+     * prescriptor… Son códigos de `COMPANY_RELATIONSHIP_ROLE`. `null` = sin dato (cliente nativo de CT, o el sync no
+     * encontró el campo) vs `[]` = Twenty dice que no tiene ninguno; el sync no pisa el valor guardado con un vacío.
+     */
+    relationshipRoles: varchar('relationship_roles').array(),
     websiteUrl: text('website_url'),
     notes: text('notes'),
     createdAt: createdAt(),

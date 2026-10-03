@@ -239,12 +239,15 @@ IDs de las DBs de Notion en `configuration.databases.<key>` y el `folderId` de D
   (company→client, **person→contact _o_ client** —⚑ ADR-010: una Person con el rol `INDIVIDUAL_CLIENT` se sincroniza
   como **CLIENTE**; empresa vs particular se **deriva** del `external_type` de su identidad, no hay columna; el nombre
   del campo de roles es configuración: `configuration.fields.personRelationshipRoles`, y si no viene **no se
-  reclasifica a nadie** y el run queda «con advertencias»—, opportunity→opportunity, task) y **un único write-back**: al mover el **stage** de
+  reclasifica a nadie** y el run queda «con advertencias»; **M46**: de las empresas se trae además
+  `relationshipRoles` → columna «Relación» con faceta en Clientes, con su propio nombre de campo configurable
+  (`fields.companyRelationshipRoles`) y su propio vocabulario (`COMPANY_RELATIONSHIP_ROLE`), porque distinguir un
+  proveedor de un cliente en la misma lista es identificar, no decidir (E-19)—, opportunity→opportunity, task) y **un único write-back**: al mover el **stage** de
   una oportunidad (UPDATE de un USER), `recordAudit` encola `twenty.push` → `runTwentyEntityPush` →
   `PATCH /rest/opportunities/{id}` con `{ stage }`. Solo actualiza existentes (id por `external_identities`).
   **Todo lo demás que llega de Twenty es inmutable en CT** (`FIELD_OWNERSHIP` en `@ct/domain/ownership`, bloqueo **por
-  procedencia**): client `name`/`industry`/`websiteUrl`, contact `firstName`/`lastName`/`email`/`phone`/`jobTitle`/
-  `clientId`, task `title`+`dueDate`, opportunity todo menos `stage`. Se bloquea en el panel (🔒 «se edita en el
+  procedencia**): client `name`/`industry`/`relationshipRoles`/`websiteUrl`, contact `firstName`/`lastName`/`email`/
+  `phone`/`jobTitle`/`clientId`, task `title`+`dueDate`, opportunity todo menos `stage`. Se bloquea en el panel (🔒 «se edita en el
   origen») **y** en el comando (`assertNotEditingOwnedFields`), así que tampoco cuela por API. Lo que SÍ es de CT y
   sigue editable: `status` y `notes` del cliente, `notes` del contacto, y **cualquier cliente/contacto creado en CT**
   (sin identidad de Twenty). Se retiraron `companyPatch`/`personPatch`/`taskPatch`. Twenty está alineado 1:1 con CT

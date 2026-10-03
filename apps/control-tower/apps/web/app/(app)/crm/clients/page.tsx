@@ -73,6 +73,23 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
       facet: true,
       cell: (r) => (r.industry ? enumLabel(r.industry) : '—'),
     },
+    // **Relación** (M46): qué es esta ficha para el negocio —cuenta comercial, proveedor, colaborador, prescriptor—,
+    // tal como lo marca Twenty, que es su dueño. Lo pidió el owner (2026-10-03) porque en la lista de Clientes
+    // conviven empresas que no son clientes y hasta ahora nada las distinguía. Vacío en los clientes particulares (su
+    // rol es lo que los trajo aquí: la columna «Tipo» ya dice «Particular») y en los nativos de CT.
+    // Con varios roles el valor es la combinación: la faceta compara la celda entera, así que «Proveedor ·
+    // Colaborador» es su propia opción — lo que se ve en la columna es lo que se puede elegir en el filtro.
+    {
+      header: t('field.relationshipRoles'),
+      value: (r) => (r.relationshipRoles?.length ? r.relationshipRoles.map((x) => enumLabel(x)).join(' · ') : null),
+      facet: true,
+      cell: (r) =>
+        r.relationshipRoles?.length ? (
+          <span className="text-xs text-fg-muted">{r.relationshipRoles.map((x) => enumLabel(x)).join(' · ')}</span>
+        ) : (
+          '—'
+        ),
+    },
     {
       header: t('crm.openInCrm'),
       className: 'w-28',

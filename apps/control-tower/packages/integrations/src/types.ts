@@ -27,6 +27,15 @@ export interface NormalizedCompany {
    * avisa: el nombre del campo puede ser otro en ese Twenty y el handoff prohíbe inferir identificadores de API.
    */
   orgTypeFieldPresent?: boolean;
+  /**
+   * Roles de relación de la empresa (`COMPANY_RELATIONSHIP_ROLE`): cuenta comercial, proveedor, colaborador…
+   * Identifica QUÉ es esa ficha dentro de la lista de Clientes, que es lo único que CT trae del CRM (E-19).
+   */
+  relationshipRoles?: string[];
+  /** ¿VENÍA el campo de roles? Si no, el sync no pisa los roles guardados y avisa (igual que el de tipo). */
+  rolesFieldPresent?: boolean;
+  /** Etiquetas de rol que no son del vocabulario de empresas. Se informan una vez por sync. */
+  unknownRoles?: string[];
 }
 export interface NormalizedPerson {
   externalId: string;

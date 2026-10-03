@@ -25,6 +25,28 @@ describe('twenty mapper', () => {
     expect(mapCompany({ id: 'c1', name: 'Acme', tipoOrg: 'BUSINESS' }, 'tipoOrg').industry).toBe('BUSINESS');
   });
 
+  /** Roles de relación de la empresa (M46): la columna «Relación» de Clientes sale de aquí. */
+  it('trae los roles de relación, con el nombre de campo configurable', () => {
+    const c = mapCompany({ id: 'c1', name: 'Acme', relationshipRoles: ['Commercial Account', 'Supplier'] });
+    expect(c.relationshipRoles).toEqual(['COMMERCIAL_ACCOUNT', 'SUPPLIER']);
+    expect(c.rolesFieldPresent).toBe(true);
+    expect(mapCompany({ id: 'c1', name: 'Acme', roles: ['PARTNER'] }, undefined, 'roles').relationshipRoles).toEqual([
+      'PARTNER',
+    ]);
+  });
+
+  it('si el campo de roles no viene, lo dice (para que el sync no borre lo guardado)', () => {
+    const c = mapCompany({ id: 'c1', name: 'Acme' });
+    expect(c.rolesFieldPresent).toBe(false);
+    expect(c.relationshipRoles).toEqual([]);
+  });
+
+  it('una etiqueta de rol que CT no conoce se informa, no se guarda', () => {
+    const c = mapCompany({ id: 'c1', name: 'Acme', relationshipRoles: ['Investor'] });
+    expect(c.relationshipRoles).toEqual([]);
+    expect(c.unknownRoles).toEqual(['Investor']);
+  });
+
   it('normaliza el dominio sin esquema a URL absoluta (bug real de sync)', () => {
     // Twenty guarda domainName como dominio pelado → createClient exige url() válida.
     expect(mapCompany({ id: 'c1', name: 'Alondra', domainName: 'alondrama.com' }).websiteUrl).toBe('https://alondrama.com');

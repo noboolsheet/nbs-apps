@@ -1,6 +1,6 @@
 import { OPPORTUNITY_STAGE, type OpportunityStage, type TaskStatus } from '@ct/domain';
 import type { TwentyRawRecord } from './client';
-import { ORGANIZATION_TYPE, parsePersonRoles } from '@ct/domain';
+import { ORGANIZATION_TYPE, parsePersonRoles, parseCompanyRoles } from '@ct/domain';
 import type { NormalizedCompany, NormalizedPerson, NormalizedOpportunity, NormalizedTask } from '../types';
 
 /**
@@ -84,8 +84,20 @@ function orgTypeCode(raw: unknown): string | undefined {
   return (ORGANIZATION_TYPE as readonly string[]).includes(code) ? code : raw.trim();
 }
 
-export function mapCompany(raw: TwentyRawRecord, orgTypeField = DEFAULT_ORG_TYPE_FIELD): NormalizedCompany {
+/**
+ * Nombre POR DEFECTO del campo de **roles de relación de una empresa**. En un Twenty estándar las dos familias usan
+ * el mismo nombre (`relationshipRoles`), pero se configura aparte (`configuration.fields.companyRelationshipRoles`)
+ * porque son dos campos distintos del CRM, con vocabularios distintos, y renombrar uno no renombra el otro.
+ */
+export const DEFAULT_COMPANY_ROLES_FIELD = 'relationshipRoles';
+
+export function mapCompany(
+  raw: TwentyRawRecord,
+  orgTypeField = DEFAULT_ORG_TYPE_FIELD,
+  rolesField = DEFAULT_COMPANY_ROLES_FIELD,
+): NormalizedCompany {
   const rawType = (raw as Record<string, unknown>)[orgTypeField];
+  const parsed = parseCompanyRoles((raw as Record<string, unknown>)[rolesField]);
   return {
     externalId: raw.id,
     name: str(raw.name) ?? '(sin nombre)',
@@ -93,6 +105,9 @@ export function mapCompany(raw: TwentyRawRecord, orgTypeField = DEFAULT_ORG_TYPE
     industry: orgTypeCode(rawType),
     websiteUrl: toUrl(str(raw.domainName) ?? nested(raw, 'domainName', 'primaryLinkUrl')),
     orgTypeFieldPresent: rawType !== undefined && rawType !== null,
+    relationshipRoles: parsed.roles,
+    rolesFieldPresent: parsed.present,
+    unknownRoles: parsed.unknown,
   };
 }
 

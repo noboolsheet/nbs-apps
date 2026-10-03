@@ -7,6 +7,7 @@ import {
   mapTask,
   DEFAULT_PERSON_ROLES_FIELD,
   DEFAULT_ORG_TYPE_FIELD,
+  DEFAULT_COMPANY_ROLES_FIELD,
 } from './mapper';
 
 /** Adapter de Twenty: implementa el contrato común usando una TwentyDataSource inyectable. */
@@ -22,6 +23,8 @@ export class TwentyAdapter implements IntegrationAdapter {
     private readonly personRolesField: string | undefined = DEFAULT_PERSON_ROLES_FIELD,
     /** Campo **Organization Type** en este Twenty (`configuration.fields.companyOrganizationType`). */
     private readonly orgTypeField: string | undefined = DEFAULT_ORG_TYPE_FIELD,
+    /** Campo de **roles de relación de las empresas** (`configuration.fields.companyRelationshipRoles`). */
+    private readonly companyRolesField: string | undefined = DEFAULT_COMPANY_ROLES_FIELD,
   ) {}
 
   async healthCheck(): Promise<HealthResult> {
@@ -41,7 +44,9 @@ export class TwentyAdapter implements IntegrationAdapter {
       this.source.tasks(),
     ]);
     return {
-      companies: companies.map((c) => mapCompany(c, this.orgTypeField || DEFAULT_ORG_TYPE_FIELD)),
+      companies: companies.map((c) =>
+        mapCompany(c, this.orgTypeField || DEFAULT_ORG_TYPE_FIELD, this.companyRolesField || DEFAULT_COMPANY_ROLES_FIELD),
+      ),
       people: people.map((p) => mapPerson(p, this.personRolesField || DEFAULT_PERSON_ROLES_FIELD)),
       opportunities: opportunities.map(mapOpportunity),
       tasks: tasks.map(mapTask),
