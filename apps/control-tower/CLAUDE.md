@@ -242,7 +242,9 @@ IDs de las DBs de Notion en `configuration.databases.<key>` y el `folderId` de D
   reclasifica a nadie** y el run queda «con advertencias»; **M46**: de las empresas se trae además
   `relationshipRoles` → columna «Relación» con faceta en Clientes, con su propio nombre de campo configurable
   (`fields.companyRelationshipRoles`) y su propio vocabulario (`COMPANY_RELATIONSHIP_ROLE`), porque distinguir un
-  proveedor de un cliente en la misma lista es identificar, no decidir (E-19)—, opportunity→opportunity, task) y **un único write-back**: al mover el **stage** de
+  proveedor de un cliente en la misma lista es identificar, no decidir (E-19). Esas dos columnas sólo las rellena el
+  pull de companies, así que en un cliente que es **persona** se **derivan** de su origen —«Cliente individual» +
+  «Cuenta comercial»— en `apps/web/lib/client-crm-display.ts`, igual que «Empresa / Particular»: nunca se guardan—, opportunity→opportunity, task) y **un único write-back**: al mover el **stage** de
   una oportunidad (UPDATE de un USER), `recordAudit` encola `twenty.push` → `runTwentyEntityPush` →
   `PATCH /rest/opportunities/{id}` con `{ stage }`. Solo actualiza existentes (id por `external_identities`).
   **Todo lo demás que llega de Twenty es inmutable en CT** (`FIELD_OWNERSHIP` en `@ct/domain/ownership`, bloqueo **por

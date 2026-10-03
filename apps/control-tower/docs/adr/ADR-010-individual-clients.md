@@ -175,9 +175,39 @@ se ve de un golpe qué es cada ficha y se puede filtrar por ello.
 | Nombre del campo de Twenty **configurable** (`configuration.fields.companyRelationshipRoles`) y **aparte** del de personas | No se adivinan identificadores de API (regla del handoff). Aparte porque son dos campos distintos del CRM: renombrar uno no renombra el otro. |
 | **Propiedad de Twenty** (`FIELD_OWNERSHIP.client.TWENTY`) | Bloqueo por procedencia, como `name` o `industry`: editarlo en CT sería un cambio que el siguiente sync borra. Tampoco está en el esquema de creación, así que no cuela por API. |
 | Se ve como **columna con faceta** en `/crm/clients`, no en el panel | Es un dato para **comparar en lista** («quién es qué»), no para leer ficha a ficha. Con varios roles el valor de la celda es la combinación (`Proveedor · Colaborador`) y ésa es su propia opción en el filtro: lo que se ve en la columna es lo que se puede elegir. |
-| **Vacío en los clientes particulares** | Su rol es el que los trajo a la lista (`INDIVIDUAL_CLIENT`) y la columna «Tipo» ya dice «Particular». Repetirlo en «Relación» —y con el vocabulario de la otra familia— sería ruido. |
+| ~~Vacío en los clientes particulares~~ → **«Cliente individual» + «Cuenta comercial»** (owner, mismo día) | Ver el apartado de abajo: dejar las dos columnas vacías hacía que un cliente-persona pareciera un registro a medias. |
 | No se refleja en Notion | `clients` no es una entidad del espejo (`notion-specs.ts` no la tiene): nada que contagiar. |
 
 **Qué NO se hizo, y por qué:** una lista separada de proveedores, o un filtro que escondiera de Clientes lo que no es
 cliente. Las dos obligan a CT a decidir qué es un cliente de verdad —gobierno que es de Twenty (ADR-009)— y la segunda
 además esconde registros sin que se vea que los esconde.
+
+
+### Las dos columnas de un cliente que es una PERSONA (owner, 2026-10-04)
+
+Con la columna «Relación» ya puesta, el owner vio el efecto secundario y lo corrigió:
+
+> «En las columnas tipo de organización y relación de un cliente que es una persona pon cliente individual (como
+> corresponde con su etiqueta) y cuenta comercial como el resto de las empresas que son mis clientes.»
+
+**El problema:** las dos columnas salen de columnas de `clients` que **sólo rellena el pull de companies**
+(`industry` y `relationship_roles`). Un cliente que llega de una **Person** las dejaba las dos en «—», así que en la
+lista parecía un registro a medias cuando en realidad es un cliente completo: lo que le falta no es dato, es que su
+dato vive en el otro objeto de Twenty.
+
+**La regla:** un cliente cuya identidad es `person` enseña **«Cliente individual»** en Tipo de organización —la
+etiqueta que le corresponde en Twenty (`INDIVIDUAL_CLIENT`), que es justo la que lo trajo a esta lista— y **«Cuenta
+comercial»** en Relación, igual que las empresas que sí son clientes. Lo segundo no es una suposición: si está en esta
+lista es porque en Twenty está marcado como cliente, y eso en el vocabulario de relación es una cuenta comercial.
+
+**Se deriva, no se guarda** (`apps/web/lib/client-crm-display.ts`, pura y con test), por lo mismo que «Empresa /
+Particular»: escribirlo en la tabla sería un **tercer valor que CT se inventa**, que Twenty no conoce, que el pull de
+companies no mantiene y que podría quedarse viejo. Además `INDIVIDUAL_CLIENT` no es un código de `ORGANIZATION_TYPE` ni
+`COMMERCIAL_ACCOUNT` un rol que Twenty tenga puesto en esa Person: son **lectura**, no dato. Y en una persona lo
+derivado **manda** sobre lo que hubiera en las columnas (un residuo de un sync viejo no se enseña).
+
+Mismo criterio en la **ficha** del cliente, que enseñaba `industry` crudo bajo la etiqueta «Industria» —el nombre del
+campo en el CRM anterior—: ahora dice «Tipo de organización» y «Relación», con los mismos valores que la lista.
+
+**De paso:** `enum.INDIVIDUAL_CLIENT` pasa de «Cliente particular» a **«Cliente individual»**, que es la etiqueta de
+Twenty y la que pidió el owner. La columna «Tipo» sigue diciendo «Particular» (es otro eje: empresa o persona).

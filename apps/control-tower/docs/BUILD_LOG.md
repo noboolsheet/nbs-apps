@@ -5,6 +5,31 @@ Estado autoritativo del progreso. Ver el plan completo en [`IMPLEMENTATION_ROADM
 
 Leyenda estado: ⬜ pendiente · 🚧 en curso · ✅ hecho · ⛔ bloqueado
 
+## 2026-10-04 — Un cliente que es una persona ya no parece una ficha a medias ✅
+
+Con la columna «Relación» puesta, el owner vio el efecto secundario y lo corrigió el mismo día:
+
+> «En las columnas tipo de organización y relación de un cliente que es una persona pon cliente individual (como
+> corresponde con su etiqueta) y cuenta comercial como el resto de las empresas que son mis clientes.»
+
+**Por qué estaban vacías:** las dos columnas salen de `clients.industry` y `clients.relationship_roles`, que **sólo
+rellena el pull de companies**. Un cliente que llega de una **Person** las dejaba las dos en «—» y parecía un registro
+incompleto, cuando lo que pasa es que su dato vive en el otro objeto de Twenty.
+
+**Ahora:** identidad `person` ⇒ «Cliente individual» (su etiqueta en Twenty, la que lo trajo a esta lista) y «Cuenta
+comercial» (si está aquí es porque en Twenty es cliente, y eso en el vocabulario de relación es eso). **Derivado, no
+guardado** (`apps/web/lib/client-crm-display.ts`, puro y con test), por lo mismo que «Empresa / Particular» en ADR-010:
+escribirlo sería un tercer valor que CT se inventa, que Twenty no conoce y que podría quedarse viejo. En una persona lo
+derivado **manda** sobre lo que hubiera en las columnas, para que un residuo de un sync viejo no se enseñe.
+
+**De paso, dos cosas que chocaban:** la **ficha** del cliente enseñaba `industry` crudo bajo la etiqueta «Industria» —el
+nombre del campo en el CRM anterior— y ahora dice «Tipo de organización» y «Relación» con los mismos valores que la
+lista; y `enum.INDIVIDUAL_CLIENT` pasa de «Cliente particular» a **«Cliente individual»**, que es la etiqueta de Twenty
+y la que pidió el owner (la columna «Tipo» sigue diciendo «Particular»: es otro eje, empresa o persona).
+
+Verificado: `pnpm -r typecheck` · `pnpm lint` · `pnpm test` (**224**, 5 nuevos) · `pnpm build`. Documentado en ADR-010
+y en la matriz de la guía de uso.
+
 ## 2026-10-04 — La columna «Relación»: qué es cada empresa, de un golpe ✅ (M46, cierra E-19)
 
 El owner cerró la última pregunta de E-19 eligiendo la primera de las tres propuestas:
@@ -1181,7 +1206,9 @@ Plan completo por bloques en `~/.claude/plans/quiero-hacer-unas-mejoras-golden-b
 > `relationshipRoles` (cuenta comercial · proveedor · colaborador · socio · prescriptor) a una columna con filtro: en una
 > lista donde conviven clientes y proveedores, ya se ve quién es qué. Lector compartido con las personas pero
 > **vocabulario propio**, campo de Twenty configurable, propiedad de Twenty (sólo lectura) y tres guardas: campo ausente
-> **no borra**, `[]` declarado sí se escribe, etiquetas desconocidas se avisan aparte.
+> **no borra**, `[]` declarado sí se escribe, etiquetas desconocidas se avisan aparte. Y un cliente que es una
+> **persona** enseña «Cliente individual» + «Cuenta comercial», **derivado** de su origen (como «Empresa / Particular»):
+> esas dos columnas sólo las rellena el pull de companies y dejarlas vacías lo hacía parecer una ficha a medias.
 >
 > **⚑ ANTES (2026-10-03): de clientes y contactos sólo se trae lo que los IDENTIFICA.** Criterio del owner que cierra
 > casi todo E-19: lo que sirve para **decidir** (facturación, `Do Not Contact`, canal e idioma) se consulta **en

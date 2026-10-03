@@ -65,7 +65,9 @@ export const es = {
   'enum.FREELANCER_PROFESSIONAL': 'Autónomo o profesional',
   // Roles de relación (empresa y persona; son multi-select)
   'enum.COMMERCIAL_ACCOUNT': 'Cuenta comercial',
-  'enum.INDIVIDUAL_CLIENT': 'Cliente particular',
+  // «Cliente individual» y no «particular» (owner 2026-10-04): es la etiqueta de Twenty, y es la que se enseña en
+  // la columna «Tipo de organización» de un cliente que es una persona. La columna «Tipo» sigue diciendo «Particular».
+  'enum.INDIVIDUAL_CLIENT': 'Cliente individual',
   'enum.PARTNER': 'Socio',
   'enum.SUPPLIER': 'Proveedor',
   'enum.CONTACT': 'Contacto de empresa',

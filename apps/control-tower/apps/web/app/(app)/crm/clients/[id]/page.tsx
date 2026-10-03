@@ -18,6 +18,7 @@ import { ContextNewButton } from '@/components/ui/context-new-button';
 import { RecordLink } from '@/components/ui/record-link';
 import { t } from '@/lib/i18n';
 import { enumLabel } from '@/lib/labels';
+import { clientCrmDisplay } from '@/lib/client-crm-display';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,6 +45,11 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
     getIdentityForInternal(db, ctx.org, 'client', client.id),
   ]);
   const crmUrl = (identity?.metadata as { url?: string } | null)?.url ?? null;
+  const crmDisplay = clientCrmDisplay({
+    externalType: identity?.externalType,
+    industry: client.industry,
+    relationshipRoles: client.relationshipRoles,
+  });
 
   const contactCols: Column<(typeof contacts)[number]>[] = [
     {
@@ -101,7 +107,20 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
             label: t('common.summary'),
             content: (
               <div className="flex flex-col gap-1 text-sm text-fg-muted">
-                <div>Industria: {client.industry ?? '—'}</div>
+                {/* Mismo criterio que la lista (`lib/client-crm-display.ts`): de una empresa, lo que guardó el pull;
+                    de una persona, lo que le corresponde por ser cliente individual (owner 2026-10-04). Y la etiqueta
+                    es «Tipo de organización», que es lo que la columna guarda de verdad — «Industria» era el nombre
+                    viejo del campo en el CRM anterior. */}
+                <div>
+                  {t('field.organizationType')}:{' '}
+                  {crmDisplay.organizationType ? enumLabel(crmDisplay.organizationType) : '—'}
+                </div>
+                <div>
+                  {t('field.relationshipRoles')}:{' '}
+                  {crmDisplay.relationshipRoles.length
+                    ? crmDisplay.relationshipRoles.map((r) => enumLabel(r)).join(' · ')
+                    : '—'}
+                </div>
                 <div>Web: {client.websiteUrl ?? '—'}</div>
                 <div>Contactos: {contacts.length} · Oportunidades: {opportunities.length}</div>
                 {identity ? (

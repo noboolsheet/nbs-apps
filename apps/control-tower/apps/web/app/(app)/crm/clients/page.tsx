@@ -9,6 +9,7 @@ import { FilterTabs } from '@/components/ui/filter-tabs';
 import { ClientStatusControl } from '@/components/crm/forms';
 import { RecordLink } from '@/components/ui/record-link';
 import { enumLabel } from '@/lib/labels';
+import { clientCrmDisplay } from '@/lib/client-crm-display';
 import { t } from '@/lib/i18n';
 
 export const dynamic = 'force-dynamic';
@@ -46,6 +47,18 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   const externalTypeByClient = new Map(identities.map((i) => [i.internalId, i.externalType]));
   const clientKind = (id: string) =>
     externalTypeByClient.get(id) === 'person' ? t('crm.kindIndividual') : t('crm.kindCompany');
+  // Lo que enseñan «Tipo de organización» y «Relación»: de una empresa, lo que guardó el pull; de una persona, lo que
+  // le corresponde por ser cliente individual (owner 2026-10-04). Ver `lib/client-crm-display.ts`.
+  const display = (r: Client) =>
+    clientCrmDisplay({
+      externalType: externalTypeByClient.get(r.id),
+      industry: r.industry,
+      relationshipRoles: r.relationshipRoles,
+    });
+  const rolesText = (r: Client) =>
+    display(r)
+      .relationshipRoles.map((x) => enumLabel(x))
+      .join(' · ');
 
   const columns: Column<Client>[] = [
     {
@@ -69,26 +82,30 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
     // la columna se llama por lo que es. `enumLabel` traduce los códigos del contrato y deja pasar una etiqueta propia.
     {
       header: t('field.organizationType'),
-      value: (r) => (r.industry ? enumLabel(r.industry) : null),
+      value: (r) => {
+        const code = display(r).organizationType;
+        return code ? enumLabel(code) : null;
+      },
       facet: true,
-      cell: (r) => (r.industry ? enumLabel(r.industry) : '—'),
+      cell: (r) => {
+        const code = display(r).organizationType;
+        return code ? enumLabel(code) : '—';
+      },
     },
     // **Relación** (M46): qué es esta ficha para el negocio —cuenta comercial, proveedor, colaborador, prescriptor—,
     // tal como lo marca Twenty, que es su dueño. Lo pidió el owner (2026-10-03) porque en la lista de Clientes
-    // conviven empresas que no son clientes y hasta ahora nada las distinguía. Vacío en los clientes particulares (su
-    // rol es lo que los trajo aquí: la columna «Tipo» ya dice «Particular») y en los nativos de CT.
+    // conviven empresas que no son clientes y hasta ahora nada las distinguía. Los clientes particulares salen como
+    // «Cuenta comercial» (derivado, 2026-10-04); los nativos de CT, vacíos.
     // Con varios roles el valor es la combinación: la faceta compara la celda entera, así que «Proveedor ·
     // Colaborador» es su propia opción — lo que se ve en la columna es lo que se puede elegir en el filtro.
     {
       header: t('field.relationshipRoles'),
-      value: (r) => (r.relationshipRoles?.length ? r.relationshipRoles.map((x) => enumLabel(x)).join(' · ') : null),
+      value: (r) => rolesText(r) || null,
       facet: true,
-      cell: (r) =>
-        r.relationshipRoles?.length ? (
-          <span className="text-xs text-fg-muted">{r.relationshipRoles.map((x) => enumLabel(x)).join(' · ')}</span>
-        ) : (
-          '—'
-        ),
+      cell: (r) => {
+        const text = rolesText(r);
+        return text ? <span className="text-xs text-fg-muted">{text}</span> : '—';
+      },
     },
     {
       header: t('crm.openInCrm'),
